@@ -73,6 +73,19 @@ class BillingRadarDetectorTest {
     }
 
     @Test
+    void sameMerchantRecurringOnTwoAccountsDoesNotCombinePriceHistory() {
+        List<RecurrenceDetector.Movement> movements = List.of(
+                movement(1, "2026-08-05", "39.90", RecurrenceDetector.Direction.OUT,
+                        "Streaming Plus", "Conta A", "Banco A"),
+                movement(2, "2026-09-05", "39.90", RecurrenceDetector.Direction.OUT,
+                        "Streaming Plus", "Conta A", "Banco A"),
+                movement(3, "2026-10-05", "49.90", RecurrenceDetector.Direction.OUT,
+                        "Streaming Plus", "Conta B", "Banco B"));
+
+        assertTrue(BillingRadarDetector.detect(movements).isEmpty());
+    }
+
+    @Test
     void inboundTransfersAndGenericMovementNamesAreNotBills() {
         List<RecurrenceDetector.Movement> movements = List.of(
                 movement(1, "2026-08-05", "100.00", RecurrenceDetector.Direction.IN, "Streaming Plus"),
