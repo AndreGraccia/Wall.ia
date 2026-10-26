@@ -62,6 +62,17 @@ class BillingRadarDetectorTest {
     }
 
     @Test
+    void sameMerchantAndAmountInDifferentAccountsIsNotADuplicate() {
+        List<RecurrenceDetector.Movement> movements = List.of(
+                movement(1, "2026-10-05", "42.00", RecurrenceDetector.Direction.OUT,
+                        "Mercado do Bairro", "Conta A", "Banco A"),
+                movement(2, "2026-10-05", "42.00", RecurrenceDetector.Direction.OUT,
+                        "Mercado do Bairro", "Conta B", "Banco B"));
+
+        assertTrue(BillingRadarDetector.detect(movements).isEmpty());
+    }
+
+    @Test
     void inboundTransfersAndGenericMovementNamesAreNotBills() {
         List<RecurrenceDetector.Movement> movements = List.of(
                 movement(1, "2026-08-05", "100.00", RecurrenceDetector.Direction.IN, "Streaming Plus"),
@@ -82,7 +93,13 @@ class BillingRadarDetectorTest {
 
     private static RecurrenceDetector.Movement movement(long id, String date, String amount,
                                                          RecurrenceDetector.Direction direction, String counterparty) {
+        return movement(id, date, amount, direction, counterparty, "Conta principal", "Banco de teste");
+    }
+
+    private static RecurrenceDetector.Movement movement(long id, String date, String amount,
+                                                         RecurrenceDetector.Direction direction, String counterparty,
+                                                         String accountName, String institution) {
         return new RecurrenceDetector.Movement(id, LocalDate.parse(date), new BigDecimal(amount), direction,
-                counterparty, "Conta principal", "Banco de teste");
+                counterparty, accountName, institution);
     }
 }
