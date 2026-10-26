@@ -1,8 +1,9 @@
 # ADR 0019: Radar de cobranças
 
-- **Status:** Proposto para integração após CI
+- **Status:** Integrado à `main` via PR #2; CI e E2E aprovados em 26/10/2026
 - **Data:** 26/10/2026
 - **Contexto:** Wall.ia, produto de projeção de fluxo de caixa pessoal
+- **Validação:** [CI: 381 testes backend, 74 frontend e build](https://github.com/AndreGraccia/Wall.ia/actions/runs/40390985911); [E2E Playwright](https://github.com/AndreGraccia/Wall.ia/actions/runs/40390985877); [PR #2](https://github.com/AndreGraccia/Wall.ia/pull/2).
 
 ## Problema
 
