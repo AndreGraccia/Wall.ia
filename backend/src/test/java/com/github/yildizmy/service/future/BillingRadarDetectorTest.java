@@ -82,7 +82,13 @@ class BillingRadarDetectorTest {
                 movement(3, "2026-10-05", "49.90", RecurrenceDetector.Direction.OUT,
                         "Streaming Plus", "Conta B", "Banco B"));
 
-        assertTrue(BillingRadarDetector.detect(movements).isEmpty());
+        List<BillingRadarDetector.Signal> signals = BillingRadarDetector.detect(movements);
+
+        assertEquals(1, signals.size());
+        assertTrue(signals.get(0).recurring());
+        assertFalse(signals.get(0).priceIncrease());
+        assertEquals(2, signals.get(0).occurrences());
+        assertTrue(signals.get(0).key().contains("conta-a"));
     }
 
     @Test
