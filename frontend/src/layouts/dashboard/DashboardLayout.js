@@ -52,6 +52,7 @@ export default function DashboardLayout() {
     { path: '/ask', label: 'navigation.ask', icon: 'ask' },
     { path: '/wallets', label: 'navigation.wallets', icon: 'wallet', mobile: true },
     { path: '/commitments', label: 'navigation.commitments', icon: 'card' },
+    { path: '/billing-radar', label: 'navigation.billingRadar', icon: 'insights' },
     { path: '/envelopes', label: 'navigation.envelopes', icon: 'envelope', mobile: true },
     { path: '/transactions', label: 'navigation.transactions', icon: 'history', mobile: true },
     { path: '/insights', label: 'navigation.insights', icon: 'insights' },

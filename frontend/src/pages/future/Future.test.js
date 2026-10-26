@@ -6,7 +6,11 @@ import Future from './Future';
 import ThemeProvider from '../../theme';
 import HttpService from '../../services/HttpService';
 
-jest.mock('../../services/HttpService', () => ({ getWithAuth: jest.fn(), putWithAuth: jest.fn() }));
+jest.mock('../../services/HttpService', () => ({
+  getWithAuth: jest.fn(),
+  putWithAuth: jest.fn(),
+  postWithAuth: jest.fn(),
+}));
 jest.mock('../../context/WalletContext', () => ({ useWallets: jest.fn() }));
 jest.mock('notistack', () => ({ useSnackbar: () => ({ enqueueSnackbar: jest.fn(), closeSnackbar: jest.fn() }) }));
 jest.mock('react-i18next', () => ({
