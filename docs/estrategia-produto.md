@@ -162,6 +162,16 @@ Próximas da lista, por nota (dor x diferencial / esforço):
 
 Não fazer, com motivo: adiantamento de salário e cobertura de negativo (é crédito, regra 3), sugestão de caixinha ou investimento (é venda, regra 3), poupança automática que move dinheiro sozinha (regra 1), assistente que responde com número de modelo de linguagem (regra 2).
 
+## Nova oportunidade priorizada: Radar de cobranças (26/10/2026)
+
+O diagnóstico original já identificava o problema de compromissos que somem ou mudam no extrato. A revisão de implementação encontrou uma lacuna adicional: o detector mensal geral exige estabilidade de valor e pode deixar de reconhecer a recorrência quando um preço aumenta.
+
+O Radar de cobranças cria uma leitura separada para saídas liquidadas e mantém a cobrança visível quando o valor muda. Sinaliza aumento apenas quando a última cobrança supera a mediana anterior em pelo menos R$ 2,00 e 10%, e possíveis duplicidades quando a mesma contraparte apresenta lançamentos de mesmo valor no mesmo dia. Cada sinal inclui as transações de evidência; datas futuras são estimadas.
+
+É uma hipótese de diferenciação, não uma alegação de exclusividade no mercado: a proposta é ligar cobrança alterada, evidência e impacto potencial no caixa futuro, sem vender crédito nem tomar decisões pelo usuário. A primeira implementação está descrita em [ADR 0019](adr/0019-radar-de-cobrancas.md) e [evolução do produto](evolucao-radar-cobrancas.md), pendente dos workflows CI/E2E e revisão.
+
+**Como medir valor:** proporção de sinais que usuários consideram úteis, sinais revisados versus ignorados, falsos positivos relatados e capacidade de explicar por que cada item apareceu. Não otimizar pela quantidade de alertas.
+
 ## Próximos passos, em ordem
 
 Feitos na quinta rodada ([ADR 0006](adr/0006-sync-diario-e-push-sem-sdk.md)): sync diário automático, contagem do clique em "Preparar Pix", avisos por push no navegador e painel da métrica principal para o time.
