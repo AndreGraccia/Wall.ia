@@ -5,8 +5,10 @@
 ### Novo
 - Tela autenticada para detectar recorrências, aumentos observados e possíveis duplicidades com evidências do histórico do titular.
 - API determinística com próximo vencimento estimado, total mensal provável e aviso de sincronização antiga.
+- Alertas de possível duplicidade e de valor fora do padrão, decisões do usuário persistidas por titular/transação e exportação da decisão na conta.
+- Simulação de possível estorno comparando menor saldo e dias negativos no horizonte de 90 dias; é uma entrada hipotética, sem mudar transações reais nem contactar o banco.
 - Regra separada do detector de recorrências geral para que uma mudança de preço não faça a cobrança desaparecer do radar.
-- Testes de domínio para aumento, recorrência estável, possível duplicidade, transferências/entradas genéricas e cobranças sem cadência mensal.
+- Testes de domínio para aumento, recorrência estável, possíveis duplicidades, transferências/entradas genéricas, cobranças sem cadência mensal, decisões de alertas e estorno hipotético.
 
 ### Limites
 - O sinal não prova fraude; compras repetidas podem ser legítimas.
