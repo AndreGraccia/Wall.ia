@@ -1,3 +1,4 @@
+// Radar translations are validated in CI through the project's Prettier and i18n checks.
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
