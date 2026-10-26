@@ -48,6 +48,12 @@ Os números, as fontes e as projeções de negócio (três cenários de 36 meses
 
 - "Posso comprar um notebook de R$ 4.000 em 10x?", "Quanto posso gastar por dia?", "Por que meu saldo fica negativo?". A resposta vem do motor, com os números e a origem. Nenhum modelo de linguagem define valores, e pergunta fora do que o motor sabe responder recebe "ainda não sei".
 
+**Radar de cobranças**
+
+- Identifica padrões mensais mesmo quando o preço varia, destaca aumentos observados a partir da mediana histórica e sinaliza lançamentos de mesmo nome, valor e data como possíveis duplicidades.
+- Mostra a evidência do extrato, a próxima data provável e avisa quando os dados conectados estão antigos. A pessoa revisa; o radar não acusa fraude, cancela serviços nem movimenta dinheiro.
+- Tela autenticada em /billing-radar; API GET /api/v1/billing-radar. Decisão e limites em [ADR 0019](docs/adr/0019-radar-de-cobrancas.md) e validação em [documentação de evolução](docs/evolucao-radar-cobrancas.md).
+
 **Cartões e dívidas**
 
 - Fatura aberta e faturas futuras com as compras e parcelas que as compõem.
