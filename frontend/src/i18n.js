@@ -937,6 +937,7 @@ const resources = {
         confidence: { HIGH: 'Mais evidências', MEDIUM: 'Sinal inicial', REVIEW: 'Revisar manualmente' },
         lastCharge: 'Última cobrança: {{amount}} em {{date}}',
         priceChange: 'O valor observado subiu de {{before}} para {{after}} (aumento de {{delta}}, {{percent}}%).',
+        annualizedImpact: 'Se o aumento continuar por 12 meses, o impacto adicional será de aproximadamente {{amount}}.',
         nextCharge: 'Próxima cobrança estimada: {{date}}.',
         nextChargeHelp: 'Estimativa baseada no intervalo recente, não uma data garantida.',
         duplicateHint:
@@ -2042,6 +2043,7 @@ const resources = {
         confidence: { HIGH: 'More evidence', MEDIUM: 'Early signal', REVIEW: 'Manual review' },
         lastCharge: 'Last charge: {{amount}} on {{date}}',
         priceChange: 'Observed amount rose from {{before}} to {{after}} (up {{delta}}, {{percent}}%).',
+        annualizedImpact: 'If the increase continues for 12 months, the additional impact will be about {{amount}}.',
         nextCharge: 'Next expected charge: {{date}}.',
         nextChargeHelp: 'Estimate based on recent timing, not a guaranteed date.',
         duplicateHint:
