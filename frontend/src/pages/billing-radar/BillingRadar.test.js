@@ -81,6 +81,7 @@ test('renders the price-change alert with transaction evidence', async () => {
   expect(pageText()).toContain('billingRadar.heading');
   expect(pageText()).toContain('Streaming Plus');
   expect(pageText()).toContain('billingRadar.priceChange');
+  expect(pageText()).toContain('billingRadar.annualizedImpact');
   expect(pageText()).toContain('billingRadar.evidence');
   expect(pageText()).toContain('Conta principal');
   expect(container.querySelector('a[href="/transactions"]')).not.toBeNull();
