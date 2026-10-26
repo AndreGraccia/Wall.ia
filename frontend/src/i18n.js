@@ -117,6 +117,7 @@ const resources = {
           INVALID_PERIOD: 'Escolha um período entre 1 e 365 dias.',
           INITIAL_BALANCE_NOT_ALLOWED: 'Uma carteira nova começa com saldo zero. O saldo real chega pelo Open Finance.',
           CHARGE_ALERT_NOT_FOUND: 'Esse sinal já não está disponível para sua conta. Atualize o radar.',
+          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND: 'Não foi possível calcular este cenário. Atualize o radar e confira se há histórico suficiente.',
           INVALID_CHARGE_ALERT_DECISION: 'Escolha uma resposta válida para esse sinal.',
           INVALID_TOKEN: 'O servidor respondeu ao login sem uma sessão válida. Tente de novo em instantes.',
         },
@@ -940,6 +941,18 @@ const resources = {
         priceChange: 'O valor observado subiu de {{before}} para {{after}} (aumento de {{delta}}, {{percent}}%).',
         annualizedImpact:
           'Se o aumento continuar por 12 meses, o impacto adicional será de aproximadamente {{amount}}.',
+        simulatePriceReversion: 'Simular retorno ao valor anterior',
+        impactLoading: 'Calculando impacto…',
+        impactHeading: 'Efeito hipotético na projeção de 90 dias',
+        impactDates: '{{count}} cobranças previstas, de {{first}} a {{last}}.',
+        hypotheticalNote:
+          'Este cenário não altera o extrato e não garante que a empresa aceite reduzir ou cancelar a cobrança.',
+        keepCurrentPrice: 'Mantendo o preço atual',
+        returnToPreviousPrice: 'Voltando ao valor histórico',
+        impactMinBalance: 'Menor saldo previsto: {{amount}}',
+        impactNegativeDays_one: '{{count}} dia com saldo negativo',
+        impactNegativeDays_other: '{{count}} dias com saldo negativo',
+        impactDifference: 'Economia potencial em 90 dias: {{amount}} ({{count}} cobranças).',
         nextCharge: 'Próxima cobrança estimada: {{date}}.',
         nextChargeHelp: 'Estimativa baseada no intervalo recente, não uma data garantida.',
         duplicateHint:
@@ -1230,6 +1243,7 @@ const resources = {
           INVALID_PERIOD: 'Choose a period between 1 and 365 days.',
           INITIAL_BALANCE_NOT_ALLOWED: 'A new wallet starts at zero. The real balance comes from Open Finance.',
           CHARGE_ALERT_NOT_FOUND: 'This signal is no longer available for your account. Refresh the radar.',
+          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND: 'This scenario could not be calculated. Refresh the radar and check whether enough history is available.'
           INVALID_CHARGE_ALERT_DECISION: 'Choose a valid response for this signal.',
           INVALID_TOKEN: 'The server answered the login without a valid session. Try again in a moment.',
         },
@@ -2046,6 +2060,18 @@ const resources = {
         lastCharge: 'Last charge: {{amount}} on {{date}}',
         priceChange: 'Observed amount rose from {{before}} to {{after}} (up {{delta}}, {{percent}}%).',
         annualizedImpact: 'If the increase continues for 12 months, the additional impact will be about {{amount}}.',
+        simulatePriceReversion: 'Simulate return to prior price',
+        impactLoading: 'Calculating impact…',
+        impactHeading: 'Hypothetical effect on the 90-day forecast',
+        impactDates: '{{count}} projected charges, from {{first}} to {{last}}.',
+        hypotheticalNote:
+          'This scenario does not change your ledger and does not guarantee the provider will reduce or cancel the charge.',
+        keepCurrentPrice: 'Keeping the current price',
+        returnToPreviousPrice: 'Returning to the historical price',
+        impactMinBalance: 'Lowest projected balance: {{amount}}',
+        impactNegativeDays_one: '{{count}} day with a negative balance',
+        impactNegativeDays_other: '{{count}} days with a negative balance',
+        impactDifference: 'Potential savings over 90 days: {{amount}} ({{count}} charges).',
         nextCharge: 'Next expected charge: {{date}}.',
         nextChargeHelp: 'Estimate based on recent timing, not a guaranteed date.',
         duplicateHint:
