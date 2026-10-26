@@ -109,13 +109,14 @@ public final class PriceReversionScenario {
             String institution) {
         if (event.kind() != Kind.RECURRING_EXPENSE || event.isInflow()) return false;
 
-        boolean sameReference = signalKey != null && event.reference() != null
-                && (event.reference().equals(signalKey)
-                || event.reference().equals("out:" + RecurrenceDetector.counterpartyKey(counterparty)));
         boolean sameCounterparty = RecurrenceDetector.counterpartyKey(event.label())
                 .equals(RecurrenceDetector.counterpartyKey(counterparty));
         boolean sameAccount = contains(event.origin(), accountName) && contains(event.origin(), institution);
-        return sameReference || (sameCounterparty && sameAccount);
+        boolean exactReference = signalKey != null && event.reference() != null
+                && event.reference().equals(signalKey);
+        boolean legacyReference = event.reference() != null
+                && event.reference().equals("out:" + RecurrenceDetector.counterpartyKey(counterparty));
+        return exactReference || ((legacyReference || sameCounterparty) && sameAccount);
     }
 
     private static boolean contains(String value, String part) {
