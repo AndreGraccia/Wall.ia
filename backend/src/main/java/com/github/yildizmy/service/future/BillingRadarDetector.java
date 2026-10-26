@@ -147,7 +147,9 @@ public final class BillingRadarDetector {
     private static Duplicate findDuplicate(List<RecurrenceDetector.Movement> sorted) {
         Map<String, List<RecurrenceDetector.Movement>> byDayAndAmount = sorted.stream()
                 .collect(Collectors.groupingBy(
-                        movement -> movement.date() + "|" + movement.amount().stripTrailingZeros().toPlainString(),
+                        movement -> movement.date() + "|" + movement.amount().stripTrailingZeros().toPlainString()
+                                + "|" + String.valueOf(movement.accountName())
+                                + "|" + String.valueOf(movement.institution()),
                         LinkedHashMap::new, Collectors.toList()));
         return byDayAndAmount.values().stream()
                 .filter(items -> items.size() > 1)
