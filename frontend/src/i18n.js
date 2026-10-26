@@ -1243,7 +1243,7 @@ const resources = {
           INVALID_PERIOD: 'Choose a period between 1 and 365 days.',
           INITIAL_BALANCE_NOT_ALLOWED: 'A new wallet starts at zero. The real balance comes from Open Finance.',
           CHARGE_ALERT_NOT_FOUND: 'This signal is no longer available for your account. Refresh the radar.',
-          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND: 'This scenario could not be calculated. Refresh the radar and check whether enough history is available.'
+          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND: 'This scenario could not be calculated. Refresh the radar and check whether enough history is available.',
           INVALID_CHARGE_ALERT_DECISION: 'Choose a valid response for this signal.',
           INVALID_TOKEN: 'The server answered the login without a valid session. Try again in a moment.',
         },
