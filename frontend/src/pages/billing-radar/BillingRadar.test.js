@@ -9,7 +9,7 @@ import HttpService from '../../services/HttpService';
 jest.mock('../../services/HttpService', () => ({ getWithAuth: jest.fn() }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => (options?.count ? key + ':' + options.count : key),
+    t: (key, options) => (options?.count ? `${key}:${options.count}` : key),
     i18n: { language: 'pt' },
   }),
 }));
