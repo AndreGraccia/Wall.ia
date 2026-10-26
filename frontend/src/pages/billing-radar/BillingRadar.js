@@ -68,7 +68,7 @@ function RadarItem({ item, language }) {
             {item.recurring && <Chip size="small" label={t('billingRadar.recurring')} />}
             {item.priceIncrease && <Chip size="small" color="warning" label={t('billingRadar.increase')} />}
             {item.possibleDuplicate && <Chip size="small" color="warning" variant="outlined" label={t('billingRadar.duplicate')} />}
-            <Chip size="small" variant="outlined" label={t('billingRadar.confidence.' + item.confidence)} />
+            <Chip size="small" variant="outlined" label={t(`billingRadar.confidence.${item.confidence}`)} />
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
             {t('billingRadar.lastCharge', {
@@ -138,7 +138,7 @@ function RadarItem({ item, language }) {
               </thead>
               <tbody>
                 {evidence.map((entry) => (
-                  <tr key={entry.transactionId + '-' + entry.date}>
+                  <tr key={`${entry.transactionId}-${entry.date}`}>
                     <td>{dayLabel(entry.date, language)}</td>
                     <td>{[entry.institution, entry.accountName].filter(Boolean).join(' · ') || '—'}</td>
                     <td>{money(entry.amount, language)}</td>
@@ -177,7 +177,7 @@ export default function BillingRadar() {
   }, [load]);
 
   const { report } = state;
-  const language = i18n.language;
+  const { language } = i18n;
   return (
     <>
       <Helmet>
