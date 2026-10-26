@@ -110,11 +110,7 @@ function RadarItem({ item, language }) {
               >
                 {impactLoading ? t('billingRadar.impactLoading') : t('billingRadar.simulatePriceReversion')}
               </Button>
-              {impactError && (
-                <Alert severity="error">
-                  {t(impactError)}
-                </Alert>
-              )}
+              {impactError && <Alert severity="error">{t(impactError)}</Alert>}
             </Stack>
           )}
           {item.possibleDuplicate && (

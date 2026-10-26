@@ -118,7 +118,8 @@ const resources = {
           INVALID_PERIOD: 'Escolha um período entre 1 e 365 dias.',
           INITIAL_BALANCE_NOT_ALLOWED: 'Uma carteira nova começa com saldo zero. O saldo real chega pelo Open Finance.',
           CHARGE_ALERT_NOT_FOUND: 'Esse sinal já não está disponível para sua conta. Atualize o radar.',
-          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND: 'Não foi possível calcular este cenário. Atualize o radar e confira se há histórico suficiente.',
+          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND:
+            'Não foi possível calcular este cenário. Atualize o radar e confira se há histórico suficiente.',
           INVALID_CHARGE_ALERT_DECISION: 'Escolha uma resposta válida para esse sinal.',
           INVALID_TOKEN: 'O servidor respondeu ao login sem uma sessão válida. Tente de novo em instantes.',
         },
@@ -1244,7 +1245,8 @@ const resources = {
           INVALID_PERIOD: 'Choose a period between 1 and 365 days.',
           INITIAL_BALANCE_NOT_ALLOWED: 'A new wallet starts at zero. The real balance comes from Open Finance.',
           CHARGE_ALERT_NOT_FOUND: 'This signal is no longer available for your account. Refresh the radar.',
-          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND: 'This scenario could not be calculated. Refresh the radar and check whether enough history is available.',
+          BILLING_RADAR_PRICE_CHANGE_NOT_FOUND:
+            'This scenario could not be calculated. Refresh the radar and check whether enough history is available.',
           INVALID_CHARGE_ALERT_DECISION: 'Choose a valid response for this signal.',
           INVALID_TOKEN: 'The server answered the login without a valid session. Try again in a moment.',
         },
