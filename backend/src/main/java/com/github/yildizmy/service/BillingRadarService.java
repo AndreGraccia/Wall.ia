@@ -3,6 +3,7 @@ package com.github.yildizmy.service;
 import com.github.yildizmy.domain.entity.Wallet;
 import com.github.yildizmy.domain.enums.WalletSource;
 import com.github.yildizmy.dto.response.BillingRadarReport;
+import com.github.yildizmy.dto.response.BillingRadarPriceImpact;
 import com.github.yildizmy.repository.WalletRepository;
 import com.github.yildizmy.service.future.BillingRadarDetector;
 import com.github.yildizmy.service.future.BillingRadarDetector.Signal;
@@ -33,6 +34,11 @@ public class BillingRadarService {
         this.futureService = futureService;
         this.walletRepository = walletRepository;
         this.clock = clock;
+    }
+
+    @Transactional(readOnly = true)
+    public BillingRadarPriceImpact simulatePriceReversion(long userId, String signalKey) {
+        return futureService.simulatePriceReversion(userId, signalKey);
     }
 
     @Transactional(readOnly = true)
