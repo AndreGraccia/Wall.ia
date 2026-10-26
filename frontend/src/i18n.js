@@ -938,7 +938,8 @@ const resources = {
         confidence: { HIGH: 'Mais evidências', MEDIUM: 'Sinal inicial', REVIEW: 'Revisar manualmente' },
         lastCharge: 'Última cobrança: {{amount}} em {{date}}',
         priceChange: 'O valor observado subiu de {{before}} para {{after}} (aumento de {{delta}}, {{percent}}%).',
-        annualizedImpact: 'Se o aumento continuar por 12 meses, o impacto adicional será de aproximadamente {{amount}}.',
+        annualizedImpact:
+          'Se o aumento continuar por 12 meses, o impacto adicional será de aproximadamente {{amount}}.',
         nextCharge: 'Próxima cobrança estimada: {{date}}.',
         nextChargeHelp: 'Estimativa baseada no intervalo recente, não uma data garantida.',
         duplicateHint:
