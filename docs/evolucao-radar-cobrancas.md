@@ -1,7 +1,9 @@
 # Evolução de produto: Radar de cobranças
 
 **Data:** 26/10/2026  
-**Estado:** implementado em branch, aguardando CI e revisão.
+**Estado:** integrado à `main` pelo [PR #2](https://github.com/AndreGraccia/Wall.ia/pull/2); CI e E2E aprovados em 26/10/2026.
+
+**Validação:** [CI verde — 381 testes backend, 74 testes frontend e build](https://github.com/AndreGraccia/Wall.ia/actions/runs/40390985911); [jornada E2E Playwright verde](https://github.com/AndreGraccia/Wall.ia/actions/runs/40390985877). A validação com usuários reais e instituições financeiras reais continua pendente.
 
 ## Dor atendida
 
