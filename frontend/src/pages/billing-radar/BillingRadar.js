@@ -1,18 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
-import {
-  Alert,
-  AlertTitle,
-  Box,
-  Button,
-  Card,
-  Chip,
-  Container,
-  Grid,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Card, Chip, Container, Grid, Stack, Typography } from '@mui/material';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
@@ -67,7 +56,9 @@ function RadarItem({ item, language }) {
           <Stack direction="row" flexWrap="wrap" sx={{ mt: 1, gap: 1 }}>
             {item.recurring && <Chip size="small" label={t('billingRadar.recurring')} />}
             {item.priceIncrease && <Chip size="small" color="warning" label={t('billingRadar.increase')} />}
-            {item.possibleDuplicate && <Chip size="small" color="warning" variant="outlined" label={t('billingRadar.duplicate')} />}
+            {item.possibleDuplicate && (
+              <Chip size="small" color="warning" variant="outlined" label={t('billingRadar.duplicate')} />
+            )}
             <Chip size="small" variant="outlined" label={t(`billingRadar.confidence.${item.confidence}`)} />
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
@@ -156,7 +147,6 @@ RadarItem.propTypes = {
   item: PropTypes.object.isRequired,
   language: PropTypes.string.isRequired,
 };
-
 
 // The radar exposes transaction evidence and estimates; financial decisions remain with the user.
 export default function BillingRadar() {

@@ -70,7 +70,9 @@ test('renders the price-change alert with transaction evidence', async () => {
         lastChargeDate: '2026-10-05',
         nextExpectedDate: '2026-11-04',
         occurrences: 3,
-        evidence: [{ transactionId: 3, date: '2026-10-05', amount: 49.9, accountName: 'Conta principal', institution: 'Banco' }],
+        evidence: [
+          { transactionId: 3, date: '2026-10-05', amount: 49.9, accountName: 'Conta principal', institution: 'Banco' },
+        ],
       },
     ],
   });

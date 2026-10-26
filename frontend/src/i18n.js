@@ -323,12 +323,15 @@ const resources = {
       future: {
         chargeRadar: {
           title: 'Cobranças para revisar',
-          description: 'Sinais de possíveis cobranças repetidas ou valores fora do seu padrão, ligados ao efeito no caixa dos próximos 90 dias.',
-          disclaimer: 'Isto é um indício para conferir, não uma conclusão de fraude. Revise o lançamento no seu banco; a Wall.ia não contesta, cancela nem movimenta dinheiro.',
+          description:
+            'Sinais de possíveis cobranças repetidas ou valores fora do seu padrão, ligados ao efeito no caixa dos próximos 90 dias.',
+          disclaimer:
+            'Isto é um indício para conferir, não uma conclusão de fraude. Revise o lançamento no seu banco; a Wall.ia não contesta, cancela nem movimenta dinheiro.',
           loading: 'Conferindo movimentações importadas…',
           loadError: 'Não foi possível carregar o radar.',
           emptyTitle: 'Nenhum sinal para revisar agora',
-          emptyDescription: 'O radar compara saídas importadas do Open Finance. Ele não analisa carteiras fictícias nem substitui a conferência do extrato.',
+          emptyDescription:
+            'O radar compara saídas importadas do Open Finance. Ele não analisa carteiras fictícias nem substitui a conferência do extrato.',
           unnamedCharge: 'Cobrança sem descrição',
           duplicateBadge: 'Possível duplicidade',
           unusualBadge: 'Valor fora do padrão',
@@ -336,8 +339,10 @@ const resources = {
             HIGH: 'Indício forte',
             MEDIUM: 'Indício moderado',
           },
-          duplicateReason: 'Encontramos outra saída de {{previousAmount}} em {{previousDate}} com a mesma descrição e conta, dentro de 48 horas.',
-          unusualReason: 'O valor supera em {{difference}} a mediana de {{previousAmount}}, calculada a partir de {{occurrences}} cobranças anteriores semelhantes.',
+          duplicateReason:
+            'Encontramos outra saída de {{previousAmount}} em {{previousDate}} com a mesma descrição e conta, dentro de 48 horas.',
+          unusualReason:
+            'O valor supera em {{difference}} a mediana de {{previousAmount}}, calculada a partir de {{occurrences}} cobranças anteriores semelhantes.',
           evidence: 'Movimentação de referência #{{reference}}, em {{date}}.',
           underReview: 'Marcada para conferir',
           working: 'Processando…',
@@ -353,7 +358,8 @@ const resources = {
           noDate: 'data desconhecida',
           simulationError: 'Não foi possível simular:',
           simulationTitle: 'Efeito hipotético no caixa dos próximos 90 dias',
-          simulationDisclaimer: 'A simulação acrescenta uma entrada hipotética do mesmo valor ao cenário. Não solicita um estorno, não altera o extrato e não prevê que o banco devolverá o dinheiro.',
+          simulationDisclaimer:
+            'A simulação acrescenta uma entrada hipotética do mesmo valor ao cenário. Não solicita um estorno, não altera o extrato e não prevê que o banco devolverá o dinheiro.',
           beforeMin: 'Menor saldo sem estorno',
           afterHypotheticalRefund: 'Menor saldo com estorno hipotético',
           negativeDays_zero: 'Nenhum dia abaixo de zero',
@@ -912,9 +918,11 @@ const resources = {
       billingRadar: {
         pageTitle: 'Radar de cobranças | Wall.ia',
         heading: 'Radar de cobranças',
-        description: 'Descubra cobranças recorrentes que mudaram de valor e possíveis duplicidades, com as movimentações que explicam cada sinal.',
+        description:
+          'Descubra cobranças recorrentes que mudaram de valor e possíveis duplicidades, com as movimentações que explicam cada sinal.',
         staleTitle: 'Os dados bancários podem estar desatualizados',
-        staleDescription: 'Os alertas usam o último histórico sincronizado. Atualize a conexão antes de tomar uma decisão.',
+        staleDescription:
+          'Os alertas usam o último histórico sincronizado. Atualize a conexão antes de tomar uma decisão.',
         refreshConnection: 'Atualizar conexão',
         summary: {
           recurring: 'Padrões mensais identificados',
@@ -931,17 +939,20 @@ const resources = {
         priceChange: 'O valor observado subiu de {{before}} para {{after}} (aumento de {{delta}}, {{percent}}%).',
         nextCharge: 'Próxima cobrança estimada: {{date}}.',
         nextChargeHelp: 'Estimativa baseada no intervalo recente, não uma data garantida.',
-        duplicateHint: '{{count}} lançamentos de mesmo nome e valor em {{date}} ({{amount}} cada). Pode ser legítimo; confira no banco antes de contestar.',
+        duplicateHint:
+          '{{count}} lançamentos de mesmo nome e valor em {{date}} ({{amount}} cada). Pode ser legítimo; confira no banco antes de contestar.',
         evidence: 'Movimentações que sustentam o sinal',
         date: 'Data',
         account: 'Conta de origem',
         amount: 'Valor',
         openHistory: 'Ver no extrato',
         emptyTitle: 'Ainda não há sinais suficientes',
-        emptyDescription: 'Conecte uma conta no Open Finance e sincronize o histórico. A Wall.ia precisa de transações anteriores para comparar recorrências; não inventa cobranças.',
+        emptyDescription:
+          'Conecte uma conta no Open Finance e sincronize o histórico. A Wall.ia precisa de transações anteriores para comparar recorrências; não inventa cobranças.',
         connect: 'Conectar conta',
         chargeAlerts: 'Cobranças que merecem uma segunda olhada',
-        chargeAlertsHelp: 'Padrões incomuns identificados nas transações do Open Finance. Eles são sinais para revisar, não afirmações de fraude.',
+        chargeAlertsHelp:
+          'Padrões incomuns identificados nas transações do Open Finance. Eles são sinais para revisar, não afirmações de fraude.',
         emptyAlerts: 'Nenhum sinal incomum encontrado no histórico conectado.',
         alertKinds: { POSSIBLE_DUPLICATE: 'Possível duplicidade', UNUSUAL_AMOUNT: 'Valor fora do padrão' },
         alertDecision: { REVIEW: 'Em revisão', NOT_ANOMALOUS: 'Marcado como normal', RESOLVED: 'Resolvido' },
@@ -950,8 +961,10 @@ const resources = {
         actionResolve: 'Marcar como resolvido',
         alertEvidence: '{{count}} lançamentos semelhantes no histórico usado para comparação.',
         unusualAmount: 'Valor atual {{amount}}; referência histórica {{baseline}}; diferença {{difference}}.',
-        duplicateDetails: 'Há um lançamento semelhante em {{date}}. Confirme se as duas compras foram legítimas antes de contestar.',
-        disclaimer: 'Este radar encontra padrões, não confirma fraude nem cancela serviços. Cobranças repetidas podem ser legítimas; confirme no banco antes de contestar. Valores e datas futuras são estimativas.',
+        duplicateDetails:
+          'Há um lançamento semelhante em {{date}}. Confirme se as duas compras foram legítimas antes de contestar.',
+        disclaimer:
+          'Este radar encontra padrões, não confirma fraude nem cancela serviços. Cobranças repetidas podem ser legítimas; confirme no banco antes de contestar. Valores e datas futuras são estimativas.',
       },
       navigation: {
         metrics: 'Métricas',
@@ -1420,12 +1433,15 @@ const resources = {
       future: {
         chargeRadar: {
           title: 'Charges to review',
-          description: 'Signals for possible repeated charges or amounts outside your pattern, connected to their effect on the next 90 days of cash flow.',
-          disclaimer: 'This is a signal to review, not a fraud conclusion. Check the transaction with your bank; Wall.ia does not dispute, cancel or move money.',
+          description:
+            'Signals for possible repeated charges or amounts outside your pattern, connected to their effect on the next 90 days of cash flow.',
+          disclaimer:
+            'This is a signal to review, not a fraud conclusion. Check the transaction with your bank; Wall.ia does not dispute, cancel or move money.',
           loading: 'Checking imported transactions…',
           loadError: 'Could not load the radar.',
           emptyTitle: 'No signals to review right now',
-          emptyDescription: 'The radar compares outflows imported through Open Finance. It does not analyse simulated wallets or replace checking your statement.',
+          emptyDescription:
+            'The radar compares outflows imported through Open Finance. It does not analyse simulated wallets or replace checking your statement.',
           unnamedCharge: 'Charge without a description',
           duplicateBadge: 'Possible duplicate',
           unusualBadge: 'Unusual amount',
@@ -1433,8 +1449,10 @@ const resources = {
             HIGH: 'Strong signal',
             MEDIUM: 'Moderate signal',
           },
-          duplicateReason: 'Another {{previousAmount}} outflow with the same description and account was found on {{previousDate}}, within 48 hours.',
-          unusualReason: 'The charge is {{difference}} above the median of {{previousAmount}}, calculated from {{occurrences}} similar previous charges.',
+          duplicateReason:
+            'Another {{previousAmount}} outflow with the same description and account was found on {{previousDate}}, within 48 hours.',
+          unusualReason:
+            'The charge is {{difference}} above the median of {{previousAmount}}, calculated from {{occurrences}} similar previous charges.',
           evidence: 'Reference transaction #{{reference}}, dated {{date}}.',
           underReview: 'Marked to review',
           working: 'Working…',
@@ -1450,7 +1468,8 @@ const resources = {
           noDate: 'unknown date',
           simulationError: 'Could not simulate:',
           simulationTitle: 'Hypothetical effect on the next 90 days of cash flow',
-          simulationDisclaimer: 'The simulation adds a hypothetical inflow of the same amount to the scenario. It does not request a refund, change your statement or predict that the bank will return the money.',
+          simulationDisclaimer:
+            'The simulation adds a hypothetical inflow of the same amount to the scenario. It does not request a refund, change your statement or predict that the bank will return the money.',
           beforeMin: 'Lowest balance without refund',
           afterHypotheticalRefund: 'Lowest balance with hypothetical refund',
           negativeDays_zero: 'No days below zero',
@@ -2005,7 +2024,8 @@ const resources = {
       billingRadar: {
         pageTitle: 'Billing Radar | Wall.ia',
         heading: 'Billing radar',
-        description: 'Spot recurring charges that changed in price and possible duplicates, with the transactions behind each signal.',
+        description:
+          'Spot recurring charges that changed in price and possible duplicates, with the transactions behind each signal.',
         staleTitle: 'Bank data may be out of date',
         staleDescription: 'Alerts use the last synced history. Refresh the connection before deciding.',
         refreshConnection: 'Refresh connection',
@@ -2024,17 +2044,20 @@ const resources = {
         priceChange: 'Observed amount rose from {{before}} to {{after}} (up {{delta}}, {{percent}}%).',
         nextCharge: 'Next expected charge: {{date}}.',
         nextChargeHelp: 'Estimate based on recent timing, not a guaranteed date.',
-        duplicateHint: '{{count}} transactions with the same name and amount on {{date}} ({{amount}} each). This may be legitimate; check with your bank before disputing.',
+        duplicateHint:
+          '{{count}} transactions with the same name and amount on {{date}} ({{amount}} each). This may be legitimate; check with your bank before disputing.',
         evidence: 'Transactions behind this signal',
         date: 'Date',
         account: 'Source account',
         amount: 'Amount',
         openHistory: 'View activity',
         emptyTitle: 'Not enough signals yet',
-        emptyDescription: 'Connect an account through Open Finance and sync history. Wall.ia needs previous transactions to compare recurring patterns; it does not invent charges.',
+        emptyDescription:
+          'Connect an account through Open Finance and sync history. Wall.ia needs previous transactions to compare recurring patterns; it does not invent charges.',
         connect: 'Connect account',
         chargeAlerts: 'Charges worth a second look',
-        chargeAlertsHelp: 'Unusual patterns found in Open Finance transactions. These are review signals, not fraud claims.',
+        chargeAlertsHelp:
+          'Unusual patterns found in Open Finance transactions. These are review signals, not fraud claims.',
         emptyAlerts: 'No unusual signals were found in the connected history.',
         alertKinds: { POSSIBLE_DUPLICATE: 'Possible duplicate', UNUSUAL_AMOUNT: 'Unusual amount' },
         alertDecision: { REVIEW: 'Under review', NOT_ANOMALOUS: 'Marked as normal', RESOLVED: 'Resolved' },
@@ -2043,8 +2066,10 @@ const resources = {
         actionResolve: 'Mark as resolved',
         alertEvidence: '{{count}} similar historical transactions were used for comparison.',
         unusualAmount: 'Current amount {{amount}}; historical reference {{baseline}}; difference {{difference}}.',
-        duplicateDetails: 'A similar transaction appears on {{date}}. Confirm both purchases are legitimate before disputing.',
-        disclaimer: 'This radar finds patterns; it does not confirm fraud or cancel services. Repeated charges can be legitimate; check with your bank before disputing. Future values and dates are estimates.',
+        duplicateDetails:
+          'A similar transaction appears on {{date}}. Confirm both purchases are legitimate before disputing.',
+        disclaimer:
+          'This radar finds patterns; it does not confirm fraud or cancel services. Repeated charges can be legitimate; check with your bank before disputing. Future values and dates are estimates.',
       },
       navigation: {
         metrics: 'Metrics',

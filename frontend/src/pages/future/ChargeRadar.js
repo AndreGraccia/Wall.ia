@@ -75,7 +75,7 @@ export default function ChargeRadar() {
     }
   };
 
-  const formatDate = (value) => value ? dayLabel(value, i18n.language) : t('future.chargeRadar.noDate');
+  const formatDate = (value) => (value ? dayLabel(value, i18n.language) : t('future.chargeRadar.noDate'));
 
   return (
     <Card component="section" aria-labelledby="charge-radar-title" sx={{ p: { xs: 2, sm: 3 } }}>
@@ -89,9 +89,7 @@ export default function ChargeRadar() {
           </Typography>
         </Box>
 
-        <Alert severity="info">
-          {t('future.chargeRadar.disclaimer')}
-        </Alert>
+        <Alert severity="info">{t('future.chargeRadar.disclaimer')}</Alert>
 
         {operationError && (
           <Alert severity="error" onClose={() => setOperationError(null)}>
@@ -107,14 +105,20 @@ export default function ChargeRadar() {
         {state.loading && state.alerts.length === 0 && !state.error && (
           <Stack direction="row" spacing={1.5} alignItems="center" role="status">
             <CircularProgress size={20} />
-            <Typography variant="body2" color="text.secondary">{t('future.chargeRadar.loading')}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t('future.chargeRadar.loading')}
+            </Typography>
           </Stack>
         )}
 
         {state.error && (
           <Alert
             severity="error"
-            action={<Button color="inherit" size="small" onClick={load}>{t('app.retry')}</Button>}
+            action={
+              <Button color="inherit" size="small" onClick={load}>
+                {t('app.retry')}
+              </Button>
+            }
           >
             {t('future.chargeRadar.loadError')} {t(state.error)}
           </Alert>
@@ -134,9 +138,17 @@ export default function ChargeRadar() {
           const working = busyId === alert.transactionId;
           const duplicate = alert.kind === 'POSSIBLE_DUPLICATE';
           return (
-            <Box key={alert.transactionId} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: { xs: 2, sm: 2.5 } }}>
+            <Box
+              key={alert.transactionId}
+              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: { xs: 2, sm: 2.5 } }}
+            >
               <Stack spacing={1.5}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'flex-start' }} spacing={1}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: 'flex-start', sm: 'flex-start' }}
+                  spacing={1}
+                >
                   <Box sx={{ minWidth: 0 }}>
                     <Stack direction="row" alignItems="center" spacing={1} useFlexGap flexWrap="wrap">
                       <Typography variant="subtitle1" component="h3" sx={{ overflowWrap: 'anywhere' }}>
@@ -147,7 +159,11 @@ export default function ChargeRadar() {
                         color={duplicate ? 'warning' : 'default'}
                         label={t(duplicate ? 'future.chargeRadar.duplicateBadge' : 'future.chargeRadar.unusualBadge')}
                       />
-                      <Chip size="small" variant="outlined" label={t(`future.chargeRadar.confidence.${alert.confidence}`)} />
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={t(`future.chargeRadar.confidence.${alert.confidence}`)}
+                      />
                       {alert.decision === 'REVIEW' && (
                         <Chip size="small" color="info" label={t('future.chargeRadar.underReview')} />
                       )}
@@ -189,11 +205,7 @@ export default function ChargeRadar() {
 
                 <Divider />
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
-                  <Button
-                    variant="contained"
-                    onClick={() => simulateRefund(alert)}
-                    disabled={working}
-                  >
+                  <Button variant="contained" onClick={() => simulateRefund(alert)} disabled={working}>
                     {working ? t('future.chargeRadar.working') : t('future.chargeRadar.simulateRefund')}
                   </Button>
                   {alert.decision !== 'REVIEW' && (
@@ -236,7 +248,11 @@ export default function ChargeRadar() {
                         <Typography variant="caption" color="text.secondary">
                           {t('future.chargeRadar.afterHypotheticalRefund')}
                         </Typography>
-                        <Typography variant="subtitle1" color={Number(simulation.scenario.minBalance90) < 0 ? 'error.main' : 'success.main'} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                        <Typography
+                          variant="subtitle1"
+                          color={Number(simulation.scenario.minBalance90) < 0 ? 'error.main' : 'success.main'}
+                          sx={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
                           {money(simulation.scenario.minBalance90, i18n.language)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
