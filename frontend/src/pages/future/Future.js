@@ -42,7 +42,6 @@ import Goals from './Goals';
 import AlertToggle from './AlertToggle';
 import Accuracy from './Accuracy';
 import CancelGuide from './CancelGuide';
-import ChargeRadar from './ChargeRadar';
 
 function WhyDialog({ risk, exitPlan, onClose }) {
   const { t, i18n } = useTranslation();
@@ -230,8 +229,6 @@ export default function Future() {
             </ToggleButtonGroup>
           }
         />
-
-        <ChargeRadar />
 
         <Box role="status" aria-live="polite" sx={visuallyHidden}>
           {announce}
