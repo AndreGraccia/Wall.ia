@@ -1,5 +1,19 @@
 # Changelog
 
+## 26/10/2026: Radar de cobranças (em validação)
+
+### Novo
+- Tela autenticada para detectar recorrências, aumentos observados e possíveis duplicidades com evidências do histórico do titular.
+- API determinística com próximo vencimento estimado, total mensal provável e aviso de sincronização antiga.
+- Regra separada do detector de recorrências geral para que uma mudança de preço não faça a cobrança desaparecer do radar.
+- Testes de domínio para aumento, recorrência estável, possível duplicidade, transferências/entradas genéricas e cobranças sem cadência mensal.
+
+### Limites
+- O sinal não prova fraude; compras repetidas podem ser legítimas.
+- O produto não cancela assinaturas nem movimenta dinheiro.
+- A implementação está em branch separada e aguarda os workflows CI/E2E antes de ser integrada.
+
+
 Mudanças da branch `feat/wallia` em relação à `main`, agrupadas por tema. Datas no fuso de Brasília.
 
 ## 26/09/2026: consentimento como registro (Sprint 16, B42)
