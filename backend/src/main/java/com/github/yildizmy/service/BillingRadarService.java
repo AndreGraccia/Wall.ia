@@ -47,7 +47,10 @@ public class BillingRadarService {
                 .min(Comparator.naturalOrder())
                 .orElse(null);
         boolean hasOpenFinance = wallets.stream().anyMatch(wallet -> wallet.getSource() == WalletSource.OPEN_FINANCE);
-        boolean stale = hasOpenFinance && (bankDataAsOf == null
+        boolean anyOpenFinanceWithoutSync = wallets.stream()
+                .filter(wallet -> wallet.getSource() == WalletSource.OPEN_FINANCE)
+                .anyMatch(wallet -> wallet.getLastSyncedAt() == null);
+        boolean stale = hasOpenFinance && (anyOpenFinanceWithoutSync || bankDataAsOf == null
                 || bankDataAsOf.plus(FutureService.BANK_DATA_STALE_AFTER).isBefore(clock.instant()));
 
         BigDecimal projectedMonthly = signals.stream()
