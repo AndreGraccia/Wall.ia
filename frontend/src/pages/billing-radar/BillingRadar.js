@@ -158,6 +158,7 @@ RadarItem.propTypes = {
 };
 
 
+// The radar exposes evidence and estimates; all financial decisions remain with the user.
 export default function BillingRadar() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState({ loading: true, error: null, report: null });
