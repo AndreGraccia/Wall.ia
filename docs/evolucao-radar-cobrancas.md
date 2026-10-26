@@ -24,6 +24,9 @@ O radar não declara fraude. Ele identifica padrões verificáveis e entrega evi
 - Até seis movimentações para explicar o sinal.
 - Resumo de padrões, aumentos, possíveis duplicidades e total mensal provável das recorrências encontradas.
 - Aviso de dados bancários desatualizados.
+- Alertas de lançamentos suspeitos por repetição em até 48 horas ou valor superior ao padrão histórico.
+- Decisão persistente do titular: revisar depois, marcar como normal ou resolver; a transação original permanece intacta.
+- Simulação de estorno hipotético com comparação entre menor saldo e dias negativos na projeção de 90 dias, sem integração bancária de contestação.
 - Interface PT/EN, estado vazio e layout responsivo.
 
 ## O que não faz
