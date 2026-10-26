@@ -21,6 +21,17 @@ Adicionar o **Radar de cobranças**, uma leitura somente de consulta do históri
 
 Endpoint autenticado: GET /api/v1/billing-radar. Tela: /billing-radar.
 
+## Segunda camada: anomalias de cobrança e impacto no caixa
+
+O radar combina a leitura de recorrências com uma segunda camada sobre saídas importadas do Open Finance:
+
+- Uma possível duplicidade é sinalizada quando há uma saída anterior de mesmo valor, descrição normalizada e conta dentro de 48 horas.
+- Um valor fora do padrão é sinalizado após pelo menos três observações históricas limpas quando o lançamento atual é pelo menos 1,5 vez a mediana anterior e a diferença absoluta é de no mínimo R$ 20,00.
+- O titular pode marcar o sinal como REVIEW, NOT_ANOMALOUS ou RESOLVED. Essas respostas são persistidas por usuário e transação; descartar um sinal não apaga nem altera a transação importada.
+- O botão “Simular possível estorno” adiciona somente uma entrada hipotética ao cenário de 90 dias e compara menor saldo e dias abaixo de zero antes/depois. Não envia comando ao banco e não prevê que o dinheiro será devolvido.
+
+Essa segunda camada só classifica transações de saída liquidadas importadas pelo Open Finance. A camada de recorrências pode usar outros movimentos disponíveis na conta. As duas camadas usam regras determinísticas próprias, com limiares documentados e diferentes.
+
 ## Regras de segurança e confiança
 
 - O serviço consulta apenas as carteiras e movimentações do usuário autenticado; não recebe um userId do cliente.
