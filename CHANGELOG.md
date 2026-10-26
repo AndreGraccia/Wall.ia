@@ -1,6 +1,6 @@
 # Changelog
 
-## 26/10/2026: Radar de cobranças (em validação)
+## 26/10/2026: Radar de cobranças (integrado; validação de mercado pendente)
 
 ### Novo
 - Tela autenticada para detectar recorrências, aumentos observados e possíveis duplicidades com evidências do histórico do titular.
@@ -13,7 +13,8 @@
 ### Limites
 - O sinal não prova fraude; compras repetidas podem ser legítimas.
 - O produto não cancela assinaturas nem movimenta dinheiro.
-- A implementação está em branch separada e aguarda os workflows CI/E2E antes de ser integrada.
+- Integrado à `main` pelo [PR #2](https://github.com/AndreGraccia/Wall.ia/pull/2); CI verde com 381 testes backend, 74 testes frontend e build, além da jornada E2E Playwright aprovada.
+- Continua pendente a validação com usuários reais e Open Finance em instituições reais; o sandbox não comprova adoção nem qualidade comercial do diferencial.
 
 
 Mudanças da branch `feat/wallia` em relação à `main`, agrupadas por tema. Datas no fuso de Brasília.
