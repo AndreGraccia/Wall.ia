@@ -64,6 +64,8 @@ public class AccountExportService {
                     + "WHERE user_id = ? ORDER BY id", 1),
             new Section("alerts", "SELECT enabled, last_window_start, last_sent_at, updated_at FROM future_alert "
                     + "WHERE user_id = ?", 1),
+            new Section("chargeAlertDecisions", "SELECT transaction_id, decision, created_at, updated_at "
+                    + "FROM charge_alert_decision WHERE user_id = ? ORDER BY updated_at, id", 1),
             new Section("forecastSnapshots", "SELECT taken_on, balance FROM forecast_snapshot WHERE user_id = ? "
                     + "ORDER BY taken_on", 1),
             new Section("pushDevices", "SELECT created_at FROM push_subscription WHERE user_id = ? ORDER BY id", 1),
