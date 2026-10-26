@@ -915,6 +915,7 @@ const resources = {
         confirm: 'Excluir definitivamente',
         cancel: 'Cancelar',
       },
+      // Copy and thresholds for the recurring-charge radar.
       billingRadar: {
         pageTitle: 'Radar de cobranças | Wall.ia',
         heading: 'Radar de cobranças',
