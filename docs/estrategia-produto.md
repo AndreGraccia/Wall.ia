@@ -122,19 +122,34 @@ Análise feita em 24/09/2026. Duas revisões independentes (frontend das telas n
 
 ## Onde o Wall.ia se diferencia, com o que existe hoje
 
-Comparação com os players da [pesquisa](pesquisa-mercado.md), seção 3. "Não" quer dizer que a funcionalidade não aparece no material público consultado.
+Atualização competitiva feita em 26/10/2026. A pesquisa de mercado encontrou serviços que já anunciam alertas inteligentes e detecção de cobranças duplicadas (SmartBunny, Coupe e Tucano). Portanto, **detectar duplicidade isoladamente não é um diferencial defensável**. A diferença pretendida pelo Wall.ia é ligar o sinal à projeção determinística do caixa e deixar claro o efeito hipotético de uma possível recuperação, com revisão do usuário e sem ação bancária automática.
 
-| Capacidade | Mobills / Organizze | Assistentes de WhatsApp (Magie, Financinha) | PFM dos bancos | Wall.ia |
+| Capacidade | SmartBunny | Coupe | Tucano | Wall.ia |
 | --- | --- | --- | --- | --- |
-| Saldo projetado dia a dia, não só no fim do mês | Fim do mês | "Antecipa riscos" (Financinha), sem detalhe público | Não | Sim, 30/60/90 dias |
-| Cada número com origem e grau de certeza | Não | Não | Não | Confirmado, estimado ou hipotético em toda linha |
-| Pergunta antes de supor recorrência ou gasto diário | Não | Registra o que a pessoa manda | Não | Sim, com a evidência |
-| Limite diário até a próxima entrada | Não | Não | Não | Sim, com o dia que o define |
-| Plano de saída testado pelo motor | Não | Não | Não | Até 3 ações, nunca adiar fatura ou empréstimo |
-| Mostra o próprio erro de previsão | Não | Não | Não | Sim, com os negativos que não previu |
-| Vende crédito | Mobills é do Santander | Magie migra para B2B | Sim | Não, e isso é regra |
+| Alerta de cobrança repetida/fora do padrão | Sim, descrito publicamente como alertas inteligentes | Sim, agente que aponta possível cobrança duplicada | Sim, detecção de duplicidade anunciada | Sim, regra transparente sobre dados importados; o alerta não é um veredito |
+| Calendário/fluxo de caixa futuro | Previsão de fluxo de caixa anunciada | Não identificado na página pública consultada | Calendário de fluxo de caixa anunciado | Saldo mínimo diário e janelas negativas em 30/60/90 dias |
+| Impacto da cobrança alertada no menor saldo futuro | Não identificado na página pública consultada | Não identificado na página pública consultada | Não identificado na página pública consultada | Antes/depois do cenário de estorno hipotético, calculado pelo mesmo motor Java |
+| Evidência da decisão | Varia por recurso/plano; confirmar em teste de produto | Mensagem gerada pelo agente; verificar origem no produto | Depende do detalhe mostrado na conta | Movimentação de referência, data, valor e regra que acionou o sinal |
+| Feedback sem alterar o extrato bancário | Validar no produto | Validar no produto | Validar no produto | REVIEW, NOT_ANOMALOUS ou RESOLVED; registro separado do lançamento |
+| Regra de produto sem venda de crédito | Não usada como comparação de funcionalidade | Não usada como comparação de funcionalidade | Não usada como comparação de funcionalidade | Compromisso explícito: nenhum empréstimo é ofertado para resolver o alerta |
 
-O que um concorrente não copia rápido não é uma tela, é o conjunto: um banco não publica o erro da própria previsão nem promete não vender crédito, e um assistente de WhatsApp que registra gasto não tem o motor para projetar. O placar de precisão transforma "confie em nós" em número verificável, e é também o instrumento para saber se o produto funciona.
+Fontes públicas consultadas em 26/10/2026: [SmartBunny](https://www.smartbunny.com.br/), [Coupe](https://usecoupe.com.br/), [Tucano](https://tucano.finance/) e [Organizze](https://www.organizze.com.br/app-de-financas/). Esta comparação é uma leitura das páginas públicas, não um teste completo dos planos pagos nem prova de ausência da função em produtos concorrentes.
+
+## Sprint 18: Radar de cobranças com impacto no caixa
+
+**Dor do usuário:** descobrir uma cobrança possivelmente duplicada ou acima do padrão é apenas metade do trabalho. A pessoa também precisa saber se aquele valor pode antecipar um período negativo e decidir o próximo passo sem ser empurrada para crédito.
+
+**Fluxo entregue nesta branch:**
+
+1. O detector observa apenas saídas efetivadas importadas por Open Finance, na conta do usuário autenticado. Um sinal de possível duplicidade exige descrição normalizada, mesma conta, mesmo valor e intervalo de até 48 horas; um valor atípico exige ao menos três cobranças anteriores semelhantes, valor de 1,5× a mediana e diferença mínima de R$ 20.
+2. A API retorna o lançamento, o lançamento anterior (quando existe), a conta, a data, o valor e a regra aplicada. Os alertas ficam limitados a 20 por resposta.
+3. A pessoa marca para revisar, dispensa ou marca como resolvido. O feedback é persistido numa tabela separada; não reescreve o dado importado e entra na exportação dos dados pessoais.
+4. “Simular possível estorno” acrescenta uma entrada **hipotética** apenas à cópia de eventos que vai para o ScenarioSimulator/ProjectionEngine. A resposta compara menor saldo e quantidade de dias abaixo de zero em 90 dias, sem salvar eventos, pedir reembolso ou mover dinheiro.
+5. O motor calcula os números sem IA. A tela deixa explícito que se trata de um indício e recomenda conferir o extrato no banco.
+
+**O que precisa ser provado antes de considerar pronto:** CI e E2E verdes no SHA final; testes contra duplicidade mensal legítima, transferências internas e valor atípico; revisão visual da tela em 390 px; e validação com usuários de que a evidência ajuda a decidir, sem sugerir que o Wall.ia identificou fraude com certeza.
+
+O diferencial é o conjunto **sinal explicável → impacto no caixa → cenário hipotético de recuperação → decisão do titular**, não o classificador de duplicidade sozinho. Essa hipótese deve ser medida por sinais marcados como legítimos, sinais revisados/resolvidos e quantas simulações ajudam o usuário a entender o efeito no saldo, sem enviar descrições ou lançamentos brutos para analítica.
 
 ## Sexta rodada: revisões independentes e o que o mercado ensina
 
@@ -145,7 +160,7 @@ O que um concorrente não copia rápido não é uma tela, é o conjunto: um banc
 - Um navegador compartilhado passava os alertas de uma conta para a próxima que entrasse.
 - As migrações nunca eram testadas. Agora o CI aplica todas num Postgres vazio a cada push.
 
-**Pesquisa de mercado.** Warren, bancos e PFMs brasileiros, YNAB, Monzo, Rocket Money, Emma, Simplifi e outros. Monzo, Emma e Simplifi têm um "saldo livre", mas nenhum projeta dia a dia com plano de saída do negativo nem publica o próprio erro. O que entrou nesta rodada:
+**Pesquisa de mercado.** A pesquisa macro original tem corte de 22/09/2026; em 26/10 foi feita uma atualização competitiva específica sobre alertas de cobrança. A nova varredura encontrou SmartBunny, Coupe e Tucano anunciando detecção de cobranças repetidas. A atualização está em [pesquisa-mercado.md](pesquisa-mercado.md). O que entrou nesta rodada:
 
 | Ideia | De onde veio | Como ficou no Wall.ia |
 | --- | --- | --- |
