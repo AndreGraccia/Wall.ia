@@ -59,7 +59,7 @@ Prioridade: **P0** bloqueia a homologação, **P1** bloqueia produção, **P2** 
 - **B10 (P1) Parcela perde centavos.** `OpenFinanceImportService` divide com `RoundingMode.DOWN`: R$ 100,00 em 3 vira R$ 99,99 no futuro projetado. Aceite: a soma das parcelas projetadas é igual ao total da compra.
 - **B11 (P1) Transferência entre contas próprias só por valor e dia.** `InsightsService.pairKey` junta entrada e saída independentes. Aceite: só pareia entre carteiras Open Finance diferentes do mesmo usuário, e um par ambíguo (mais de um candidato) não é escondido.
 - **B12 (P2) Estados de transação.** Regras e testes para pendente, efetivada, estornada e reembolsada, e pagamento de fatura que não pode contar duas vezes com as compras da fatura.
-- **B13 (P3) Alerta de cobrança duplicada ou estranha.** Diferencial citado na pesquisa de mercado; usa só dados que já existem.
+- **B13 (P3) Radar de cobrança duplicada ou estranha.** Implementado nesta branch e em validação pelo PR: `ChargeAlertService` detecta mesmo valor/descrição/conta em 48 h e valores ≥ 1,5× a mediana de pelo menos 3 cobranças anteriores, com diferença mínima de R$ 20; exige saída `OPEN_FINANCE` efetivada e exclui transferências internas conhecidas. API mostra a evidência, aceita `REVIEW`/`NOT_ANOMALOUS`/`RESOLVED` e a tela Futuro simula impacto de um estorno hipotético no caixa de 90 dias. Não modifica extrato, não movimenta dinheiro e não chama de fraude. Aceite antes de fechar: CI backend/frontend/E2E verde, confirmação de isolamento por usuário, cenários de falsos positivos e revisão de UX. ADR 0019.
 - **B14 (P3) "Pix no crédito" como dívida no planejador de quitação.** CET perto de 8% ao mês (Agência Brasil, dez/2025).
 - **B15 (P3) Fila da estratégia:** SCR/Registrato, tarifas, quitação do cartão.
 
@@ -135,6 +135,6 @@ Uma sprint por sessão, com commit verde ao fim.
 - **Sprint 15: plataforma nova.** Feita em 25/09: B35 (Boot 4.1.1 e Java 25, ADR 0017), B36, B50 e B04 para as rotas de admin. B04 para Auth, Wallet, Future, Insights, Market e OpenFinance fechado em 26/09.
 - **Sprint 16: Open Finance preparado.** B42 feito em 26/09 (ADR 0018). B40 e B43 esperam a proposta do agregador (passo 8 das pendências); B41 pode andar antes.
 - **Sprint 17: Open Finance em escala.** B44, B45, B46, B12.
-- **Sprint 18: diferenciais.** B13, B14, B52, e o que o placar de precisão indicar.
+- **Sprint 18: diferenciais.** B13 implementado nesta branch e pendente de CI/revisão final; B14 (Pix no crédito), B52 (rótulo de origem em todo número) e o que o placar de precisão indicar continuam no backlog.
 
 A versão 1.0 vai para produção ao fim da Sprint 14, sem Open Finance real (só manual e sandbox rotulado). Open Finance real entra numa versão seguinte, depois da Sprint 17 e da análise jurídica.
