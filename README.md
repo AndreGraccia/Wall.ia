@@ -52,6 +52,8 @@ Os números, as fontes e as projeções de negócio (três cenários de 36 meses
 
 - Identifica padrões mensais mesmo quando o preço varia, destaca aumentos observados a partir da mediana histórica e sinaliza lançamentos de mesmo nome, valor e data como possíveis duplicidades.
 - Mostra a evidência do extrato, a próxima data provável e avisa quando os dados conectados estão antigos. A pessoa revisa; o radar não acusa fraude, cancela serviços nem movimenta dinheiro.
+- No histórico importado do Open Finance, também destaca lançamentos com valor muito acima do padrão ou possíveis repetições em até 48 horas. A pessoa pode marcar o sinal para revisar, dispensá-lo como normal ou encerrá-lo; a decisão fica registrada para aquele titular.
+- Para um alerta, é possível simular um estorno hipotético e comparar o menor saldo e os dias abaixo de zero nos próximos 90 dias. Isso altera só o cenário simulado, nunca o extrato nem o banco.
 - Tela autenticada em /billing-radar; API GET /api/v1/billing-radar. Decisão e limites em [ADR 0019](docs/adr/0019-radar-de-cobrancas.md) e validação em [documentação de evolução](docs/evolucao-radar-cobrancas.md).
 
 **Cartões e dívidas**
