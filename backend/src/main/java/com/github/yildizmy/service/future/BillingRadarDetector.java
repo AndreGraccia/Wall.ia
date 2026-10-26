@@ -37,8 +37,8 @@ public final class BillingRadarDetector {
                 .filter(movement -> movement.direction() == RecurrenceDetector.Direction.OUT)
                 .filter(movement -> movement.amount() != null && movement.amount().signum() > 0)
                 .filter(movement -> !isGenericTransfer(movement.counterparty()))
-                .map(movement -> Map.entry(RecurrenceDetector.counterpartyKey(movement.counterparty()), movement))
-                .filter(entry -> !entry.getKey().isBlank())
+                .filter(movement -> !RecurrenceDetector.counterpartyKey(movement.counterparty()).isBlank())
+                .map(movement -> Map.entry(groupKey(movement), movement))
                 .collect(Collectors.groupingBy(Map.Entry::getKey, LinkedHashMap::new,
                         Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
 
@@ -156,6 +156,16 @@ public final class BillingRadarDetector {
                 .map(items -> new Duplicate(items.get(0).date(), items.get(0).amount(), items.size()))
                 .max(Comparator.comparingInt(Duplicate::count).thenComparing(Duplicate::date))
                 .orElse(null);
+    }
+
+    /**
+     * Same merchant across two accounts is not one subscription and must not share a price baseline.
+     * The key is internal to the radar; the counterparty label remains what the user sees.
+     */
+    private static String groupKey(RecurrenceDetector.Movement movement) {
+        return "out:" + RecurrenceDetector.counterpartyKey(movement.counterparty())
+                + "|" + RecurrenceDetector.counterpartyKey(movement.accountName())
+                + "|" + RecurrenceDetector.counterpartyKey(movement.institution());
     }
 
     private static boolean isGenericTransfer(String counterparty) {
