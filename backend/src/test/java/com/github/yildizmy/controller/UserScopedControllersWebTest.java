@@ -8,6 +8,7 @@ import com.github.yildizmy.security.JwtUtils;
 import com.github.yildizmy.security.UserDetailsImpl;
 import com.github.yildizmy.security.UserDetailsServiceImpl;
 import com.github.yildizmy.service.ForecastService;
+import com.github.yildizmy.service.ChargeAlertService;
 import com.github.yildizmy.service.FutureAlertService;
 import com.github.yildizmy.service.FutureService;
 import com.github.yildizmy.service.InsightsService;
@@ -35,10 +36,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -59,6 +62,7 @@ class UserScopedControllersWebTest {
     @MockitoBean AskUsage askUsage;
     @MockitoBean FutureAlertService alertService;
     @MockitoBean ForecastService forecastService;
+    @MockitoBean ChargeAlertService chargeAlertService;
     @MockitoBean PushService pushService;
     @MockitoBean InsightsService insightsService;
     @MockitoBean MarketRatesService marketRates;
@@ -75,11 +79,12 @@ class UserScopedControllersWebTest {
     @Test
     void withoutATokenNothingRuns() throws Exception {
         mvc.perform(get("/api/v1/future/overview")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/future/charge-alerts")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/insights/reports").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"months\":3,\"language\":\"pt-BR\"}")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/market/overview")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/open-finance/sync")).andExpect(status().isUnauthorized());
-        verifyNoInteractions(futureService, insightsService, openFinanceService, forecastService);
+        verifyNoInteractions(futureService, insightsService, openFinanceService, forecastService, chargeAlertService);
         verify(marketRates, never()).quotes(anyLong()); // the startup refresh is not a request
     }
 
@@ -89,6 +94,25 @@ class UserScopedControllersWebTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
         verify(futureService).overview(7L, 60);
+    }
+
+    @Test
+    void theChargeRadarIsScopedToTheCallerAndNeverCached() throws Exception {
+        when(chargeAlertService.findForUser(7L)).thenReturn(List.of());
+        mvc.perform(get("/api/v1/future/charge-alerts").with(user(person(7))))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
+        verify(chargeAlertService).findForUser(7L);
+    }
+
+    @Test
+    void chargeAlertFeedbackUsesTheAuthenticatedUserRatherThanRequestData() throws Exception {
+        mvc.perform(put("/api/v1/future/charge-alerts/42/decision")
+                        .with(user(person(7)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"REVIEW\"}"))
+                .andExpect(status().isNoContent());
+        verify(chargeAlertService).decide(7L, 42L, "REVIEW");
     }
 
     @Test

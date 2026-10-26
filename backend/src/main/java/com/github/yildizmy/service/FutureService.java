@@ -10,6 +10,7 @@ import com.github.yildizmy.domain.enums.Status;
 import com.github.yildizmy.domain.enums.TransactionSource;
 import com.github.yildizmy.dto.request.FutureRequests;
 import com.github.yildizmy.dto.response.FutureResponses;
+import com.github.yildizmy.dto.response.BillingRadarPriceImpact;
 import com.github.yildizmy.exception.WalletRuleException;
 import com.github.yildizmy.repository.CreditCardRepository;
 import com.github.yildizmy.repository.EnvelopeRepository;
@@ -20,6 +21,7 @@ import com.github.yildizmy.repository.LoanRepository;
 import com.github.yildizmy.repository.RecurrenceDecisionRepository;
 import com.github.yildizmy.repository.TransactionRepository;
 import com.github.yildizmy.repository.WalletRepository;
+import com.github.yildizmy.service.future.BillingRadarDetector;
 import com.github.yildizmy.service.future.CardPlan;
 import com.github.yildizmy.service.future.CashEvent;
 import com.github.yildizmy.service.future.CashEventPlanner;
@@ -30,6 +32,7 @@ import com.github.yildizmy.service.future.LoanCost;
 import com.github.yildizmy.service.future.LoanPlan;
 import com.github.yildizmy.service.future.OverdraftCost;
 import com.github.yildizmy.service.future.ProjectionEngine;
+import com.github.yildizmy.service.future.PriceReversionScenario;
 import com.github.yildizmy.service.future.QuestionParser;
 import com.github.yildizmy.service.future.RecurrenceDetector;
 import com.github.yildizmy.service.future.RecurrenceDetector.Category;
@@ -46,6 +49,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -376,6 +380,71 @@ public class FutureService {
                 outcome.cardName(),
                 toResponse(before, SCENARIO_HORIZON_DAYS, overdraftRate),
                 toResponse(after, SCENARIO_HORIZON_DAYS, overdraftRate)
+        );
+    }
+
+    /**
+     * Compares two hypothetical future paths for an observed recurring price increase.
+     * The values come from this user's own transaction history; the client cannot supply prices.
+     */
+    @Transactional(readOnly = true)
+    public BillingRadarPriceImpact simulatePriceReversion(long userId, String key) {
+        Context context = load(userId);
+        BillingRadarDetector.Signal signal = BillingRadarDetector.detect(movements(userId, context.wallets()))
+                .stream()
+                .filter(candidate -> candidate.key().equals(key))
+                .filter(BillingRadarDetector.Signal::priceIncrease)
+                .findFirst()
+                .orElseThrow(() -> new WalletRuleException("BILLING_RADAR_PRICE_CHANGE_NOT_FOUND"));
+
+        if (signal.baselineAmount() == null || signal.lastChargeDate() == null || signal.nextExpectedDate() == null
+                || signal.evidence().isEmpty()) {
+            throw new WalletRuleException("BILLING_RADAR_PRICE_CHANGE_NOT_FOUND");
+        }
+
+        long observedInterval = ChronoUnit.DAYS.between(signal.lastChargeDate(), signal.nextExpectedDate());
+        if (observedInterval < 20 || observedInterval > 40) {
+            throw new WalletRuleException("BILLING_RADAR_PRICE_CHANGE_NOT_FOUND");
+        }
+
+        BillingRadarDetector.Occurrence latestEvidence = signal.evidence().get(0);
+        LocalDate end = context.today().plusDays(SCENARIO_HORIZON_DAYS);
+        List<CashEvent> baselineEvents = context.plan(end);
+        PriceReversionScenario.Comparison comparison = PriceReversionScenario.build(
+                context.today(),
+                end,
+                baselineEvents,
+                signal.key(),
+                signal.counterparty(),
+                latestEvidence.accountName(),
+                latestEvidence.institution(),
+                signal.nextExpectedDate(),
+                Math.toIntExact(observedInterval),
+                signal.latestAmount(),
+                signal.baselineAmount()
+        );
+
+        ProjectionEngine.Projection keepProjection = ProjectionEngine.project(
+                context.today(), context.balance(), comparison.keepCurrentPrice(), SCENARIO_HORIZON_DAYS);
+        ProjectionEngine.Projection priorProjection = ProjectionEngine.project(
+                context.today(), context.balance(), comparison.returnToPreviousPrice(), SCENARIO_HORIZON_DAYS);
+        OverdraftCost.Rate overdraftRate = marketRates.overdraftRate(userId);
+        BigDecimal differencePerCharge = signal.latestAmount().subtract(signal.baselineAmount());
+        BigDecimal possibleSavings = differencePerCharge.multiply(BigDecimal.valueOf(comparison.chargeDates().size()));
+
+        return new BillingRadarPriceImpact(
+                signal.counterparty(),
+                signal.latestAmount(),
+                signal.baselineAmount(),
+                differencePerCharge,
+                possibleSavings,
+                comparison.chargeDates().size(),
+                comparison.chargeDates().get(0),
+                comparison.chargeDates().get(comparison.chargeDates().size() - 1),
+                summary(keepProjection),
+                summary(priorProjection),
+                toResponse(keepProjection, SCENARIO_HORIZON_DAYS, overdraftRate),
+                toResponse(priorProjection, SCENARIO_HORIZON_DAYS, overdraftRate)
         );
     }
 

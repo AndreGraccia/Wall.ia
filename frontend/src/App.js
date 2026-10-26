@@ -25,6 +25,7 @@ const OpenFinance = lazy(() => import('./pages/open-finance/OpenFinance'));
 const Future = lazy(() => import('./pages/future/Future'));
 const Ask = lazy(() => import('./pages/ask/Ask'));
 const Commitments = lazy(() => import('./pages/commitments/Commitments'));
+const BillingRadar = lazy(() => import('./pages/billing-radar/BillingRadar'));
 const Metrics = lazy(() => import('./pages/admin/Metrics'));
 
 const USER_ROLES = ['ROLE_USER', 'ROLE_ADMIN'];
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="future" element={<Future />} />
             <Route path="ask" element={<Ask />} />
             <Route path="commitments" element={<Commitments />} />
+            <Route path="billing-radar" element={<BillingRadar />} />
             <Route path="insights" element={<Insights />} />
             <Route path="open-finance" element={<OpenFinance />} />
             <Route path="about" element={<About />} />

@@ -2,9 +2,11 @@ package com.github.yildizmy.controller;
 
 import com.github.yildizmy.dto.request.FutureRequests;
 import com.github.yildizmy.dto.response.FutureResponses;
+import com.github.yildizmy.dto.response.ChargeAlertResponse;
 import com.github.yildizmy.exception.WalletRuleException;
 import com.github.yildizmy.security.UserDetailsImpl;
 import com.github.yildizmy.service.ForecastService;
+import com.github.yildizmy.service.ChargeAlertService;
 import com.github.yildizmy.service.push.PushService;
 import com.github.yildizmy.service.FutureAlertService;
 import com.github.yildizmy.service.FutureService;
@@ -44,6 +46,7 @@ public class FutureController {
     private final FutureAlertService alertService;
     private final ForecastService forecastService;
     private final PushService pushService;
+    private final ChargeAlertService chargeAlertService;
 
     @GetMapping("/overview")
     public ResponseEntity<FutureResponses.Overview> overview(
@@ -51,6 +54,22 @@ public class FutureController {
             @RequestParam(defaultValue = "30") int horizon) {
         if (!HORIZONS.contains(horizon)) throw new WalletRuleException("INVALID_HORIZON");
         return noStore(futureService.overview(user.getId(), horizon));
+    }
+
+    /** Possible anomalies are review prompts, based only on this user's imported transactions. */
+    @GetMapping("/charge-alerts")
+    public ResponseEntity<List<ChargeAlertResponse>> chargeAlerts(@AuthenticationPrincipal UserDetailsImpl user) {
+        return noStore(chargeAlertService.findForUser(user.getId()));
+    }
+
+    /** Records only the user's decision about an alert; the imported transaction is never edited. */
+    @PutMapping("/charge-alerts/{transactionId}/decision")
+    public ResponseEntity<Void> decideChargeAlert(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable long transactionId,
+            @Valid @RequestBody FutureRequests.ChargeAlertDecision request) {
+        chargeAlertService.decide(user.getId(), transactionId, request.decision());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/recurrences")
