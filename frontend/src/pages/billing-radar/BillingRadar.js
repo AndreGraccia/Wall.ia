@@ -156,19 +156,122 @@ RadarItem.propTypes = {
   language: PropTypes.string.isRequired,
 };
 
+
+function ChargeAlertItem({ item, language, onDecision, busy }) {
+  const { t } = useTranslation();
+  return (
+    <Card component="article" sx={{ p: { xs: 2, md: 3 } }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between">
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="h6" component="h3" sx={{ overflowWrap: 'anywhere' }}>
+            {item.description}
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" sx={{ mt: 1, gap: 1 }}>
+            <Chip size="small" color="warning" label={t('billingRadar.alertKinds.' + item.kind)} />
+            <Chip size="small" variant="outlined" label={t('billingRadar.confidence.' + item.confidence)} />
+            {item.decision && (
+              <Chip size="small" label={t('billingRadar.alertDecision.' + item.decision)} />
+            )}
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+            {t('billingRadar.lastCharge', {
+              amount: money(item.amount, language),
+              date: dayLabel(item.date, language),
+            })}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {[item.institutionName, item.walletName].filter(Boolean).join(' · ')}
+          </Typography>
+          {item.kind === 'UNUSUAL_AMOUNT' && item.baselineAmount != null && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              {t('billingRadar.unusualAmount', {
+                amount: money(item.amount, language),
+                baseline: money(item.baselineAmount, language),
+                difference: money(item.difference, language),
+              })}
+            </Alert>
+          )}
+          {item.kind === 'POSSIBLE_DUPLICATE' && item.relatedDate && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              {t('billingRadar.duplicateDetails', { date: dayLabel(item.relatedDate, language) })}
+            </Alert>
+          )}
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
+            {t('billingRadar.alertEvidence', { count: item.occurrences })}
+          </Typography>
+        </Box>
+        <Button component={RouterLink} to="/transactions" variant="outlined" startIcon={<WalletIcon name="history" />}>
+          {t('billingRadar.openHistory')}
+        </Button>
+      </Stack>
+      <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" sx={{ mt: 2, gap: 1 }}>
+        <Button
+          size="small"
+          variant={item.decision === 'REVIEW' ? 'contained' : 'outlined'}
+          disabled={busy || item.decision === 'REVIEW'}
+          onClick={() => onDecision(item.transactionId, 'REVIEW')}
+        >
+          {t('billingRadar.actionReview')}
+        </Button>
+        <Button
+          size="small"
+          color="inherit"
+          variant="outlined"
+          disabled={busy}
+          onClick={() => onDecision(item.transactionId, 'NOT_ANOMALOUS')}
+        >
+          {t('billingRadar.actionNormal')}
+        </Button>
+        <Button
+          size="small"
+          variant="contained"
+          disabled={busy}
+          onClick={() => onDecision(item.transactionId, 'RESOLVED')}
+        >
+          {busy ? t('common.loading') : t('billingRadar.actionResolve')}
+        </Button>
+      </Stack>
+    </Card>
+  );
+}
+ChargeAlertItem.propTypes = {
+  item: PropTypes.object.isRequired,
+  language: PropTypes.string.isRequired,
+  onDecision: PropTypes.func.isRequired,
+  busy: PropTypes.bool,
+};
+
 export default function BillingRadar() {
   const { t, i18n } = useTranslation();
-  const [state, setState] = useState({ loading: true, error: null, report: null });
+  const [state, setState] = useState({ loading: true, error: null, report: null, chargeAlerts: [], alertsError: null });
+  const [actionState, setActionState] = useState({ busyId: null, error: null });
 
   const load = useCallback(async () => {
     setState((previous) => ({ ...previous, loading: true, error: null }));
-    try {
-      const report = await HttpService.getWithAuth('/billing-radar');
-      setState({ loading: false, error: null, report });
-    } catch (failure) {
-      setState((previous) => ({ ...previous, loading: false, error: errorKey(failure) }));
-    }
+    const [radarResult, alertsResult] = await Promise.allSettled([
+      HttpService.getWithAuth('/billing-radar'),
+      HttpService.getWithAuth('/future/charge-alerts'),
+    ]);
+    setState((previous) => ({
+      loading: false,
+      error: radarResult.status === 'rejected' ? errorKey(radarResult.reason) : null,
+      report: radarResult.status === 'fulfilled' ? radarResult.value : previous.report,
+      chargeAlerts: alertsResult.status === 'fulfilled' ? alertsResult.value : previous.chargeAlerts,
+      alertsError: alertsResult.status === 'rejected' ? errorKey(alertsResult.reason) : null,
+    }));
   }, []);
+
+  const decideAlert = useCallback(async (transactionId, decision) => {
+    if (actionState.busyId != null) return;
+    setActionState({ busyId: transactionId, error: null });
+    try {
+      await HttpService.putWithAuth(\`/future/charge-alerts/\${transactionId}/decision\`, { decision });
+      await load();
+      setActionState({ busyId: null, error: null });
+    } catch (failure) {
+      setActionState({ busyId: null, error: errorKey(failure) });
+    }
+  }, [actionState.busyId, load]);
 
   useEffect(() => {
     load();
@@ -210,6 +313,48 @@ export default function BillingRadar() {
                 </Button>
               </Alert>
             )}
+
+            <Box component="section" aria-labelledby="billing-radar-alerts-title" sx={{ mb: 4 }}>
+              <Typography id="billing-radar-alerts-title" variant="h5" component="h2" sx={{ mb: 1 }}>
+                {t('billingRadar.chargeAlerts')}
+              </Typography>
+              <Typography color="text.secondary" variant="body2" sx={{ mb: 2, maxWidth: 850 }}>
+                {t('billingRadar.chargeAlertsHelp')}
+              </Typography>
+              {state.alertsError && (
+                <Alert
+                  severity="error"
+                  action={
+                    <Button color="inherit" onClick={load} disabled={state.loading}>
+                      {t('app.retry')}
+                    </Button>
+                  }
+                  sx={{ mb: 2 }}
+                >
+                  {t(state.alertsError)}
+                </Alert>
+              )}
+              {actionState.error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {t(actionState.error)}
+                </Alert>
+              )}
+              {state.chargeAlerts.length ? (
+                <Stack spacing={2}>
+                  {state.chargeAlerts.map((item) => (
+                    <ChargeAlertItem
+                      key={item.transactionId}
+                      item={item}
+                      language={language}
+                      onDecision={decideAlert}
+                      busy={actionState.busyId === item.transactionId}
+                    />
+                  ))}
+                </Stack>
+              ) : !state.alertsError ? (
+                <Alert severity="success">{t('billingRadar.emptyAlerts')}</Alert>
+              ) : null}
+            </Box>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={12} sm={6} md={3}>
