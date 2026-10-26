@@ -23,6 +23,61 @@ function StatCard({ label, value, detail }) {
           {detail}
         </Typography>
       )}
+      {impact && (
+        <Box sx={{ mt: 2.5 }}>
+          <Alert severity="info">
+            <Typography variant="subtitle1" component="p" sx={{ fontWeight: 700 }}>
+              {t('billingRadar.impactHeading')}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              {t('billingRadar.impactDates', {
+                first: dayLabel(impact.firstExpectedDate, language),
+                last: dayLabel(impact.lastExpectedDate, language),
+                count: impact.projectedCharges,
+              })}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              {t('billingRadar.hypotheticalNote')}
+            </Typography>
+          </Alert>
+          <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+                <Typography variant="subtitle2">{t('billingRadar.keepCurrentPrice')}</Typography>
+                <Typography variant="h6" sx={{ mt: 0.5 }}>
+                  {t('billingRadar.impactMinBalance', {
+                    amount: money(impact.keepCurrentPrice.minBalance90, language),
+                  })}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('billingRadar.impactNegativeDays', { count: impact.keepCurrentPrice.negativeDays })}
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+                <Typography variant="subtitle2">{t('billingRadar.returnToPreviousPrice')}</Typography>
+                <Typography variant="h6" sx={{ mt: 0.5 }}>
+                  {t('billingRadar.impactMinBalance', {
+                    amount: money(impact.returnToPreviousPrice.minBalance90, language),
+                  })}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('billingRadar.impactNegativeDays', { count: impact.returnToPreviousPrice.negativeDays })}
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                {t('billingRadar.impactDifference', {
+                  amount: money(impact.possibleSavings90Days, language),
+                  count: impact.projectedCharges,
+                })}
+              </Typography>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
     </Card>
   );
 }
@@ -40,7 +95,26 @@ function percent(value, language) {
 
 function RadarItem({ item, language }) {
   const { t } = useTranslation();
+  const [impact, setImpact] = useState(null);
+  const [impactLoading, setImpactLoading] = useState(false);
+  const [impactError, setImpactError] = useState(null);
   const evidence = Array.isArray(item.evidence) ? item.evidence : [];
+
+  const simulatePriceReversion = async () => {
+    setImpactLoading(true);
+    setImpactError(null);
+    try {
+      const result = await HttpService.postWithAuth(
+        `/billing-radar/${encodeURIComponent(item.key)}/simulate-price-reversion`,
+        {}
+      );
+      setImpact(result);
+    } catch (failure) {
+      setImpactError(errorKey(failure));
+    } finally {
+      setImpactLoading(false);
+    }
+  };
   return (
     <Card component="article" sx={{ p: { xs: 2, md: 3 } }}>
       <Stack
@@ -82,6 +156,20 @@ function RadarItem({ item, language }) {
                   amount: money(Number(item.increaseAmount || 0) * 12, language),
                 })}
               </Typography>
+              <Button
+                onClick={simulatePriceReversion}
+                disabled={impactLoading}
+                variant="contained"
+                size="small"
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                {impactLoading ? t('billingRadar.impactLoading') : t('billingRadar.simulatePriceReversion')}
+              </Button>
+              {impactError && (
+                <Alert severity="error">
+                  {t(impactError)}
+                </Alert>
+              )}
             </Stack>
           )}
           {item.possibleDuplicate && (
