@@ -6,7 +6,7 @@ import BillingRadar from './BillingRadar';
 import ThemeProvider from '../../theme';
 import HttpService from '../../services/HttpService';
 
-jest.mock('../../services/HttpService', () => ({ getWithAuth: jest.fn() }));
+jest.mock('../../services/HttpService', () => ({ getWithAuth: jest.fn(), postWithAuth: jest.fn() }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options) => (options?.count ? `${key}:${options.count}` : key),
@@ -24,6 +24,7 @@ beforeEach(() => {
   document.body.appendChild(container);
   root = createRoot(container);
   HttpService.getWithAuth.mockReset();
+  HttpService.postWithAuth.mockReset();
 });
 afterEach(() => {
   act(() => root.unmount());
@@ -85,6 +86,35 @@ test('renders the price-change alert with transaction evidence', async () => {
   expect(pageText()).toContain('billingRadar.evidence');
   expect(pageText()).toContain('Conta principal');
   expect(container.querySelector('a[href="/transactions"]')).not.toBeNull();
+  expect(pageText()).toContain('billingRadar.simulatePriceReversion');
+
+  HttpService.postWithAuth.mockResolvedValue({
+    counterparty: 'Streaming Plus',
+    currentAmount: 49.9,
+    previousAmount: 39.9,
+    differencePerCharge: 10,
+    possibleSavings90Days: 30,
+    projectedCharges: 3,
+    firstExpectedDate: '2026-11-04',
+    lastExpectedDate: '2027-01-03',
+    keepCurrentPrice: { minBalance30: -200, minBalance90: -400, negativeDays: 7 },
+    returnToPreviousPrice: { minBalance30: -190, minBalance90: -370, negativeDays: 5 },
+    keepCurrentPriceProjection: {},
+    returnToPreviousPriceProjection: {},
+  });
+  const simulateButton = Array.from(container.querySelectorAll('button')).find((button) =>
+    button.textContent.includes('billingRadar.simulatePriceReversion')
+  );
+  await act(async () => simulateButton.click());
+
+  expect(HttpService.postWithAuth).toHaveBeenCalledWith(
+    '/billing-radar/out%3Astreaming-plus/simulate-price-reversion',
+    {}
+  );
+  expect(pageText()).toContain('billingRadar.impactHeading');
+  expect(pageText()).toContain('billingRadar.keepCurrentPrice');
+  expect(pageText()).toContain('billingRadar.returnToPreviousPrice');
+  expect(pageText()).toContain('billingRadar.impactDifference');
 });
 
 test('explains that more history is needed and offers Open Finance', async () => {
