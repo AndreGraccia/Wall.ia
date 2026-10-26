@@ -135,6 +135,7 @@ class ChargeAlertServiceTest {
     @Test
     void invalidFeedbackAndTransactionsOutsideTheCallersHistoryAreRejected() {
         assertThrows(WalletRuleException.class, () -> service.decide(USER_ID, 99L, "MOVE_MONEY"));
+        assertThrows(WalletRuleException.class, () -> service.decide(USER_ID, 99L, "REVIEW"));
         verify(decisions, never()).save(any(ChargeAlertDecision.class));
         verifyNoInteractions(users);
     }
