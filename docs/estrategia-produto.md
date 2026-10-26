@@ -168,7 +168,7 @@ O diagnóstico original já identificava o problema de compromissos que somem ou
 
 O Radar de cobranças cria uma leitura separada para saídas liquidadas e mantém a cobrança visível quando o valor muda. Sinaliza aumento apenas quando a última cobrança supera a mediana anterior em pelo menos R$ 2,00 e 10%, e possíveis duplicidades quando a mesma contraparte apresenta lançamentos de mesmo valor no mesmo dia. Cada sinal inclui as transações de evidência; datas futuras são estimadas.
 
-É uma hipótese de diferenciação, não uma alegação de exclusividade no mercado: a proposta é ligar cobrança alterada, evidência e impacto potencial no caixa futuro, sem vender crédito nem tomar decisões pelo usuário. A primeira implementação está descrita em [ADR 0019](adr/0019-radar-de-cobrancas.md) e [evolução do produto](evolucao-radar-cobrancas.md), pendente dos workflows CI/E2E e revisão.
+É uma hipótese de diferenciação, não uma alegação de exclusividade no mercado: a proposta é ligar cobrança alterada, evidência e impacto potencial no caixa futuro, sem vender crédito nem tomar decisões pelo usuário. A implementação foi integrada à `main` pelo [PR #2](https://github.com/AndreGraccia/Wall.ia/pull/2) após [CI verde](https://github.com/AndreGraccia/Wall.ia/actions/runs/40390985911) — 381 testes backend, 74 frontend e build — e [E2E Playwright aprovado](https://github.com/AndreGraccia/Wall.ia/actions/runs/40390985877). A validação com usuários reais, taxa de falsos positivos e valor comercial segue pendente.
 
 **Como medir valor:** proporção de sinais que usuários consideram úteis, sinais revisados versus ignorados, falsos positivos relatados e capacidade de explicar por que cada item apareceu. Não otimizar pela quantidade de alertas.
 
