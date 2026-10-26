@@ -24,6 +24,7 @@ public final class ScenarioSimulator {
             case PURCHASE -> purchase(scenario, today, end, baseline, cards);
             case SAVINGS -> savings(scenario, today, end, baseline);
             case INCOME_LOSS -> incomeLoss(scenario, today, baseline);
+            case REFUND -> refund(scenario, today, baseline);
         };
     }
 
@@ -88,6 +89,13 @@ public final class ScenarioSimulator {
     }
 
     /** Splits cents so the instalments add up exactly to the amount (the remainder goes to the first). */
+    private static Outcome refund(Scenario scenario, LocalDate today, List<CashEvent> baseline) {
+        List<CashEvent> events = new ArrayList<>(baseline);
+        events.add(new CashEvent(today, scenario.amount(), "Estorno hipotético", Kind.SCENARIO,
+                "SCENARIO", Certainty.HYPOTHETICAL, null, "hypothetical-refund"));
+        return new Outcome(events, BigDecimal.ZERO, 0, null);
+    }
+
     static List<BigDecimal> split(BigDecimal amount, int installments) {
         int count = Math.max(1, installments);
         long cents = amount.movePointRight(2).setScale(0, RoundingMode.HALF_EVEN).longValueExact();
@@ -100,7 +108,7 @@ public final class ScenarioSimulator {
         return parts;
     }
 
-    public enum Type { PURCHASE, SAVINGS, INCOME_LOSS }
+    public enum Type { PURCHASE, SAVINGS, INCOME_LOSS, REFUND }
 
     public enum Method { CASH, CARD }
 

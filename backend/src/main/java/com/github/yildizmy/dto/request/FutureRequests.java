@@ -70,11 +70,16 @@ public final class FutureRequests {
     ) {
     }
 
+    public record ChargeAlertDecision(
+            @NotNull @Pattern(regexp = "^(REVIEW|NOT_ANOMALOUS|RESOLVED)$") String decision
+    ) {
+    }
+
     /**
      * One hypothetical decision for Modo Futuro. Fields that do not apply to the type are ignored.
      */
     public record Scenario(
-            @NotNull @Pattern(regexp = "^(PURCHASE|SAVINGS|INCOME_LOSS)$") String type,
+            @NotNull @Pattern(regexp = "^(PURCHASE|SAVINGS|INCOME_LOSS|REFUND)$") String type,
             @DecimalMin("0.01") @DecimalMax("9999999999.99") @Digits(integer = 10, fraction = 2) BigDecimal amount,
             @Min(1) @Max(24) Integer installments,
             @Pattern(regexp = "^(CASH|CARD)$") String method,
