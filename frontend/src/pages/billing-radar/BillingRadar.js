@@ -68,14 +68,21 @@ function RadarItem({ item, language }) {
             })}
           </Typography>
           {item.priceIncrease && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              {t('billingRadar.priceChange', {
-                before: money(item.baselineAmount, language),
-                after: money(item.latestAmount, language),
-                delta: money(item.increaseAmount, language),
-                percent: percent(item.increasePercent, language),
-              })}
-            </Alert>
+            <Stack spacing={1} sx={{ mt: 2 }}>
+              <Alert severity="warning">
+                {t('billingRadar.priceChange', {
+                  before: money(item.baselineAmount, language),
+                  after: money(item.latestAmount, language),
+                  delta: money(item.increaseAmount, language),
+                  percent: percent(item.increasePercent, language),
+                })}
+              </Alert>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {t('billingRadar.annualizedImpact', {
+                  amount: money(Number(item.increaseAmount || 0) * 12, language),
+                })}
+              </Typography>
+            </Stack>
           )}
           {item.possibleDuplicate && (
             <Alert severity="info" sx={{ mt: 2 }}>
