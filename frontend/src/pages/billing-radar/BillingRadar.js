@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -36,9 +37,9 @@ function StatCard({ label, value, detail }) {
   );
 }
 StatCard.propTypes = {
-  label: require('prop-types').string.isRequired,
-  value: require('prop-types').oneOfType([require('prop-types').string, require('prop-types').number]).isRequired,
-  detail: require('prop-types').string,
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  detail: PropTypes.string,
 };
 
 function percent(value, language) {
@@ -151,8 +152,8 @@ function RadarItem({ item, language }) {
   );
 }
 RadarItem.propTypes = {
-  item: require('prop-types').object.isRequired,
-  language: require('prop-types').string.isRequired,
+  item: PropTypes.object.isRequired,
+  language: PropTypes.string.isRequired,
 };
 
 export default function BillingRadar() {
