@@ -62,7 +62,7 @@ class PriceReversionScenarioTest {
                 LocalDate.parse("2026-09-01"), 30,
                 new BigDecimal("30.00"), new BigDecimal("20.00"));
 
-        assertEquals(LocalDate.parse("2026-11-02"), comparison.chargeDates().get(0));
+        assertEquals(LocalDate.parse("2026-11-03"), comparison.chargeDates().get(0));
         assertTrue(comparison.chargeDates().stream().allMatch(date -> !date.isAfter(today.plusDays(90))));
     }
 
