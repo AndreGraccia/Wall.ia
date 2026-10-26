@@ -45,8 +45,8 @@ public final class BillingRadarDetector {
         List<Signal> signals = new ArrayList<>();
         groups.forEach((key, group) -> analyse(key, group).ifPresent(signals::add));
         return signals.stream()
-                .sorted(Comparator.comparing(Signal::priceIncrease).reversed()
-                        .thenComparing(Signal::possibleDuplicate).reversed()
+                .sorted(Comparator.comparingInt((Signal signal) -> signal.priceIncrease() ? 0
+                                : signal.possibleDuplicate() ? 1 : 2)
                         .thenComparing(Signal::latestAmount, Comparator.reverseOrder()))
                 .toList();
     }
