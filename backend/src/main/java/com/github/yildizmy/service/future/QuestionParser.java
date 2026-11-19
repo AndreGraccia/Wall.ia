@@ -43,8 +43,8 @@ public final class QuestionParser {
      * "bolsa" alone is a handbag; only the stock-market phrasings count.
      */
     private static final Pattern INVESTMENT = Pattern.compile(
-            "\\b(investir|investimentos?|acao|acoes|bolsa de valores|na bolsa|cripto\\w*|bitcoin|tesouro direto|cdb"
-                    + "|renda fixa|fundos? de investimento|invest\\w*|stocks?|shares|crypto\\w*)\\b");
+            "\\b(invest\\w*|acao|acoes|bolsa de valores|na bolsa|cripto\\w*|crypto\\w*|bitcoin|tesouro direto|cdb"
+                    + "|renda fixa|fundos? de investimento|stocks?|shares)\\b");
     private static final Pattern BILL_PAYMENT = Pattern.compile("\\b(pagar|quitar|pay)\\b.*\\b(fatura|boleto|conta de|invoice|bill)");
     private static final Pattern PURCHASE = Pattern.compile("\\b(comprar|compro|compra|parcelar|afford|buy|purchase)\\b");
     private static final Pattern SPEND = Pattern.compile("\\b(gastar|gasto|pagar|spend|pay)\\b");
