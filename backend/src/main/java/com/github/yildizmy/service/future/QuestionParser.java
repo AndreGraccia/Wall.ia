@@ -42,9 +42,10 @@ public final class QuestionParser {
      * Checked first: "Qual ação devo comprar?" has "comprar" in it and must not become a purchase simulation.
      * "bolsa" alone is a handbag; only the stock-market phrasings count.
      */
-    private static final Pattern INVESTMENT = Pattern.compile(
-            "\\b(invest\\w*|acao|acoes|bolsa de valores|na bolsa|cripto\\w*|crypto\\w*|bitcoin|tesouro direto|cdb"
-                    + "|renda fixa|fundos? de investimento|stocks?|shares)\\b");
+    private static final Pattern INVESTMENT_WORD = Pattern.compile(
+            "\\b(invest\\w*|acao|acoes|cripto\\w*|crypto\\w*|bitcoin|cdb|stocks?|shares)\\b");
+    private static final Pattern INVESTMENT_PHRASE = Pattern.compile(
+            "bolsa de valores|na bolsa|tesouro direto|renda fixa|fundos? de investimento");
     private static final Pattern BILL_PAYMENT = Pattern.compile("\\b(pagar|quitar|pay)\\b.*\\b(fatura|boleto|conta de|invoice|bill)");
     private static final Pattern PURCHASE = Pattern.compile("\\b(comprar|compro|compra|parcelar|afford|buy|purchase)\\b");
     private static final Pattern SPEND = Pattern.compile("\\b(gastar|gasto|pagar|spend|pay)\\b");
@@ -74,7 +75,7 @@ public final class QuestionParser {
         boolean card = CARD.matcher(text).find() || (installments != null && installments > 1);
 
         Intent intent;
-        if (INVESTMENT.matcher(text).find()) {
+        if (INVESTMENT_WORD.matcher(text).find() || INVESTMENT_PHRASE.matcher(text).find()) {
             intent = Intent.UNKNOWN;
         } else if (BILL_PAYMENT.matcher(text).find()) {
             // Paying an existing bill is not a new purchase: simulating it would add the debt twice.
