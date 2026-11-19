@@ -1,5 +1,23 @@
 # Changelog
 
+## 19/11/2026: identidade visual "Farol"
+
+### Mudou
+- **Nova identidade.** Sai o preto com verde-limão (ink/volt/horizon); entra o mar à noite com a luz do farol. Fundo azul-esverdeado `#0A1519`, ação em `#FFD25E`, estimado em `#A3B5FF`, positivo `#5ED6A2`, negativo `#FF8590`. Conceito, regras e aplicações em [docs/brand/wallia-brand.md](docs/brand/wallia-brand.md), que o `palette.js` já citava e não existia.
+- **Símbolo novo:** um W desenhado como a linha do saldo, sólido até hoje (o ponto de luz) e tracejado depois, com o vale passando abaixo da linha d'água: o buraco entre a fatura e o salário. Favicon, PNG, ICO e `logo.png` regenerados a partir do SVG.
+- **Tipografia:** Bricolage Grotesque (tamanho óptico) no lugar da Space Grotesk nos títulos e botões; Inter com algarismos tabulares em todo o corpo. O `overline` deixou de ser caixa-alta espaçada.
+- **Certeza também no itálico:** os chips Estimado e Simulado ficam em itálico, além da cor e do estilo da borda.
+- Tokens de marca renomeados para o que significam (`brand.lamp`, `brand.fog`, `brand.waterline`).
+- Login com a ilustração da linha d'água; `index.html` com descrição nova, Open Graph e `og.png` 1200×630; `theme_color` do manifest atualizado.
+
+### Novo
+- `npm run test:contrast`: lê os hex do `palette.js` e confere 53 pares de texto, borda, foco e linha de gráfico (WCAG 2.2). Falha com código 1 se um par cair; provado trocando `muted` por um tom escuro (4 falhas).
+- Peças de LinkedIn editáveis em `docs/brand/comunicacao/` (2 posts 1200×1200 e capa 1584×396), com texto do produto e números só do README. `frontend/scripts/build-icons.py` agora gera ícones, OG e peças com Chrome/Edge headless.
+
+### Limites
+- O produto continua só no tema escuro; não existia tema claro.
+- `og:image` usa `%PUBLIC_URL%`: para os cartões de compartilhamento funcionarem, o build de produção precisa de `PUBLIC_URL` absoluta.
+
 ## 26/10/2026: Radar de cobranças (integrado; validação de mercado pendente)
 
 ### Novo
