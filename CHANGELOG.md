@@ -1,5 +1,21 @@
 # Changelog
 
+## 19/11/2026: dado atrasado em toda tela, Pix no crédito e fatura contada uma vez (B50, B14, B12 parcial)
+
+Decisões em [ADR 0020](docs/adr/0020-dado-atrasado-pix-no-credito-e-fatura.md). Migração V34.
+
+### Novo
+- **Dado atrasado em toda tela com Open Finance (B50).** Futuro, Início, Radar de cobranças, Compromissos e Análises dizem de qual instituição e de quando é o dado. Quando a última sincronização passa de 36 horas, um alerta aparece antes dos números, com o botão para atualizar.
+- **Pix no crédito na quitação (B14).** Em Compromissos, a pessoa informa saldo, parcela e CET ao mês do Pix pago com o limite do cartão. Ele entra na ordem de quitação ao lado dos empréstimos, marcado como "informado por você" e estimado. Não entra na projeção do saldo, porque as parcelas costumam vir na fatura. A seção aparece mesmo sem banco conectado. Entra na exportação e na exclusão da conta.
+
+### Corrigido
+- **Pagamento de fatura contado duas vezes (B12, parcial).** Um pagamento de fatura descrito sem a palavra "fatura" (por exemplo "NU PAGAMENTOS SA" ou "PAGTO CARTAO") entrava na média dos gastos do dia a dia, e as mesmas compras já estavam na fatura projetada. Agora o pagamento é reconhecido também pelo valor igual ao total da fatura, até 10 dias do vencimento.
+- **Futuro e Radar discordavam sobre dado atrasado.** Conta Open Finance que nunca sincronizou era atrasada no Radar e em dia no Futuro. Agora é atrasada nas duas.
+
+### Limites
+- Pagamento parcial da fatura (só o mínimo) com descrição neutra ainda não é reconhecido.
+- A Wall.ia não detecta Pix no crédito sozinha; o sandbox não tem o produto.
+
 ## 26/10/2026: Radar de cobranças (integrado; validação de mercado pendente)
 
 ### Novo

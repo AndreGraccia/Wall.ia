@@ -58,9 +58,9 @@ Prioridade: **P0** bloqueia a homologação, **P1** bloqueia produção, **P2** 
 
 - **B10 (P1) Parcela perde centavos.** `OpenFinanceImportService` divide com `RoundingMode.DOWN`: R$ 100,00 em 3 vira R$ 99,99 no futuro projetado. Aceite: a soma das parcelas projetadas é igual ao total da compra.
 - **B11 (P1) Transferência entre contas próprias só por valor e dia.** `InsightsService.pairKey` junta entrada e saída independentes. Aceite: só pareia entre carteiras Open Finance diferentes do mesmo usuário, e um par ambíguo (mais de um candidato) não é escondido.
-- **B12 (P2) Estados de transação.** Regras e testes para pendente, efetivada, estornada e reembolsada, e pagamento de fatura que não pode contar duas vezes com as compras da fatura.
+- **B12 (P2) Estados de transação.** Regras e testes para pendente, efetivada, estornada e reembolsada, e pagamento de fatura que não pode contar duas vezes com as compras da fatura. Parte da fatura feita em 19/11/2026 ([ADR 0020](adr/0020-dado-atrasado-pix-no-credito-e-fatura.md)): pagamento reconhecido pela descrição ou pelo valor igual ao total da fatura perto do vencimento, fora da média do dia a dia e das recorrências, com teste de regressão. Falta: pendente, estornada, reembolsada e pagamento parcial com descrição neutra.
 - **B13 (P3) Alerta de cobrança duplicada ou estranha.** Diferencial citado na pesquisa de mercado; usa só dados que já existem.
-- **B14 (P3) "Pix no crédito" como dívida no planejador de quitação.** CET perto de 8% ao mês (Agência Brasil, dez/2025).
+- **B14 (P3) "Pix no crédito" como dívida no planejador de quitação.** CET perto de 8% ao mês (Agência Brasil, dez/2025). Feito em 19/11/2026 ([ADR 0020](adr/0020-dado-atrasado-pix-no-credito-e-fatura.md), V34): entrada manual com CET ao mês obrigatório, origem MANUAL e certeza estimada, na ordem de quitação e fora da projeção. O sandbox não tem o produto; a detecção automática fica para o Open Finance real.
 - **B15 (P3) Fila da estratégia:** SCR/Registrato, tarifas, quitação do cartão.
 
 ### E3. Segurança e LGPD
@@ -98,7 +98,7 @@ Nada aqui liga dados reais antes de E3 e E4 fechadas.
 
 ### E6. Experiência
 
-- **B50 (P1) Estados de dado atrasado.** Instituição, horário da última atualização e aviso quando o dado está velho.
+- **B50 (P1) Estados de dado atrasado.** Instituição, horário da última atualização e aviso quando o dado está velho. Feito em 19/11/2026 ([ADR 0020](adr/0020-dado-atrasado-pix-no-credito-e-fatura.md)): uma regra só (`BankDataFreshness`, 36 horas, conta nunca sincronizada conta como atrasada) e um componente só, no Futuro, Início, Radar, Compromissos e Análises. Antes, Futuro e Radar tinham cópias que discordavam.
 - **B51 (P1) Validação da tela Futuro em 375 px.** As seções recolhíveis entraram na Sprint 10; falta medir no navegador.
 - **B52 (P2) Rótulo de origem em todo número.** Manual, importado, simulado ou previsto.
 - **B53 (P3) Idioma sob demanda.** `i18n.js` tem 109 KB. Só depois de medir o pacote com gzip.
