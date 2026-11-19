@@ -31,6 +31,7 @@ const countPix = (step) => HttpService.postWithAuth('/future/pix-interest', { st
 
 // Certainty is always shown as text + line style, never colour alone:
 // confirmed = solid, estimated = dashed, hypothetical = dotted.
+// Anything not yet confirmed is also set in italics: it leans because it can still move.
 const BORDER = { CONFIRMED: 'solid', ESTIMATED: 'dashed', HYPOTHETICAL: 'dotted' };
 const COLOR = {
   CONFIRMED: 'certainty.confirmed',
@@ -51,6 +52,7 @@ export function CertaintyChip({ certainty }) {
         color: COLOR[certainty],
         borderColor: COLOR[certainty],
         borderStyle: BORDER[certainty],
+        fontStyle: certainty === 'CONFIRMED' ? 'normal' : 'italic',
         bgcolor: 'transparent',
       }}
     />

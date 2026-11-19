@@ -112,34 +112,43 @@ export default function AuthView({ signup = false }) {
         >
           <WalliaLogo size={36} />
           <Box>
-            {/* Decorative echo of the mark: past (solid), projection (dots), the future point (volt). */}
+            {/* Decorative echo of the mark: the past (solid), today (lamp), the estimate (dashed) dipping
+                below the waterline between the card bill and the paycheck. */}
             <Box aria-hidden="true" component="svg" viewBox="0 0 420 180" sx={{ width: '100%', maxWidth: 440, mb: 6 }}>
-              <Box component="line" x1="0" y1="140" x2="420" y2="140" sx={{ stroke: 'divider' }} strokeWidth="1" />
+              <Box
+                component="polygon"
+                points="234,120 254,154 314,162 322.9,120"
+                sx={{ fill: (theme) => theme.palette.chart.negative }}
+              />
+              <Box
+                component="line"
+                x1="0"
+                y1="120"
+                x2="420"
+                y2="120"
+                strokeWidth="1.5"
+                sx={{ stroke: (theme) => theme.palette.brand.waterline }}
+              />
               <Box
                 component="polyline"
-                points="0,120 50,96 90,128 140,70 190,104 240,60"
+                points="0,70 50,86 96,54 140,74 170,46"
                 fill="none"
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 sx={{ stroke: (theme) => theme.palette.text.primary }}
               />
-              {[
-                [275, 72],
-                [305, 88],
-                [335, 64],
-                [365, 46],
-              ].map(([cx, cy]) => (
-                <Box
-                  key={cx}
-                  component="circle"
-                  cx={cx}
-                  cy={cy}
-                  r="4"
-                  sx={{ fill: (theme) => theme.palette.brand.horizon }}
-                />
-              ))}
-              <Box component="circle" cx="398" cy="26" r="11" sx={{ fill: (theme) => theme.palette.brand.volt }} />
+              <Box
+                component="polyline"
+                points="170,46 214,86 254,154 314,162 336,58 420,72"
+                fill="none"
+                strokeWidth="3"
+                strokeDasharray="8 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                sx={{ stroke: (theme) => theme.palette.brand.fog }}
+              />
+              <Box component="circle" cx="170" cy="46" r="8" sx={{ fill: (theme) => theme.palette.brand.lamp }} />
             </Box>
             <Typography variant="h2" component="p" sx={{ fontSize: { md: 40, lg: 52 }, maxWidth: 480 }}>
               {t('app.authHeadline')}

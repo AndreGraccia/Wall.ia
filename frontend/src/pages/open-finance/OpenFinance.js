@@ -208,7 +208,7 @@ export default function OpenFinance() {
                     height: 220,
                     borderRadius: '50%',
                     background: (theme) =>
-                      `radial-gradient(circle, ${alpha(theme.palette.brand.horizon, 0.16)}, transparent 68%)`,
+                      `radial-gradient(circle, ${alpha(theme.palette.brand.fog, 0.16)}, transparent 68%)`,
                     right: -70,
                     top: -90,
                   }}

@@ -30,6 +30,8 @@ export default function GlobalStyles() {
           backgroundColor: theme.palette.background.default,
 
           fontFamily: theme.typography.fontFamily,
+          // Money lines up: every digit has the same width.
+          fontVariantNumeric: 'tabular-nums',
           WebkitFontSmoothing: 'antialiased',
           MozOsxFontSmoothing: 'grayscale',
         },
