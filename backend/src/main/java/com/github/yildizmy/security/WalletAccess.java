@@ -19,6 +19,8 @@ public class WalletAccess {
     }
     public boolean user(Long id) { return id != null && id.equals(currentUserId()); }
     public boolean wallet(Long id) { var user = currentUserId(); return user != null && wallets.existsByIdAndUserId(id, user); }
+    /** Same check as iban(), on a wallet already loaded (and locked) by the caller: no second query. */
+    public boolean owns(com.github.yildizmy.domain.entity.Wallet wallet) { return wallet.getUser() != null && user(wallet.getUser().getId()); }
     public boolean iban(String iban) { var user = currentUserId(); return user != null && wallets.existsByIbanAndUserId(iban, user); }
     public boolean transaction(Long id) { return transactions.findById(id).map(t -> user(t.getFromWallet().getUser().getId()) || user(t.getToWallet().getUser().getId())).orElse(false); }
     public boolean reference(UUID reference) { return transactions.findByReferenceNumber(reference).map(t -> user(t.getFromWallet().getUser().getId()) || user(t.getToWallet().getUser().getId())).orElse(false); }

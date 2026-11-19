@@ -331,6 +331,12 @@ docker compose --env-file .env.properties -f docker-compose.yml -f docker-compos
 
 Esse comando inicia PostgreSQL, Mailpit, backend e frontend. Não mantenha as versões locais nas portas `3001` e `8082` enquanto executar a pilha completa em containers.
 
+## Deploy em produção
+
+Frontend na Vercel, API no Render (Docker) e PostgreSQL no Neon, nos planos gratuitos. O passo a passo, as variáveis, o rollback e os limites de cada plano (como o sono da API no Render) estão em [`docs/deploy-producao.md`](docs/deploy-producao.md). Arquivos de configuração: `render.yaml`, `frontend/vercel.json` e `.env.production.example`.
+
+Para um servidor próprio com Docker Compose, veja [`docs/operacao.md`](docs/operacao.md).
+
 ## Encerrando a aplicação
 
 Para encerrar o frontend ou o backend, pressione:
