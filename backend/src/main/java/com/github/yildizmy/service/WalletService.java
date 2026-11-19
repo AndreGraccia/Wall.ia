@@ -13,6 +13,8 @@ import com.github.yildizmy.exception.ElementAlreadyExistsException;
 import com.github.yildizmy.exception.InsufficientFundsException;
 import com.github.yildizmy.exception.NoSuchElementFoundException;
 import com.github.yildizmy.repository.WalletRepository;
+import com.github.yildizmy.security.WalletAccess;
+import org.springframework.security.access.AccessDeniedException;
 import com.github.yildizmy.validator.IbanValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +43,7 @@ public class WalletService {
     private final WalletRequestMapper walletRequestMapper;
     private final WalletResponseMapper walletResponseMapper;
     private final IbanValidator ibanValidator;
+    private final WalletAccess walletAccess;
 
     /**
      * Fetches a single wallet by the given id.
@@ -179,6 +182,7 @@ public class WalletService {
         var locked = walletRepository.lockByIbans(List.of(request.getFromWalletIban(), request.getToWalletIban()));
         var from = lockedWallet(request.getFromWalletIban(), locked);
         var to = lockedWallet(request.getToWalletIban(), locked);
+        assertOwned(from);
         assertLocal(from);
         assertLocal(to);
         var replay = transactionService.replay(request);
@@ -199,6 +203,7 @@ public class WalletService {
         request.setToWalletIban(request.getFromWalletIban());
         request.setTypeId(5L);
         var wallet = lockedWallet(request.getFromWalletIban(), walletRepository.lockByIbans(List.of(request.getFromWalletIban())));
+        assertOwned(wallet);
         assertLocal(wallet);
         var replay = transactionService.replay(request);
         if (replay != null) return replay;
@@ -248,6 +253,14 @@ public class WalletService {
         if (wallet.getBalance().signum() != 0 || transactionService.hasHistory(id)) throw new WalletRuleException("IMMUTABLE_WALLET");
         walletRepository.delete(wallet);
         log.info(messageConfig.getMessage(INFO_WALLET_DELETED, wallet.getIban(), wallet.getName(), wallet.getBalance()));
+    }
+
+    /**
+     * Defence in depth: the controller already checks @walletAccess.iban, but money only leaves a wallet whose owner is
+     * the authenticated user, whoever calls this method. Same 403 as the controller check.
+     */
+    private void assertOwned(Wallet wallet) {
+        if (!walletAccess.owns(wallet)) throw new AccessDeniedException("FORBIDDEN");
     }
 
     private void assertLocal(Wallet wallet) {
