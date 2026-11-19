@@ -1,5 +1,27 @@
 # Changelog
 
+## 19/11/2026: preparação para produção (Vercel + Render + Neon)
+
+### Novo
+- `render.yaml` (Blueprint): API em Docker no plano free, health check em `/actuator/health/readiness`, segredos com `sync: false`. Na URL pública do Render o actuator expõe só `health` e o Swagger fica desligado.
+- `frontend/vercel.json`: rewrite de `/api/*` para a API (mesma origem, sem CORS), fallback da SPA e os cabeçalhos do `nginx.conf`, mais HSTS. `frontend/.env.production` fixa `REACT_APP_API_URL=/api/v1` no build.
+- `server.port` lê `PORT` (Render) antes de `backend_port`; o Compose continua com `SERVER_PORT=8080`.
+- `.env.production.example` com cada variável da API, sem valores.
+- [`docs/deploy-producao.md`](docs/deploy-producao.md): Neon, Blueprint, Vercel, SMTP, IP do cliente, limites dos planos gratuitos e rollback.
+
+### Corrigido
+- **Posse da carteira também no serviço.** `transferFunds` e `withdrawFunds` confiavam só no `@PreAuthorize` do controller. Agora o serviço recusa com 403 uma carteira de origem de outro usuário, ou sem ninguém autenticado, antes de mexer em saldo. Os dois testes novos falham sem a checagem.
+
+### Limites
+- O plano free do Render bloqueia SMTP nas portas 25, 465 e 587: o e-mail do cadastro precisa da porta alternativa do provedor (Brevo 2525, Resend 2587).
+- Pela Vercel, os limites por endereço (cadastro e login) veem o IP do servidor de borda da Vercel, não o do usuário. Continua impossível forjar o IP com `X-Forwarded-For`; o limite por usuário não muda.
+- A API dorme após 15 minutos sem uso e os jobs agendados não rodam enquanto ela dorme.
+
+### Verificado
+- Backend: 383 testes, 0 falhas, 20 pulados (Testcontainers sem Docker na máquina).
+- Frontend: 74 testes, lint sem erros, `CI=true npm run build` ok, com `/api/v1` no bundle e nenhum `localhost:8082`.
+- Deploy real não foi feito: Render, Neon e Vercel ficam com o dono.
+
 ## 26/10/2026: Radar de cobranças (integrado; validação de mercado pendente)
 
 ### Novo
