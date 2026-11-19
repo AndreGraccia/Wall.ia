@@ -20,6 +20,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { PageHeading, WalletIcon } from '../../components/wallet-ui';
 import HttpService from '../../services/HttpService';
+import BankDataNotice from '../../components/bank-data';
 import { dateTime, errorKey, monthLabel, money, projectRegularDeposits } from '../../utils/wallet';
 
 const PERIODS = [1, 3, 6, 12];
@@ -168,6 +169,8 @@ export default function Insights() {
 
         {report && (
           <Stack spacing={3}>
+            {/* The totals are only as fresh as the bank data under them (B50). */}
+            <BankDataNotice bankData={report.bankData} />
             <Card
               sx={{
                 p: { xs: 3, md: 4 },

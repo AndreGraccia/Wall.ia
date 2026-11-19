@@ -107,6 +107,8 @@ const resources = {
           CARD_SPENDING_NO_CARD: 'Conecte um cartão pelo Open Finance para estimar as compras no cartão.',
           ENVELOPE_LIMIT: 'Você já tem 10 envelopes. Remova um para criar outro.',
           ENVELOPE_NOT_FOUND: 'Esse envelope não existe mais.',
+          MANUAL_DEBT_LIMIT: 'Você já informou 10 dívidas. Remova uma para incluir outra.',
+          MANUAL_DEBT_NOT_FOUND: 'Essa dívida não existe mais.',
           GOAL_LIMIT: 'Você já tem 10 metas. Remova uma para criar outra.',
           GOAL_NOT_FOUND: 'Essa meta não existe mais.',
           ALERT_EMAIL_NOT_VERIFIED:
@@ -626,11 +628,6 @@ const resources = {
         allClearHelp: 'O menor saldo previsto é {{amount}}, em {{date}}.',
         needsAnswers: 'A projeção ainda não conhece seu salário nem suas contas fixas.',
         needsAnswersHelp: 'Responda às perguntas abaixo. Só o que você confirmar entra nas contas.',
-        bankDataAsOf: 'Dados do banco de {{date}}.',
-        bankDataStaleTitle: 'Os dados do banco estão atrasados',
-        bankDataStale:
-          'A última atualização é de {{date}}. O saldo e a previsão abaixo podem não mostrar o que aconteceu depois disso.',
-        bankDataStaleAction: 'Atualizar',
         questionsError: 'Não foi possível carregar as perguntas sobre renda e contas.',
         chartTitle: 'Saldo projetado, dia a dia',
         chartLabel: 'Gráfico do saldo projetado. Menor saldo {{amount}} em {{date}}; saldo final {{end}}.',
@@ -817,7 +814,7 @@ const resources = {
         loansTitle: 'Empréstimos',
         payoff: {
           title: 'Quitar mais rápido',
-          help: 'Quanto você consegue pôr a mais por mês nos empréstimos? A Wall.ia compara duas ordens de quitação com só pagar as parcelas.',
+          help: 'Quanto você consegue pôr a mais por mês nas dívidas? A Wall.ia compara duas ordens de quitação com só pagar as parcelas.',
           extra: 'A mais por mês (R$)',
           extraInvalid: 'Use um valor como 150 ou 150,50.',
           calculate: 'Comparar',
@@ -831,10 +828,24 @@ const resources = {
           orderTitle: 'Ordem com maior juro primeiro, a que custa menos:',
           endsIn_one: 'acaba em {{count}} mês',
           endsIn_other: 'acaba em {{count}} meses',
-          noLoans: 'Nenhum empréstimo com saldo, parcela e taxa para comparar.',
+          noLoans: 'Nenhuma dívida com saldo, parcela e taxa para comparar.',
           withoutRate_one: '{{count}} empréstimo ficou de fora porque o banco não informou a taxa ou a parcela.',
           withoutRate_other: '{{count}} empréstimos ficaram de fora porque o banco não informou a taxa ou a parcela.',
           note: 'Nenhum crédito é oferecido. Pagar antes com redução proporcional dos juros é direito seu (Código de Defesa do Consumidor, art. 52). Peça ao banco o valor para amortizar.',
+        },
+        pix: {
+          title: 'Pix no crédito',
+          help: 'O Open Finance não informa o Pix pago com o limite do cartão. Digite o que aparece no app do banco: o saldo, a parcela e o CET ao mês. Ele entra na ordem de quitação acima, nunca na projeção do saldo, porque as parcelas costumam vir na fatura do cartão.',
+          label: 'Banco ou cartão',
+          balance: 'Saldo devedor (R$)',
+          installment: 'Parcela (R$)',
+          cet: 'CET (% ao mês)',
+          cetHelp: 'Está no contrato ou no app, perto de 8% ao mês.',
+          cetInvalid: 'Use o CET ao mês, como 8 ou 8,5 (até 30%).',
+          add: 'Incluir na quitação',
+          remove: 'Remover',
+          typedByYou: 'informado por você',
+          line: '{{label}}: {{balance}} em aberto, parcela de {{installment}}, CET de {{cet}}% ao mês',
         },
         cardFinal: 'final {{digits}}',
         limitUnknown:
@@ -918,16 +929,22 @@ const resources = {
         confirm: 'Excluir definitivamente',
         cancel: 'Cancelar',
       },
+      // How old the Open Finance data under a screen is (B50, ADR 0020). One text for every screen.
+      bankData: {
+        asOf: 'Dados de {{institution}}, sincronizados em {{date}}.',
+        staleTitle: 'Os dados de {{institution}} estão atrasados',
+        stale:
+          'A última sincronização foi em {{date}}, há mais de {{hours}} horas. Os números abaixo podem não mostrar o que aconteceu depois disso.',
+        neverSynced: 'Esta conta ainda não foi sincronizada. Os números abaixo não incluem o que está no banco.',
+        refresh: 'Atualizar',
+        unknownInstitution: 'sua instituição',
+      },
       // Copy and thresholds for the recurring-charge radar.
       billingRadar: {
         pageTitle: 'Radar de cobranças | Wall.ia',
         heading: 'Radar de cobranças',
         description:
           'Descubra cobranças recorrentes que mudaram de valor e possíveis duplicidades, com as movimentações que explicam cada sinal.',
-        staleTitle: 'Os dados bancários podem estar desatualizados',
-        staleDescription:
-          'Os alertas usam o último histórico sincronizado. Atualize a conexão antes de tomar uma decisão.',
-        refreshConnection: 'Atualizar conexão',
         summary: {
           recurring: 'Padrões mensais identificados',
           increases: 'Aumentos observados',
@@ -1234,6 +1251,8 @@ const resources = {
           CARD_SPENDING_NO_CARD: 'Connect a card through Open Finance to estimate card purchases.',
           ENVELOPE_LIMIT: 'You already have 10 envelopes. Remove one to create another.',
           ENVELOPE_NOT_FOUND: 'This envelope no longer exists.',
+          MANUAL_DEBT_LIMIT: 'You already typed 10 debts. Remove one to add another.',
+          MANUAL_DEBT_NOT_FOUND: 'This debt no longer exists.',
           GOAL_LIMIT: 'You already have 10 goals. Remove one to create another.',
           GOAL_NOT_FOUND: 'This goal no longer exists.',
           ALERT_EMAIL_NOT_VERIFIED:
@@ -1752,10 +1771,6 @@ const resources = {
         allClearHelp: 'The lowest expected balance is {{amount}}, on {{date}}.',
         needsAnswers: 'The projection does not know your salary or fixed bills yet.',
         needsAnswersHelp: 'Answer the questions below. Only what you confirm is counted.',
-        bankDataAsOf: 'Bank data from {{date}}.',
-        bankDataStaleTitle: 'The bank data is out of date',
-        bankDataStale: 'The last update is from {{date}}. The balance and forecast below may miss what happened since.',
-        bankDataStaleAction: 'Update',
         questionsError: 'Could not load the questions about income and bills.',
         chartTitle: 'Projected balance, day by day',
         chartLabel: 'Projected balance chart. Lowest balance {{amount}} on {{date}}; final balance {{end}}.',
@@ -1940,7 +1955,7 @@ const resources = {
         loansTitle: 'Loans',
         payoff: {
           title: 'Pay off faster',
-          help: 'How much more can you put into your loans each month? Wall.ia compares two payoff orders with paying only the instalments.',
+          help: 'How much more can you put into your debts each month? Wall.ia compares two payoff orders with paying only the instalments.',
           extra: 'Extra per month (R$)',
           extraInvalid: 'Use an amount like 150 or 150.50.',
           calculate: 'Compare',
@@ -1954,10 +1969,24 @@ const resources = {
           orderTitle: 'Highest rate first, the cheapest order:',
           endsIn_one: 'ends in {{count}} month',
           endsIn_other: 'ends in {{count}} months',
-          noLoans: 'No loan with balance, instalment and rate to compare.',
+          noLoans: 'No debt with balance, instalment and rate to compare.',
           withoutRate_one: '{{count}} loan was left out because the bank did not send the rate or the instalment.',
           withoutRate_other: '{{count}} loans were left out because the bank did not send the rate or the instalment.',
           note: 'No credit is offered. Paying early with a proportional interest cut is your right in Brazil (Consumer Code, art. 52). Ask your bank for the payoff amount.',
+        },
+        pix: {
+          title: 'Pix on credit',
+          help: 'Open Finance does not report a Pix paid with the card limit. Type what your bank app shows: the balance, the instalment and the monthly CET. It enters the payoff order above, never the balance forecast, because its instalments usually land on the card bill.',
+          label: 'Bank or card',
+          balance: 'Outstanding balance (R$)',
+          installment: 'Instalment (R$)',
+          cet: 'CET (% a month)',
+          cetHelp: 'It is in the contract or the app, around 8% a month.',
+          cetInvalid: 'Use the monthly CET, like 8 or 8.5 (up to 30%).',
+          add: 'Add to the payoff',
+          remove: 'Remove',
+          typedByYou: 'typed by you',
+          line: '{{label}}: {{balance}} outstanding, instalment of {{installment}}, CET of {{cet}}% a month',
         },
         cardFinal: 'ending {{digits}}',
         limitUnknown:
@@ -2041,14 +2070,20 @@ const resources = {
         confirm: 'Delete for good',
         cancel: 'Cancel',
       },
+      bankData: {
+        asOf: 'Data from {{institution}}, synced on {{date}}.',
+        staleTitle: 'The data from {{institution}} is out of date',
+        stale:
+          'The last sync was on {{date}}, more than {{hours}} hours ago. The numbers below may miss what happened since.',
+        neverSynced: 'This account has not been synced yet. The numbers below do not include what is at the bank.',
+        refresh: 'Update',
+        unknownInstitution: 'your institution',
+      },
       billingRadar: {
         pageTitle: 'Billing Radar | Wall.ia',
         heading: 'Billing radar',
         description:
           'Spot recurring charges that changed in price and possible duplicates, with the transactions behind each signal.',
-        staleTitle: 'Bank data may be out of date',
-        staleDescription: 'Alerts use the last synced history. Refresh the connection before deciding.',
-        refreshConnection: 'Refresh connection',
         summary: {
           recurring: 'Monthly patterns found',
           increases: 'Observed price increases',

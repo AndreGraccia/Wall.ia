@@ -18,6 +18,7 @@ import WalletCard from '../../components/wallet-card';
 import TransactionDetail from '../../components/transaction-detail';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
+import BankDataNotice from '../../components/bank-data';
 import { dayLabel, money, totalsFor } from '../../utils/wallet';
 import { forecastReady } from '../../utils/forecast';
 
@@ -49,6 +50,7 @@ function FutureSummary({ hidden }) {
           {t('navigation.future')}
         </Button>
       </Stack>
+      <BankDataNotice bankData={overview.sources.bankData} sx={{ mt: 1 }} />
       {!ready && (
         <Alert severity="info" sx={{ mt: 1 }}>
           {t('future.needsAnswers')}
