@@ -1,7 +1,6 @@
 package com.github.yildizmy.service;
 
 import com.github.yildizmy.domain.entity.Wallet;
-import com.github.yildizmy.domain.enums.WalletSource;
 import com.github.yildizmy.dto.response.BillingRadarReport;
 import com.github.yildizmy.dto.response.BillingRadarPriceImpact;
 import com.github.yildizmy.repository.WalletRepository;
@@ -13,12 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 /** Builds the user's billing radar exclusively from their own settled movements. */
 @Service
@@ -45,19 +41,6 @@ public class BillingRadarService {
     public BillingRadarReport report(long userId) {
         List<Wallet> wallets = walletRepository.findByUserId(userId);
         List<Signal> signals = BillingRadarDetector.detect(futureService.movements(userId, wallets));
-
-        Instant bankDataAsOf = wallets.stream()
-                .filter(wallet -> wallet.getSource() == WalletSource.OPEN_FINANCE)
-                .map(Wallet::getLastSyncedAt)
-                .filter(Objects::nonNull)
-                .min(Comparator.naturalOrder())
-                .orElse(null);
-        boolean hasOpenFinance = wallets.stream().anyMatch(wallet -> wallet.getSource() == WalletSource.OPEN_FINANCE);
-        boolean anyOpenFinanceWithoutSync = wallets.stream()
-                .filter(wallet -> wallet.getSource() == WalletSource.OPEN_FINANCE)
-                .anyMatch(wallet -> wallet.getLastSyncedAt() == null);
-        boolean stale = hasOpenFinance && (anyOpenFinanceWithoutSync || bankDataAsOf == null
-                || bankDataAsOf.plus(FutureService.BANK_DATA_STALE_AFTER).isBefore(clock.instant()));
 
         BigDecimal projectedMonthly = signals.stream()
                 .filter(Signal::recurring)
@@ -94,8 +77,7 @@ public class BillingRadarService {
         return new BillingRadarReport(
                 clock.instant(),
                 LocalDate.now(clock.withZone(ZONE)),
-                bankDataAsOf,
-                stale,
+                FutureService.bankData(wallets, clock.instant()),
                 wallets.size(),
                 (int) signals.stream().filter(Signal::recurring).count(),
                 (int) signals.stream().filter(Signal::priceIncrease).count(),

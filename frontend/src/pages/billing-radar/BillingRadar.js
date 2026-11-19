@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
-import { Alert, AlertTitle, Box, Button, Card, Chip, Container, Grid, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Chip, Container, Grid, Stack, Typography } from '@mui/material';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
 import ChargeRadar from '../future/ChargeRadar';
+import BankDataNotice from '../../components/bank-data';
 import { EmptyState, PageHeading, PageSkeleton, WalletIcon } from '../../components/wallet-ui';
 import { dayLabel, errorKey, money } from '../../utils/wallet';
 
@@ -285,15 +286,7 @@ export default function BillingRadar() {
 
         {report && (
           <>
-            {report.bankDataStale && (
-              <Alert severity="warning" sx={{ mb: 3 }}>
-                <AlertTitle>{t('billingRadar.staleTitle')}</AlertTitle>
-                {t('billingRadar.staleDescription')}
-                <Button component={RouterLink} to="/open-finance" size="small" sx={{ ml: 1 }}>
-                  {t('billingRadar.refreshConnection')}
-                </Button>
-              </Alert>
-            )}
+            <BankDataNotice bankData={report.bankData} sx={{ mb: 3 }} />
 
             <Box sx={{ mb: 3 }}>
               <ChargeRadar />

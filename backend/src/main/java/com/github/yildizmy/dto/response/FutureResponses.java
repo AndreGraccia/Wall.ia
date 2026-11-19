@@ -97,13 +97,11 @@ public final class FutureResponses {
     }
 
     /**
-     * @param bankDataAsOf  oldest sync among the Open Finance accounts (null without them): the projection is only as
-     *                      fresh as its oldest input
-     * @param bankDataStale older than {@link com.github.yildizmy.service.FutureService#BANK_DATA_STALE_AFTER}: at least
-     *                      one daily sync failed, so the screen warns before anyone trusts the projection
+     * @param bankData freshness of the Open Finance accounts (null without them): institution, oldest sync and
+     *                 whether it passed the limit, by the rule every screen shares (B50, ADR 0020)
      */
     public record Sources(int accounts, int cards, int loans, int confirmedRecurrences, int pendingQuestions,
-                          java.time.Instant bankDataAsOf, boolean bankDataStale) {
+                          com.github.yildizmy.service.future.BankDataFreshness.Status bankData) {
     }
 
     /**
@@ -330,7 +328,25 @@ public final class FutureResponses {
     ) {
     }
 
-    public record Commitments(List<Card> cards, List<Loan> loans) {
+    /**
+     * @param manualDebts debts the person typed (Pix no crédito), never mixed with the bank's
+     * @param bankData    freshness of the cards and loans shown (null without them), see {@link Sources}
+     */
+    public record Commitments(List<Card> cards, List<Loan> loans, List<ManualDebt> manualDebts,
+                              com.github.yildizmy.service.future.BankDataFreshness.Status bankData) {
+    }
+
+    /**
+     * A debt typed by the person (B14, ADR 0020).
+     *
+     * @param monthlyCet CET in percent a month, as typed
+     * @param annualCet  the same rate over a year, which is what the payoff plan compares
+     * @param origin     always MANUAL
+     * @param certainty  always ESTIMATED: not checked against the institution
+     */
+    public record ManualDebt(long id, String kind, String label, BigDecimal outstandingBalance,
+                             BigDecimal installmentAmount, BigDecimal monthlyCet, BigDecimal annualCet,
+                             String origin, String certainty, Instant createdAt) {
     }
 
     public record ScenarioSummary(

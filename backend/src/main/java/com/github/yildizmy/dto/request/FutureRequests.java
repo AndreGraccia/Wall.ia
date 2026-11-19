@@ -53,6 +53,20 @@ public final class FutureRequests {
     public record PixInterest(@NotNull @Pattern(regexp = "^(PREPARE|CONFIRM)$") String step) {
     }
 
+    /**
+     * A debt Open Finance does not send (B14, ADR 0020). Only PIX_CREDIT; values as the bank app shows them.
+     *
+     * @param monthlyCet CET in percent a month (8.5 = 8,5% a.m.); required, the plan never guesses a rate
+     */
+    public record ManualDebt(
+            @NotNull @Pattern(regexp = "^PIX_CREDIT$") String kind,
+            @NotBlank @Size(max = 60) String label,
+            @NotNull @DecimalMin("0.01") @DecimalMax("1000000.00") @Digits(integer = 7, fraction = 2) BigDecimal outstandingBalance,
+            @NotNull @DecimalMin("0.01") @DecimalMax("1000000.00") @Digits(integer = 7, fraction = 2) BigDecimal installmentAmount,
+            @NotNull @DecimalMin("0.01") @DecimalMax("30.00") @Digits(integer = 2, fraction = 4) BigDecimal monthlyCet
+    ) {
+    }
+
     public record Envelope(
             @NotBlank @Size(max = 60) String name,
             @NotNull @DecimalMin("0.01") @DecimalMax("1000000.00") @Digits(integer = 7, fraction = 2) BigDecimal amount

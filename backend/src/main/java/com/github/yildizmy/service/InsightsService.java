@@ -80,6 +80,9 @@ public class InsightsService {
      */
     public InsightReportResponse generate(Long userId, int months, String language) {
         FinancialSnapshot snapshot = readOnly.execute(status -> createSnapshot(userId, months));
+        // Read apart from the snapshot on purpose: the snapshot may go to the AI provider, the institution must not.
+        var bankData = readOnly.execute(status ->
+                FutureService.bankData(walletRepository.findByUserId(userId), clock.instant()));
         GeneratedNarrative narrative = localNarrative(snapshot, language);
         String provider = "LOCAL";
         Map<String, String> research = researchContext("en".equals(language));
@@ -99,7 +102,7 @@ public class InsightsService {
             }
         }
 
-        return toResponse(snapshot, narrative, provider, language);
+        return toResponse(snapshot, narrative, provider, language, bankData);
     }
 
     /**
@@ -277,7 +280,8 @@ public class InsightsService {
             FinancialSnapshot snapshot,
             GeneratedNarrative narrative,
             String provider,
-            String language
+            String language,
+            com.github.yildizmy.service.future.BankDataFreshness.Status bankData
     ) {
         boolean english = "en".equals(language);
         return new InsightReportResponse(
@@ -299,7 +303,8 @@ public class InsightsService {
                         : "Conteúdo informativo baseado em dados simulados. Não é recomendação individual de investimento, crédito, jurídica, tributária ou financeira.",
                 english
                         ? "Only aggregate totals by period and operation direction are processed. Names, emails, wallet codes and transaction descriptions are not sent to the AI provider."
-                        : "Apenas totais agregados por período e direção da operação são processados. Nomes, e-mails, códigos de carteira e descrições do extrato não são enviados ao provedor de IA."
+                        : "Apenas totais agregados por período e direção da operação são processados. Nomes, e-mails, códigos de carteira e descrições do extrato não são enviados ao provedor de IA.",
+                bankData
         );
     }
 
