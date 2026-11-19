@@ -1,5 +1,7 @@
 import '@fontsource-variable/inter';
-import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/inter/wght-italic.css';
+// Optical-size axis: the display face gets tighter and more characterful as it grows.
+import '@fontsource-variable/bricolage-grotesque/opsz.css';
 import '@fontsource-variable/jetbrains-mono';
 import { SnackbarProvider } from 'notistack';
 import ReactDOM from 'react-dom/client';

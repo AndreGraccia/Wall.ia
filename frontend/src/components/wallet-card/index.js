@@ -113,7 +113,7 @@ export default function WalletCard({ wallet, index = 0, selected = false, onClic
                 borderRadius: '50%',
                 border: '2px solid currentColor',
                 background: (th) =>
-                  `conic-gradient(${th.palette.brand.volt},${th.palette.brand.horizon},${th.palette.brand.lineStrong},${th.palette.brand.volt})`,
+                  `conic-gradient(${th.palette.brand.lamp},${th.palette.brand.fog},${th.palette.brand.lineStrong},${th.palette.brand.lamp})`,
               }}
             />
           </IconButton>

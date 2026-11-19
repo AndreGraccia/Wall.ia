@@ -173,7 +173,7 @@ export default function Insights() {
                 p: { xs: 3, md: 4 },
                 background: (theme) =>
                   `radial-gradient(120% 120% at 100% 0%, ${alpha(
-                    theme.palette.brand.horizon,
+                    theme.palette.brand.fog,
                     0.14
                   )} 0%, transparent 50%), ${theme.palette.background.paper}`,
               }}
