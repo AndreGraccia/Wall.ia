@@ -42,7 +42,7 @@ body { overflow: hidden; -webkit-font-smoothing: antialiased; position: relative
 .wordmark { font-family: var(--display); font-weight: 700; letter-spacing: -0.02em; line-height: 1; display: inline-flex; align-items: center; gap: 0.4em; }
 .wordmark svg { width: 1.5em; height: 1.5em; }
 .wordmark .dot { color: var(--action); }
-.headline { font-family: var(--display); font-weight: 600; letter-spacing: -0.03em; line-height: 1.02; font-variation-settings: 'opsz' 96; }
+.headline { font-family: var(--display); font-weight: 600; letter-spacing: -0.008em; line-height: 1.04; font-variation-settings: 'opsz' 96; }
 .body { color: var(--text-2); line-height: 1.45; }
 .estimate { font-style: italic; color: var(--estimated); }
 .source { color: var(--text-2); font-size: 18px; }

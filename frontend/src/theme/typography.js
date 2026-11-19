@@ -58,7 +58,7 @@ const typography = {
     fontFamily: FONT_DISPLAY,
     fontWeight: 600,
     lineHeight: 1.12,
-    letterSpacing: '-0.025em',
+    letterSpacing: '-0.01em',
     fontSize: pxToRem(34),
     ...responsiveFontSizes({
       sm: 38,
@@ -84,7 +84,7 @@ const typography = {
     fontFamily: FONT_DISPLAY,
     fontWeight: 600,
     lineHeight: 1.22,
-    letterSpacing: '-0.03em',
+    letterSpacing: '-0.012em',
     fontSize: pxToRem(23),
     ...responsiveFontSizes({
       sm: 25,
