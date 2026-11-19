@@ -37,6 +37,14 @@ public final class QuestionParser {
             "\\b(de|por|custa|custando|gastar|gasto|pagar|valor|comprar|compro|parcelar|of|for|costs?|spend|pay|buy|afford)( an?)?\\s*$");
     private static final Pattern YEAR = Pattern.compile("(19|20)\\d{2}");
 
+    /**
+     * Investing is not something the engine answers, and the product never recommends one (no investment advice).
+     * Checked first: "Qual ação devo comprar?" has "comprar" in it and must not become a purchase simulation.
+     * "bolsa" alone is a handbag; only the stock-market phrasings count.
+     */
+    private static final Pattern INVESTMENT = Pattern.compile(
+            "\\b(investir|investimentos?|acao|acoes|bolsa de valores|na bolsa|cripto\\w*|bitcoin|tesouro direto|cdb"
+                    + "|renda fixa|fundos? de investimento|invest\\w*|stocks?|shares|crypto\\w*)\\b");
     private static final Pattern BILL_PAYMENT = Pattern.compile("\\b(pagar|quitar|pay)\\b.*\\b(fatura|boleto|conta de|invoice|bill)");
     private static final Pattern PURCHASE = Pattern.compile("\\b(comprar|compro|compra|parcelar|afford|buy|purchase)\\b");
     private static final Pattern SPEND = Pattern.compile("\\b(gastar|gasto|pagar|spend|pay)\\b");
@@ -66,7 +74,9 @@ public final class QuestionParser {
         boolean card = CARD.matcher(text).find() || (installments != null && installments > 1);
 
         Intent intent;
-        if (BILL_PAYMENT.matcher(text).find()) {
+        if (INVESTMENT.matcher(text).find()) {
+            intent = Intent.UNKNOWN;
+        } else if (BILL_PAYMENT.matcher(text).find()) {
             // Paying an existing bill is not a new purchase: simulating it would add the debt twice.
             intent = Intent.COMMITTED;
         } else if (PURCHASE.matcher(text).find()) {

@@ -131,6 +131,8 @@ public class FutureAlertService {
             alertRepository.save(alert);
             return false;
         }
+        // decide() answers SEND only with a window; said here so the next change cannot break it silently.
+        if (window == null) return false;
         boolean delivered = false;
         if (email) {
             try {

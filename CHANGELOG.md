@@ -1,5 +1,18 @@
 # Changelog
 
+## 19/11/2026: achados da inspeção da V2 (A3, checkpoint 3)
+
+Bug Hunt e SonarQube na V2, com os mesmos métodos usados no e-wallet.
+
+### Corrigido
+- **Pergunta de investimento virava simulação de compra.** "Qual ação devo comprar na bolsa?" casava com "comprar" e o motor pedia o valor. Agora investimento cai em "ainda não sei" antes de qualquer outra intenção; "comprar uma bolsa de 300" continua sendo compra (caso de teste CT-V19).
+- **Taxa a partir de `double`.** `LoanCost.monthlyRate` e `OfbResponses.annualRatePercent` usavam `new BigDecimal(double)`, que carrega a expansão binária; agora `BigDecimal.valueOf` (Sonar S2111).
+- **Invariante explícita no alerta.** `FutureAlertService` só envia com janela negativa; a garantia estava implícita entre dois métodos (Sonar S2259).
+
+### Revisado sem mudança
+- `FieldCipher` (S3077): o `volatile` publica um record imutável com `Map.copyOf`. `EmailVerificationService.maskEmail` (S2259): o nulo retorna antes do `substring`.
+- Seis hotspots revisados como seguros: CSRF numa API stateless com JWT; SQL com nome de tabela de constante; regex sobre entrada limitada a 300 caracteres ou sobre configuração; aleatório só no atraso entre tentativas.
+
 ## 19/11/2026: identidade visual "Farol"
 
 ### Mudou

@@ -178,7 +178,7 @@ final class OfbResponses {
         if (rate.isMissingNode() || !rate.hasNonNull("preFixedRate")) return null;
         double fraction = new BigDecimal(rate.path("preFixedRate").asText()).doubleValue();
         double annual = "AM".equals(rate.path("taxPeriodicity").asText()) ? Math.pow(1 + fraction, 12) - 1 : fraction;
-        return new BigDecimal(annual * 100, MathContext.DECIMAL64).setScale(4, RoundingMode.HALF_EVEN);
+        return BigDecimal.valueOf(annual * 100).round(MathContext.DECIMAL64).setScale(4, RoundingMode.HALF_EVEN);
     }
 
     // --- helpers ---------------------------------------------------------------------------------

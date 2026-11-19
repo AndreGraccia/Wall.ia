@@ -64,6 +64,7 @@ public final class LoanCost {
     }
 
     static BigDecimal monthlyRate(BigDecimal annualRatePercent) {
-        return new BigDecimal(Math.pow(1 + annualRatePercent.doubleValue() / 100, 1.0 / 12) - 1, MathContext.DECIMAL64);
+        // valueOf keeps the double's shortest decimal; new BigDecimal(double) carried the binary expansion (Sonar S2111).
+        return BigDecimal.valueOf(Math.pow(1 + annualRatePercent.doubleValue() / 100, 1.0 / 12) - 1).round(MathContext.DECIMAL64);
     }
 }
