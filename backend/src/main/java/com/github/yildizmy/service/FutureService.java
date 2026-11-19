@@ -2,6 +2,7 @@ package com.github.yildizmy.service;
 
 import com.github.yildizmy.domain.entity.CreditCard;
 import com.github.yildizmy.domain.entity.Loan;
+import com.github.yildizmy.domain.entity.ManualDebt;
 import com.github.yildizmy.domain.entity.RecurrenceDecision;
 import com.github.yildizmy.domain.entity.Transaction;
 import com.github.yildizmy.domain.entity.Wallet;
@@ -18,10 +19,13 @@ import com.github.yildizmy.repository.GoalRepository;
 import com.github.yildizmy.domain.entity.Envelope;
 import com.github.yildizmy.domain.entity.Goal;
 import com.github.yildizmy.repository.LoanRepository;
+import com.github.yildizmy.repository.ManualDebtRepository;
 import com.github.yildizmy.repository.RecurrenceDecisionRepository;
 import com.github.yildizmy.repository.TransactionRepository;
 import com.github.yildizmy.repository.WalletRepository;
+import com.github.yildizmy.service.future.BankDataFreshness;
 import com.github.yildizmy.service.future.BillingRadarDetector;
+import com.github.yildizmy.service.future.CardBillPayment;
 import com.github.yildizmy.service.future.CardPlan;
 import com.github.yildizmy.service.future.CashEvent;
 import com.github.yildizmy.service.future.CashEventPlanner;
@@ -92,6 +96,7 @@ public class FutureService {
     private final LoanRepository loanRepository;
     private final GoalRepository goalRepository;
     private final EnvelopeRepository envelopeRepository;
+    private final ManualDebtRepository manualDebtRepository;
     private final UserService userService;
     private final MarketRatesService marketRates;
     private final Clock clock;
@@ -104,6 +109,7 @@ public class FutureService {
             LoanRepository loanRepository,
             GoalRepository goalRepository,
             EnvelopeRepository envelopeRepository,
+            ManualDebtRepository manualDebtRepository,
             UserService userService,
             MarketRatesService marketRates,
             Clock clock) {
@@ -114,6 +120,7 @@ public class FutureService {
         this.loanRepository = loanRepository;
         this.goalRepository = goalRepository;
         this.envelopeRepository = envelopeRepository;
+        this.manualDebtRepository = manualDebtRepository;
         this.userService = userService;
         this.marketRates = marketRates;
         this.clock = clock;
@@ -152,8 +159,7 @@ public class FutureService {
                         context.loans().size(),
                         context.confirmed().size(),
                         (int) pending,
-                        bankDataAsOf(context.wallets()),
-                        bankDataStale(bankDataAsOf(context.wallets()), clock.instant())
+                        bankData(context.wallets(), clock.instant())
                 ),
                 spendingQuestion(context, DAILY_SPENDING_KEY, context.dailyEstimate(), context.dailyAmount()),
                 context.cardPlans().isEmpty() ? null
@@ -304,6 +310,16 @@ public class FutureService {
                     loan.getInstallmentAmount(),
                     loan.getAnnualRate()));
         }
+        // Typed by the person (B14): same order, its own CET, and the origin travels with it to the screen.
+        for (ManualDebt debt : manualDebtRepository.findByUserIdOrderById(userId)) {
+            debts.add(new com.github.yildizmy.service.future.DebtPayoff.Debt(
+                    "pix-" + debt.getId(),
+                    "Pix no crédito - " + debt.getLabel(),
+                    debt.getOutstandingBalance(),
+                    debt.getInstallmentAmount(),
+                    LoanCost.annualFromMonthly(debt.getMonthlyCet()),
+                    MANUAL));
+        }
         return new FutureResponses.DebtPayoff(
                 com.github.yildizmy.service.future.DebtPayoff.compare(debts, extra.setScale(2, java.math.RoundingMode.HALF_UP)),
                 withoutRate);
@@ -312,10 +328,12 @@ public class FutureService {
     @Transactional(readOnly = true)
     public FutureResponses.Commitments commitments(long userId) {
         LocalDate today = LocalDate.now(clock.withZone(ZONE));
-        List<FutureResponses.Card> cards = creditCardRepository.findByUserIdOrderById(userId).stream()
+        List<CreditCard> cardEntities = creditCardRepository.findByUserIdOrderById(userId);
+        List<Loan> loanEntities = loanRepository.findByUserIdOrderById(userId);
+        List<FutureResponses.Card> cards = cardEntities.stream()
                 .map(card -> toResponse(toPlan(card), card, today))
                 .toList();
-        List<FutureResponses.Loan> loans = loanRepository.findByUserIdOrderById(userId).stream()
+        List<FutureResponses.Loan> loans = loanEntities.stream()
                 .map(loan -> {
                     LoanPlan plan = toPlan(loan);
                     List<LocalDate> dues = plan.dueDates();
@@ -341,7 +359,13 @@ public class FutureService {
                     );
                 })
                 .toList();
-        return new FutureResponses.Commitments(cards, loans);
+        // Commitments shows cards and loans, so their own sync dates are what can be late here.
+        List<BankDataFreshness.Source> synced = new ArrayList<>();
+        cardEntities.forEach(card -> synced.add(new BankDataFreshness.Source(card.getInstitution(), card.getLastSyncedAt())));
+        loanEntities.forEach(loan -> synced.add(new BankDataFreshness.Source(loan.getInstitution(), loan.getLastSyncedAt())));
+        List<FutureResponses.ManualDebt> manual = manualDebtRepository.findByUserIdOrderById(userId).stream()
+                .map(FutureService::toResponse).toList();
+        return new FutureResponses.Commitments(cards, loans, manual, BankDataFreshness.of(synced, clock.instant()));
     }
 
     @Transactional(readOnly = true)
@@ -471,6 +495,37 @@ public class FutureService {
     }
 
     static final int MAX_ENVELOPES = 10;
+    static final int MAX_MANUAL_DEBTS = 10;
+    /** Origin of a number typed by the person; ESTIMATED because nobody checked it with the institution. */
+    static final String MANUAL = "MANUAL";
+
+    /** "Pix no crédito" typed by the person (B14, ADR 0020): enters the payoff plan, never the projection. */
+    @Transactional
+    public FutureResponses.ManualDebt createManualDebt(long userId, FutureRequests.ManualDebt request) {
+        userService.lockForUpdate(userId);
+        if (manualDebtRepository.countByUserId(userId) >= MAX_MANUAL_DEBTS) throw new WalletRuleException("MANUAL_DEBT_LIMIT");
+        ManualDebt debt = new ManualDebt();
+        debt.setUser(userService.getReferenceById(userId));
+        debt.setKind(request.kind());
+        debt.setLabel(request.label().trim());
+        debt.setOutstandingBalance(request.outstandingBalance());
+        debt.setInstallmentAmount(request.installmentAmount());
+        debt.setMonthlyCet(request.monthlyCet());
+        debt.setCreatedAt(clock.instant());
+        return toResponse(manualDebtRepository.save(debt));
+    }
+
+    @Transactional
+    public void deleteManualDebt(long userId, long debtId) {
+        manualDebtRepository.delete(manualDebtRepository.findByIdAndUserId(debtId, userId)
+                .orElseThrow(() -> new WalletRuleException("MANUAL_DEBT_NOT_FOUND")));
+    }
+
+    private static FutureResponses.ManualDebt toResponse(ManualDebt debt) {
+        return new FutureResponses.ManualDebt(debt.getId(), debt.getKind(), debt.getLabel(), debt.getOutstandingBalance(),
+                debt.getInstallmentAmount(), debt.getMonthlyCet(), LoanCost.annualFromMonthly(debt.getMonthlyCet()),
+                MANUAL, CashEvent.Certainty.ESTIMATED.name(), debt.getCreatedAt());
+    }
 
     @Transactional(readOnly = true)
     public FutureResponses.Envelopes envelopes(long userId) {
@@ -610,7 +665,10 @@ public class FutureService {
         // Recurrences look back up to a year; everyday spending 90 days. Older history changes nothing here.
         List<Transaction> transactions = transactionRepository.findAllByUserIdSince(userId,
                 today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant());
-        List<Movement> movements = movements(transactions, wallets);
+        List<CreditCard> cards = creditCardRepository.findByUserIdOrderById(userId);
+        List<CardPlan> cardPlans = cards.stream().map(this::toPlan).toList();
+        // The card bill paid from the account is the invoice's purchases, already projected as the invoice (B12).
+        List<Movement> movements = CardBillPayment.withoutBillPayments(movements(transactions, wallets), cardPlans);
         List<RecurrencePattern> patterns = RecurrenceDetector.detect(movements);
         Map<String, RecurrenceDecision> decisions = decisionRepository.findByUserId(userId).stream()
                 .collect(Collectors.toMap(RecurrenceDecision::getPatternKey, Function.identity()));
@@ -621,7 +679,6 @@ public class FutureService {
                 })
                 .map(pattern -> new ConfirmedRecurrence(pattern, Category.valueOf(decisions.get(pattern.key()).getCategory())))
                 .toList();
-        List<CreditCard> cards = creditCardRepository.findByUserIdOrderById(userId);
         List<Loan> loans = loanRepository.findByUserIdOrderById(userId);
 
         // Bills already projected (confirmed) or still being asked about (pending) are not everyday spending.
@@ -634,7 +691,6 @@ public class FutureService {
                 .collect(Collectors.toSet());
         Optional<DailySpending.Estimate> dailyEstimate = DailySpending.estimate(today, movements, fixedKeys);
         BigDecimal dailyAmount = applied(decisions.get(DAILY_SPENDING_KEY), dailyEstimate);
-        List<CardPlan> cardPlans = cards.stream().map(this::toPlan).toList();
         Optional<DailySpending.Estimate> cardEstimate = DailySpending.estimateCard(today, cardPlans);
         BigDecimal cardAmount = applied(decisions.get(CARD_SPENDING_KEY), cardEstimate);
         List<CashEventPlanner.GoalPlan> goals = goalRepository.findByUserIdOrderById(userId).stream().map(this::toPlan).toList();
@@ -650,20 +706,12 @@ public class FutureService {
      * Entries the bank itself scheduled (Open Finance LANCAMENTO_FUTURO, imported as PENDING): confirmed future
      * events with the bank's own date and value.
      */
-    /** The daily sync runs at 7h30; 36 hours without one means at least one run failed for this person (B50). */
-    public static final java.time.Duration BANK_DATA_STALE_AFTER = java.time.Duration.ofHours(36);
-
-    static java.time.Instant bankDataAsOf(List<Wallet> wallets) {
-        return wallets.stream()
+    /** Freshness of the Open Finance accounts, by the one rule every screen uses (B50, ADR 0020). */
+    public static BankDataFreshness.Status bankData(List<Wallet> wallets, java.time.Instant now) {
+        return BankDataFreshness.of(wallets.stream()
                 .filter(wallet -> wallet.getSource() == com.github.yildizmy.domain.enums.WalletSource.OPEN_FINANCE)
-                .map(Wallet::getLastSyncedAt)
-                .filter(java.util.Objects::nonNull)
-                .min(Comparator.naturalOrder())
-                .orElse(null);
-    }
-
-    static boolean bankDataStale(java.time.Instant asOf, java.time.Instant now) {
-        return asOf != null && asOf.plus(BANK_DATA_STALE_AFTER).isBefore(now);
+                .map(wallet -> new BankDataFreshness.Source(wallet.getInstitutionName(), wallet.getLastSyncedAt()))
+                .toList(), now);
     }
 
     static List<CashEvent> scheduled(List<Transaction> transactions, List<Wallet> wallets, LocalDate today) {

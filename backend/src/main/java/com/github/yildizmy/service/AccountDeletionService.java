@@ -37,6 +37,7 @@ public class AccountDeletionService {
             "DELETE FROM goal WHERE user_id = ?",
             "DELETE FROM future_alert WHERE user_id = ?",
             "DELETE FROM envelope WHERE user_id = ?",
+            "DELETE FROM manual_debt WHERE user_id = ?",
             "DELETE FROM forecast_snapshot WHERE user_id = ?",
             "DELETE FROM push_subscription WHERE user_id = ?",
             "DELETE FROM email_verification_challenge WHERE user_id = ?",
