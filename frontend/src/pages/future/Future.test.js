@@ -122,6 +122,8 @@ test('everyday spending without history can still be declined, and "yes" is not 
     )
   );
   await renderPage();
+  // Pending questions fold into one row ("1 pergunta melhora a projeção") once something is confirmed.
+  await act(async () => Simulate.click(button('future.questionsPending')));
 
   expect(button('future.daily.no')).toBeDefined();
   expect(button('future.daily.yes')).toBeUndefined();
@@ -146,7 +148,7 @@ test('a failure in /recurrences keeps the projection and shows the error only in
   expect(text()).not.toContain('future.questionsError');
 });
 
-test('on a phone the tools fold behind one row each and the answer stays open', async () => {
+test('the tools fold behind one row each and the answer stays open', async () => {
   const original = window.matchMedia;
   window.matchMedia = (query) => ({
     matches: query.includes('max-width'),
@@ -161,9 +163,9 @@ test('on a phone the tools fold behind one row each and the answer stays open', 
     await renderPage();
 
     expect(text()).toContain('4.242,00');
-    const simulator = button('future.simulatorTitle+');
+    const simulator = button('future.simulatorTitle');
     expect(simulator.getAttribute('aria-expanded')).toBe('false');
-    expect(button('future.goals.title+')).toBeDefined();
+    expect(button('future.goals.title')).toBeDefined();
     expect(container.querySelector('input')).toBeNull();
 
     await act(async () => Simulate.click(simulator));

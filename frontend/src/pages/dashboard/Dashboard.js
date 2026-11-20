@@ -1,261 +1,194 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Alert, Box, Button, Card, Container, Grid, IconButton, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Container, Skeleton, Stack, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Helmet } from 'react-helmet-async';
-import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useWallets } from '../../context/WalletContext';
-import {
-  ActivityList,
-  DataState,
-  EmptyState,
-  IconTile,
-  PageHeading,
-  SectionCard,
-  WalletIcon,
-} from '../../components/wallet-ui';
-import WalletCard from '../../components/wallet-card';
-import TransactionDetail from '../../components/transaction-detail';
+import { EmptyState, PageHeading } from '../../components/wallet-ui';
+import { DailyLimitCard, EventRow } from '../../components/future-ui';
+import ProjectionChart from '../../components/projection-chart';
+import BankDataNotice from '../../components/bank-data';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
-import BankDataNotice from '../../components/bank-data';
-import { dayLabel, money, totalsFor } from '../../utils/wallet';
-import { forecastReady } from '../../utils/forecast';
+import { dayLabel, errorKey, money } from '../../utils/wallet';
+import { balanceHistory, forecastReady } from '../../utils/forecast';
 
-/** "Próximos 30 dias": the Futuro page condensed. Quietly absent if the engine is unavailable. */
-function FutureSummary({ hidden }) {
-  const { t, i18n } = useTranslation();
-  const [overview, setOverview] = useState(null);
-  useEffect(() => {
-    let active = true;
-    HttpService.getWithAuth('/future/overview?horizon=30')
-      .then((data) => active && setOverview(data))
-      .catch(() => active && setOverview(null));
-    return () => {
-      active = false;
-    };
-  }, []);
-  if (!overview) return null;
-  const risk = overview.projection.riskWindows[0];
-  // Same rule as Future: with nothing confirmed, "free = balance" would be a number the engine does not know.
-  const ready = forecastReady({ sources: overview.sources });
-  const mask = (value) => (hidden ? '••••' : money(value, i18n.language));
-  return (
-    <Card sx={{ p: 3, mb: 3 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-        <Typography variant="overline" color="text.secondary">
-          {t('future.horizon', { days: 30 })}
-        </Typography>
-        <Button component={RouterLink} to="/future" size="small" endIcon={<WalletIcon name="arrow" />}>
-          {t('navigation.future')}
-        </Button>
-      </Stack>
-      <BankDataNotice bankData={overview.sources.bankData} sx={{ mt: 1 }} />
-      {!ready && (
-        <Alert severity="info" sx={{ mt: 1 }}>
-          {t('future.needsAnswers')}
-        </Alert>
-      )}
-      {ready && (
-        <Stack direction="row" spacing={3} sx={{ mt: 1 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('future.committed')}
-            </Typography>
-            <Typography
-              variant="h5"
-              component="p"
-              sx={{ fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}
-            >
-              {mask(overview.committed.total)}
-            </Typography>
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('future.free')}
-            </Typography>
-            <Typography
-              variant="h5"
-              component="p"
-              sx={{ fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere', color: 'primary.main' }}
-            >
-              {mask(overview.freeAfterCommitments)}
-            </Typography>
-          </Box>
-        </Stack>
-      )}
-      {risk && (
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          {t('future.risk', {
-            start: dayLabel(risk.start, i18n.language),
-            end: dayLabel(risk.end, i18n.language),
-            amount: hidden ? '••••' : money(Math.abs(Number(risk.lowestBalance)), i18n.language),
-          })}
-        </Alert>
-      )}
-      {ready && !risk && overview.sources.pendingQuestions > 0 && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          {t('future.needsAnswers')}
-        </Alert>
-      )}
-    </Card>
-  );
-}
-FutureSummary.propTypes = { hidden: PropTypes.bool };
-
+/**
+ * Início (docs/brand/DESIGN.md): a short greeting with the number of the day, a compact 30-day chart, the
+ * next 5 commitments and two shortcuts. Everything else has its own screen.
+ */
 export default function Dashboard() {
+  const theme = useTheme();
   const { t, i18n } = useTranslation();
-  const { wallets, transactions } = useWallets();
-  const [hidden, setHidden] = useState(false);
-  const [detail, setDetail] = useState(null);
-  const totals = totalsFor(transactions, wallets);
-  const total = wallets.reduce((sum, wallet) => sum + Math.round(Number(wallet.balance) * 100), 0) / 100;
+  const lang = i18n.language;
+  const { transactions, wallets } = useWallets() || {};
   const user = AuthService.getCurrentUser();
+  const [state, setState] = useState({ loading: true, error: null, overview: null });
+
+  const load = useCallback(async () => {
+    setState((previous) => ({ ...previous, loading: true, error: null }));
+    try {
+      setState({ loading: false, error: null, overview: await HttpService.getWithAuth('/future/overview?horizon=30') });
+    } catch (failure) {
+      setState({ loading: false, error: errorKey(failure), overview: null });
+    }
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const { overview } = state;
+  const projection = overview?.projection;
+  const today = projection?.days[0]?.date;
+  const history = useMemo(
+    () => balanceHistory({ transactions, wallets, today, balance: overview?.balance, days: 7 }),
+    [transactions, wallets, today, overview?.balance]
+  );
+  const sources = overview?.sources;
+  const noData =
+    sources && !sources.confirmedRecurrences && !sources.pendingQuestions && !sources.cards && !sources.loans;
+  const ready = forecastReady({ sources });
+  const upcoming = (projection?.events || []).filter((event) => Number(event.amount) < 0).slice(0, 5);
+  const shortcuts = (
+    <>
+      <Button component={RouterLink} to="/ask" variant="outlined">
+        {t('navigation.ask')}
+      </Button>
+      <Button component={RouterLink} to="/future#simulator" variant="outlined">
+        {t('dashboard.simulate')}
+      </Button>
+    </>
+  );
+
   return (
     <>
       <Helmet>
         <title>{t('dashboard.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <PageHeading
-          title={t('app.greeting', { name: user?.firstName || t('app.you') })}
-          description={t('app.overviewHelp')}
-        />
-        <DataState>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={5}>
-              <Card sx={{ p: { xs: 3, sm: 4 }, mb: 3 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography color="text.secondary" variant="body2">
-                    {t('wallet.stack.totalBalance')}
+        <PageHeading title={t('app.greeting', { name: user?.firstName || t('app.you') })} />
+
+        {state.loading && !overview && (
+          <Stack spacing={4} role="status" aria-busy="true" aria-label={t('common.loading')}>
+            <Box>
+              <Skeleton width={140} height={24} />
+              <Skeleton width="min(320px, 80%)" height={56} />
+              <Skeleton width="min(380px, 90%)" height={24} />
+            </Box>
+            <Skeleton variant="rounded" height={180} />
+          </Stack>
+        )}
+        {state.error && (
+          <Alert
+            severity="error"
+            action={
+              <Button color="inherit" onClick={load}>
+                {t('app.retry')}
+              </Button>
+            }
+          >
+            {t('dashboard.loadError')} {t(state.error)}
+          </Alert>
+        )}
+        {noData && (
+          <EmptyState
+            icon="bank"
+            title={t('future.noData')}
+            description={t('future.noDataHelp')}
+            action={
+              <Button component={RouterLink} to="/open-finance" variant="contained">
+                {t('openFinance.connectShort')}
+              </Button>
+            }
+          />
+        )}
+
+        {overview && !noData && (
+          <Stack spacing={{ xs: 4, md: 5 }}>
+            {sources.bankData?.stale && <BankDataNotice bankData={sources.bankData} />}
+            {ready && overview.spendingLimit ? (
+              <DailyLimitCard compact limit={overview.spendingLimit} exitPlan={overview.exitPlan} action={shortcuts} />
+            ) : (
+              <Box>
+                <Typography variant="h5" component="p" sx={{ maxWidth: 560 }}>
+                  {t('dashboard.answerFirst')}
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" sx={{ mt: 2.5, gap: 1 }}>
+                  <Button component={RouterLink} to="/future" variant="contained">
+                    {t('dashboard.answer')}
+                  </Button>
+                  {shortcuts}
+                </Stack>
+              </Box>
+            )}
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 7fr) minmax(0, 5fr)' },
+                gap: { xs: 4, md: 5 },
+                alignItems: 'start',
+              }}
+            >
+              {ready && (
+                <Box component="section" aria-labelledby="dashboard-chart">
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                    <Typography id="dashboard-chart" variant="h6" component="h2">
+                      {t('future.horizon', { days: 30 })}
+                    </Typography>
+                    <Button component={RouterLink} to="/future" size="small">
+                      {t('dashboard.openFuture')}
+                    </Button>
+                  </Stack>
+                  <ProjectionChart
+                    height={200}
+                    ariaLabel={t('future.chartLabelClear', {
+                      days: 30,
+                      amount: money(projection.minBalance, lang),
+                      date: dayLabel(projection.minDate, lang),
+                    })}
+                    history={history}
+                    series={[
+                      {
+                        key: 'projection',
+                        color: theme.palette.chart.projection,
+                        dashed: true,
+                        days: projection.days.map((day) => ({ date: day.date, balance: Number(day.balance) })),
+                      },
+                    ]}
+                    lowest={{ date: projection.minDate, balance: Number(projection.minBalance) }}
+                  />
+                  {sources.bankData && !sources.bankData.stale && (
+                    <BankDataNotice bankData={sources.bankData} sx={{ mt: 1.5 }} />
+                  )}
+                </Box>
+              )}
+              <Box component="section" aria-labelledby="dashboard-upcoming">
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography id="dashboard-upcoming" variant="h6" component="h2">
+                    {t('dashboard.upcoming')}
                   </Typography>
-                  <IconButton
-                    aria-label={t(hidden ? 'app.showBalance' : 'app.hideBalance')}
-                    aria-pressed={hidden}
-                    onClick={() => setHidden(!hidden)}
-                  >
-                    <WalletIcon name="eye" sx={{ fontSize: 20 }} />
-                  </IconButton>
-                </Stack>
-                <Typography
-                  variant="h2"
-                  sx={{
-                    my: 2,
-                    fontSize: { xs: '2.5rem', sm: '3rem' },
-                    overflowWrap: 'anywhere',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  {hidden ? '••••••' : money(total, i18n.language)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('app.balanceHelp')}
-                </Typography>
-                <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-                  <Button
-                    component={RouterLink}
-                    to="/envelopes"
-                    variant="contained"
-                    fullWidth
-                    startIcon={<WalletIcon name="envelope" />}
-                  >
-                    {t('navigation.envelopes')}
-                  </Button>
-                  <Button
-                    component={RouterLink}
-                    to="/open-finance"
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<WalletIcon name="bank" />}
-                  >
-                    {t('openFinance.connectShort')}
-                  </Button>
-                </Stack>
-                <Stack
-                  direction="row"
-                  spacing={3}
-                  sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}
-                >
-                  {['incoming', 'outgoing'].map((key) => (
-                    <Box key={key} sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {t(`app.${key}`)}
-                      </Typography>
-                      <Typography variant="subtitle1" sx={{ overflowWrap: 'anywhere' }}>
-                        {hidden ? '••••' : money(totals[key] / 100, i18n.language)}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </Card>
-              <SectionCard
-                title={t('navigation.wallets')}
-                action={
-                  <Button component={RouterLink} to="/wallets">
+                  <Button component={RouterLink} to="/commitments" size="small">
                     {t('app.seeAll')}
                   </Button>
-                }
-              >
-                {wallets.length ? (
-                  <Box sx={{ p: 3, pt: 1 }}>
-                    {wallets.slice(0, 3).map((wallet, index) => (
-                      <Box
-                        key={wallet.id}
-                        sx={{
-                          mt: index ? '-105px' : 0,
-                          position: 'relative',
-                          zIndex: index,
-                          '&:focus-within': { zIndex: 5 },
-                        }}
-                      >
-                        <WalletCard wallet={wallet} index={index} hideBalance={hidden} href={`/wallets/${wallet.id}`} />
-                      </Box>
+                </Stack>
+                {upcoming.length ? (
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                    {upcoming.map((event) => (
+                      <EventRow key={`${event.reference}-${event.date}`} event={event} dense />
                     ))}
                   </Box>
                 ) : (
-                  <EmptyState
-                    title={t('app.firstWallet')}
-                    description={t('app.firstWalletHelp')}
-                    action={
-                      <Button component={RouterLink} to="/wallets/new">
-                        {t('wallet.newWallet')}
-                      </Button>
-                    }
-                  />
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                    {t('dashboard.noUpcoming')}
+                  </Typography>
                 )}
-              </SectionCard>
-            </Grid>
-            <Grid item xs={12} md={7}>
-              <FutureSummary hidden={hidden} />
-              <SectionCard
-                title={t('wallet.statement.recent')}
-                action={
-                  <Button component={RouterLink} to="/transactions">
-                    {t('app.seeAll')}
-                  </Button>
-                }
-              >
-                <ActivityList transactions={transactions.slice(0, 6)} wallets={wallets} onSelect={setDetail} />
-              </SectionCard>
-              <Card sx={{ mt: 3, p: 3 }}>
-                <Stack direction="row" spacing={2}>
-                  <IconTile name="insights" size={44} />
-                  <Box>
-                    <Typography variant="subtitle2">{t('insights.dashboardTitle')}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1 }}>
-                      {t('insights.dashboardDescription')}
-                    </Typography>
-                    <Button component={RouterLink} to="/insights" size="small" sx={{ p: 0, minHeight: 32 }}>
-                      {t('insights.dashboardAction')}
-                    </Button>
-                  </Box>
-                </Stack>
-              </Card>
-            </Grid>
-          </Grid>
-        </DataState>
+              </Box>
+            </Box>
+          </Stack>
+        )}
       </Container>
-      <TransactionDetail transaction={detail} onClose={() => setDetail(null)} />
     </>
   );
 }

@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  AlertTitle,
-  Box,
-  Button,
-  Card,
-  Chip,
-  CircularProgress,
-  Divider,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Chip, Skeleton, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
 import { dayLabel, errorKey, money } from '../../utils/wallet';
@@ -78,18 +67,16 @@ export default function ChargeRadar() {
   const formatDate = (value) => (value ? dayLabel(value, i18n.language) : t('future.chargeRadar.noDate'));
 
   return (
-    <Card component="section" aria-labelledby="charge-radar-title" sx={{ p: { xs: 2, sm: 3 } }}>
+    <Box component="section" aria-labelledby="charge-radar-title">
       <Stack spacing={2}>
         <Box>
-          <Typography id="charge-radar-title" variant="h5" component="h2">
+          <Typography id="charge-radar-title" variant="h6" component="h2">
             {t('future.chargeRadar.title')}
           </Typography>
-          <Typography color="text.secondary" variant="body2" sx={{ mt: 0.75 }}>
-            {t('future.chargeRadar.description')}
+          <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, maxWidth: 720 }}>
+            {t('future.chargeRadar.description')} {t('future.chargeRadar.disclaimer')}
           </Typography>
         </Box>
-
-        <Alert severity="info">{t('future.chargeRadar.disclaimer')}</Alert>
 
         {operationError && (
           <Alert severity="error" onClose={() => setOperationError(null)}>
@@ -103,12 +90,23 @@ export default function ChargeRadar() {
         )}
 
         {state.loading && state.alerts.length === 0 && !state.error && (
-          <Stack direction="row" spacing={1.5} alignItems="center" role="status">
-            <CircularProgress size={20} />
-            <Typography variant="body2" color="text.secondary">
-              {t('future.chargeRadar.loading')}
-            </Typography>
-          </Stack>
+          <Box role="status" aria-label={t('future.chargeRadar.loading')}>
+            {[0, 1, 2].map((row) => (
+              <Stack
+                key={row}
+                direction="row"
+                alignItems="center"
+                spacing={2}
+                sx={{ minHeight: 56, borderTop: '1px solid', borderColor: 'divider' }}
+              >
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton width="45%" />
+                  <Skeleton width="25%" height={16} />
+                </Box>
+                <Skeleton width={80} />
+              </Stack>
+            ))}
+          </Box>
         )}
 
         {state.error && (
@@ -125,7 +123,7 @@ export default function ChargeRadar() {
         )}
 
         {!state.loading && !state.error && state.alerts.length === 0 && (
-          <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 2.5 }}>
+          <Box sx={{ borderTop: '1px solid', borderColor: 'divider', py: 3 }}>
             <Typography variant="subtitle1">{t('future.chargeRadar.emptyTitle')}</Typography>
             <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
               {t('future.chargeRadar.emptyDescription')}
@@ -140,7 +138,7 @@ export default function ChargeRadar() {
           return (
             <Box
               key={alert.transactionId}
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: { xs: 2, sm: 2.5 } }}
+              sx={{ borderTop: '1px solid', borderColor: 'divider', py: 2.5 }}
             >
               <Stack spacing={1.5}>
                 <Stack
@@ -150,7 +148,7 @@ export default function ChargeRadar() {
                   spacing={1}
                 >
                   <Box sx={{ minWidth: 0 }}>
-                    <Stack direction="row" alignItems="center" spacing={1} useFlexGap flexWrap="wrap">
+                    <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1 }}>
                       <Typography variant="subtitle1" component="h3" sx={{ overflowWrap: 'anywhere' }}>
                         {alert.description || t('future.chargeRadar.unnamedCharge')}
                       </Typography>
@@ -172,7 +170,7 @@ export default function ChargeRadar() {
                       {[alert.walletName, alert.institutionName].filter(Boolean).join(' · ')} · {formatDate(alert.date)}
                     </Typography>
                   </Box>
-                  <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {money(alert.amount, i18n.language)}
                   </Typography>
                 </Stack>
@@ -203,9 +201,8 @@ export default function ChargeRadar() {
                   </Typography>
                 )}
 
-                <Divider />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
-                  <Button variant="contained" onClick={() => simulateRefund(alert)} disabled={working}>
+                <Stack direction="row" flexWrap="wrap" sx={{ gap: 1 }}>
+                  <Button variant="outlined" onClick={() => simulateRefund(alert)} disabled={working}>
                     {working ? t('future.chargeRadar.working') : t('future.chargeRadar.simulateRefund')}
                   </Button>
                   {alert.decision !== 'REVIEW' && (
@@ -267,6 +264,6 @@ export default function ChargeRadar() {
           );
         })}
       </Stack>
-    </Card>
+    </Box>
   );
 }

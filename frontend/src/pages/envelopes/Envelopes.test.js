@@ -179,7 +179,9 @@ test('the daily limit card separates what the bank lacks, what keeping the envel
     />
   );
 
-  expect(text()).toMatch(/future\.limit\.short:R\$\s504,87/);
+  // The hero reads "Faltam / R$ 504,87 / até 05/10, mesmo sem gastar nada".
+  expect(text()).toContain('future.hero.shortLead');
+  expect(text()).toMatch(/future\.hero\.shortLead\s*R\$\s504,87/);
   expect(text()).toMatch(/future\.limit\.keepEnvelopes:R\$\s804,87/);
   expect(text()).toMatch(/future\.limit\.shortPaceLowest:-R\$\s792,67/);
   expect(text()).toContain('future.limit.bestWay');

@@ -1,17 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Container,
-  IconButton,
-  InputAdornment,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, IconButton, InputAdornment, Link, Stack, TextField, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { LoadingButton } from '@mui/lab';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +14,61 @@ import AuthService from '../../services/AuthService';
 import { safeReturnPath } from '../../services/HttpService';
 import { errorKey } from '../../utils/wallet';
 import EmailCode from './EmailCode';
+
+/**
+ * The balance line drawing itself (the one orchestrated moment, 600 ms, off with prefers-reduced-motion):
+ * solid until today, dashed after it, dipping below zero between the card bill and the paycheck.
+ */
+function BalanceLine() {
+  const theme = useTheme();
+  const { palette } = theme;
+  return (
+    <Box component="svg" viewBox="0 0 480 200" aria-hidden="true" sx={{ width: '100%', display: 'block' }}>
+      <line x1="0" x2="480" y1="130" y2="130" stroke={palette.chart.zero} strokeWidth="1" />
+      <text x="480" y="122" textAnchor="end" fontSize="12" fill={palette.text.secondary}>
+        R$ 0
+      </text>
+      <g>
+        <path d="M268 130 L292 172 L352 182 L364 130 Z" fill={palette.chart.negative} />
+        <path
+          d="M0 74 L48 92 L96 58 L146 80 L196 50"
+          fill="none"
+          stroke={palette.chart.history}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M196 50 L244 88 L292 172 L352 182 L380 64 L430 82 L480 70"
+          fill="none"
+          stroke={palette.chart.projection}
+          strokeWidth="2.5"
+          strokeDasharray="7 6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx="196"
+          cy="50"
+          r="6"
+          fill={palette.brand.future}
+          stroke={palette.background.default}
+          strokeWidth="3"
+        />
+      </g>
+      <rect
+        width="480"
+        height="200"
+        fill={palette.background.default}
+        style={{
+          transformBox: 'fill-box',
+          transformOrigin: 'right',
+          animation: 'wallia-reveal 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both',
+        }}
+      />
+    </Box>
+  );
+}
 
 export default function AuthView({ signup = false }) {
   const { t } = useTranslation();
@@ -95,89 +140,52 @@ export default function AuthView({ signup = false }) {
       <Helmet>
         <title>{t(pending ? 'auth.verify.pageTitle' : `auth.${group}.pageTitle`)}</title>
       </Helmet>
-      <Box sx={{ minHeight: '100vh', display: 'flex' }}>
+      <Box sx={{ minHeight: '100vh', display: 'flex', bgcolor: { xs: 'background.paper', md: 'background.default' } }}>
         <Box
           sx={{
             display: { xs: 'none', md: 'flex' },
-            width: '45%',
-            position: 'relative',
-            bgcolor: 'background.paper',
-            borderRight: '1px solid',
-            borderColor: 'divider',
-            p: 6,
+            flex: 1,
+            minWidth: 0,
+            p: { md: 6, lg: 8 },
             flexDirection: 'column',
             justifyContent: 'space-between',
-            overflow: 'hidden',
           }}
         >
-          <WalliaLogo size={36} />
-          <Box>
-            {/* Decorative echo of the mark: the past (solid), today (lamp), the estimate (dashed) dipping
-                below the waterline between the card bill and the paycheck. */}
-            <Box aria-hidden="true" component="svg" viewBox="0 0 420 180" sx={{ width: '100%', maxWidth: 440, mb: 6 }}>
-              <Box
-                component="polygon"
-                points="234,120 254,154 314,162 322.9,120"
-                sx={{ fill: (theme) => theme.palette.chart.negative }}
-              />
-              <Box
-                component="line"
-                x1="0"
-                y1="120"
-                x2="420"
-                y2="120"
-                strokeWidth="1.5"
-                sx={{ stroke: (theme) => theme.palette.brand.waterline }}
-              />
-              <Box
-                component="polyline"
-                points="0,70 50,86 96,54 140,74 170,46"
-                fill="none"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                sx={{ stroke: (theme) => theme.palette.text.primary }}
-              />
-              <Box
-                component="polyline"
-                points="170,46 214,86 254,154 314,162 336,58 420,72"
-                fill="none"
-                strokeWidth="3"
-                strokeDasharray="8 7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                sx={{ stroke: (theme) => theme.palette.brand.fog }}
-              />
-              <Box component="circle" cx="170" cy="46" r="8" sx={{ fill: (theme) => theme.palette.brand.lamp }} />
-            </Box>
-            <Typography variant="h2" component="p" sx={{ fontSize: { md: 40, lg: 52 }, maxWidth: 480 }}>
+          <WalliaLogo size={24} />
+          <Box sx={{ maxWidth: 560 }}>
+            <BalanceLine />
+            <Typography variant="h2" component="p" sx={{ mt: 5, maxWidth: 480 }}>
               {t('app.authHeadline')}
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 2, maxWidth: 420 }}>
-              {t('app.authDescription')}
-            </Typography>
-            <Stack direction="row" flexWrap="wrap" sx={{ mt: 4, gap: 1 }}>
-              {['clarity', 'control', 'trust'].map((pillar) => (
-                <Chip key={pillar} label={t(`app.pillars.${pillar}`)} variant="outlined" />
-              ))}
-            </Stack>
           </Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
             {t('app.demoNotice')}
           </Typography>
         </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 3 }}>
+        <Box
+          sx={{
+            width: { xs: '100%', md: 480, lg: 520 },
+            flexShrink: 0,
+            bgcolor: 'background.paper',
+            borderLeft: { md: '1px solid' },
+            borderColor: { md: 'divider' },
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ px: { xs: 2, sm: 4 }, py: 3 }}
+          >
             <Box sx={{ visibility: { md: 'hidden' } }}>
-              <WalliaLogo size={28} />
+              <WalliaLogo size={20} />
             </Box>
             <LanguageSelector />
           </Stack>
-          <Container maxWidth="sm" sx={{ px: { xs: 3, sm: 6 }, py: { xs: 4, md: 6 } }}>
-            <Typography variant="overline" color="text.secondary">
-              {t('app.demo')}
-            </Typography>
-            <Typography variant="h3" component="h1" sx={{ mt: 1, mb: pending ? 3 : 1 }}>
+          <Box sx={{ px: { xs: 2, sm: 6 }, py: { xs: 3, md: 0 }, my: { md: 'auto' }, pb: { md: 12 } }}>
+            <Typography variant="h3" component="h1" sx={{ mb: pending ? 3 : 1 }}>
               {pending ? t('auth.verify.title') : t(`auth.${group}.title`)}
             </Typography>
             {pending && (
@@ -193,9 +201,9 @@ export default function AuthView({ signup = false }) {
               <>
                 <Typography color="text.secondary" sx={{ mb: 4 }}>
                   {t(signup ? 'auth.signup.hasAccount' : 'auth.login.noAccount')}{' '}
-                  <Button component={RouterLink} to={signup ? '/login' : '/signup'} sx={{ p: 0, minHeight: 28 }}>
+                  <Link component={RouterLink} to={signup ? '/login' : '/signup'} sx={{ color: 'text.primary' }}>
                     {t(signup ? 'auth.signup.login' : 'auth.login.createAccount')}
-                  </Button>
+                  </Link>
                 </Typography>
                 <Box component="form" onSubmit={submit}>
                   <Stack spacing={2.5}>
@@ -251,14 +259,14 @@ export default function AuthView({ signup = false }) {
                     <LoadingButton type="submit" variant="contained" size="large" loading={busy}>
                       {t(`auth.${group}.submit`)}
                     </LoadingButton>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>
                       {t('app.demoNotice')}
                     </Typography>
                   </Stack>
                 </Box>
               </>
             )}
-          </Container>
+          </Box>
         </Box>
       </Box>
     </>

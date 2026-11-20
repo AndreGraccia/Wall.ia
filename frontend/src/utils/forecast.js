@@ -1,4 +1,4 @@
-import { toCents as cents } from './wallet';
+import { directionFor, toCents as cents } from './wallet';
 
 /**
  * Same rule as the Future page: with nothing confirmed, a limit or a "free" amount would read as
@@ -30,4 +30,37 @@ export function limitSummary(limit) {
   if (withEnvelopes > 0 && realShort > 0) return { ...base, kind: 'short', amount: realShort / 100 };
   if (withEnvelopes > 0) return { ...base, kind: 'shortEnvelopes', amount: withEnvelopes / 100 };
   return { ...base, kind: 'canSpend', amount: Number(limit?.safeDaily) || 0 };
+}
+
+const isoDay = (date) =>
+  [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+
+/**
+ * The solid part of the balance chart: end-of-day balances for the `days` days before `today`, walked
+ * backwards from the balance now through the settled statement (incoming adds, outgoing subtracts; moves
+ * between the user's own wallets cancel out). Empty when there is no statement to walk.
+ */
+export function balanceHistory({ transactions = [], wallets = [], today, balance, days = 14 }) {
+  if (!today || !transactions.length) return [];
+  const net = {};
+  transactions
+    .filter((item) => item.status === 'SUCCESS' && item.createdAt)
+    .forEach((item) => {
+      const direction = directionFor(item, wallets);
+      if (direction !== 'incoming' && direction !== 'outgoing') return;
+      const day = isoDay(new Date(item.createdAt));
+      net[day] = (net[day] || 0) + (direction === 'incoming' ? 1 : -1) * cents(item.amount);
+    });
+  const [year, month, dayOfMonth] = today.split('-').map(Number);
+  const cursor = new Date(year, month - 1, dayOfMonth);
+  // End of yesterday = now minus what already moved today.
+  let end = cents(balance) - (net[today] || 0);
+  const points = [];
+  for (let step = 0; step < days; step += 1) {
+    cursor.setDate(cursor.getDate() - 1);
+    const day = isoDay(cursor);
+    points.unshift({ date: day, balance: end / 100 });
+    end -= net[day] || 0;
+  }
+  return points;
 }

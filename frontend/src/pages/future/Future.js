@@ -1,42 +1,34 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import {
   Alert,
   AlertTitle,
   Box,
   Button,
-  Card,
   Collapse,
   Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
+  Skeleton,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
-  useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
+import { useWallets } from '../../context/WalletContext';
 import ProjectionChart from '../../components/projection-chart';
 import BankDataNotice from '../../components/bank-data';
-import { CertaintyLegend, DailyLimitCard, EventRow, ExitPlanList, StatBlock } from '../../components/future-ui';
-import {
-  EmptyState,
-  PageHeading,
-  PageSkeleton,
-  SectionCard,
-  WalletIcon,
-  visuallyHidden,
-} from '../../components/wallet-ui';
+import { DailyLimitCard, EventRow, ExitPlanList, StatBlock } from '../../components/future-ui';
+import { EmptyState, PageHeading, SectionCard, visuallyHidden } from '../../components/wallet-ui';
 import { dayLabel, errorKey, money, overdraftCostText } from '../../utils/wallet';
-import { forecastReady } from '../../utils/forecast';
+import { balanceHistory, forecastReady } from '../../utils/forecast';
 import Questions from './Questions';
 import Simulator from './Simulator';
 import Goals from './Goals';
@@ -67,13 +59,20 @@ function WhyDialog({ risk, exitPlan, onClose }) {
                   })
                 : t('future.whyNoRelief')}
             </Alert>
+            {Number(risk.overdraftCostCap) > 0 && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                {overdraftCostText(t, risk, i18n.language)}
+              </Typography>
+            )}
             <ExitPlanList actions={exitPlan} />
             <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
               {t('future.whyFooter')}
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={onClose}>{t('common.close')}</Button>
+            <Button variant="outlined" onClick={onClose}>
+              {t('common.close')}
+            </Button>
           </DialogActions>
         </>
       )}
@@ -83,47 +82,78 @@ function WhyDialog({ risk, exitPlan, onClose }) {
 
 WhyDialog.propTypes = { risk: PropTypes.object, exitPlan: PropTypes.array, onClose: PropTypes.func.isRequired };
 
-// On a phone the page ran past 4.700 px. What answers "will I go negative" stays open; the tools
-// (answered questions, simulator, goals) fold into one tappable row each. Wider screens are unchanged.
-function Fold({ title, children }) {
-  const theme = useTheme();
-  const phone = useMediaQuery(theme.breakpoints.down('sm'));
-  const [open, setOpen] = useState(false);
-  if (!phone) return children;
+/** Loading: the shape of the page (sentence, number, chart, three numbers), so nothing jumps. */
+function FutureSkeleton() {
+  const { t } = useTranslation();
   return (
-    <Box>
-      <Button
-        fullWidth
-        color="inherit"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        sx={{
-          justifyContent: 'space-between',
-          minHeight: 48,
-          px: 2,
-          bgcolor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <span>{title}</span>
-        <span aria-hidden="true">{open ? '-' : '+'}</span>
-      </Button>
-      <Collapse in={open} unmountOnExit>
-        <Box sx={{ mt: 1 }}>{children}</Box>
-      </Collapse>
+    <Stack spacing={4} role="status" aria-busy="true" aria-label={t('common.loading')}>
+      <Box>
+        <Skeleton width={160} height={28} />
+        <Skeleton width="min(360px, 80%)" height={64} />
+        <Skeleton width="min(420px, 90%)" height={28} />
+      </Box>
+      <Skeleton variant="rounded" height={260} />
+      <Stack direction="row" spacing={4}>
+        {[0, 1, 2].map((item) => (
+          <Box key={item} sx={{ flex: 1 }}>
+            <Skeleton width="50%" />
+            <Skeleton width="70%" height={36} />
+          </Box>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+/** The negative windows, one 56 px row each: when, how low, and why. */
+function NegativeWindows({ windows, onWhy }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  return (
+    <Box component="section" aria-labelledby="negative-title">
+      <Typography id="negative-title" variant="h6" component="h2" sx={{ mb: 1 }}>
+        {t('future.negativeTitle')}
+      </Typography>
+      {windows.map((risk) => (
+        <Stack
+          key={risk.start}
+          direction="row"
+          alignItems="center"
+          spacing={2}
+          sx={{ minHeight: 56, borderTop: '1px solid', borderColor: 'divider' }}
+        >
+          <Typography variant="subtitle2" sx={{ flex: 1, minWidth: 0 }}>
+            {t('future.windowDates', { start: dayLabel(risk.start, lang), end: dayLabel(risk.end, lang) })}
+          </Typography>
+          <Typography variant="subtitle2" sx={{ color: 'error.main', fontWeight: 600 }}>
+            {t('future.windowLowest', { amount: money(risk.lowestBalance, lang) })}
+          </Typography>
+          <Button
+            size="small"
+            onClick={() => onWhy(risk)}
+            sx={{ flexShrink: 0 }}
+            aria-label={t('future.whyLabel', { start: dayLabel(risk.start, lang), end: dayLabel(risk.end, lang) })}
+          >
+            {t('future.hero.why')}
+          </Button>
+        </Stack>
+      ))}
     </Box>
   );
 }
 
-Fold.propTypes = {
-  title: PropTypes.string.isRequired,
-  children: PropTypes.node.isRequired,
-};
+NegativeWindows.propTypes = { windows: PropTypes.array.isRequired, onWhy: PropTypes.func.isRequired };
 
+/**
+ * Futuro, the reference screen (docs/brand/DESIGN.md). Fixed order: the answer with the hero number, the
+ * chart, three numbers, the negative windows, the pending questions in one row, then the tools folded.
+ */
 export default function Future() {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
+  const { hash } = useLocation();
+  // Mocked away in some tests; the chart simply has no solid past then.
+  const { transactions, wallets } = useWallets() || {};
   const [horizon, setHorizon] = useState(30);
   const [state, setState] = useState({
     loading: true,
@@ -133,7 +163,6 @@ export default function Future() {
     recurrencesError: null,
   });
   const [why, setWhy] = useState(null);
-  const [showDays, setShowDays] = useState(false);
   const [openGroup, setOpenGroup] = useState(null);
   const [announce, setAnnounce] = useState('');
 
@@ -172,6 +201,11 @@ export default function Future() {
   const { overview, recurrences } = state;
   const lang = i18n.language;
   const projection = overview?.projection;
+  const today = projection?.days[0]?.date;
+  const history = useMemo(
+    () => balanceHistory({ transactions, wallets, today, balance: overview?.balance }),
+    [transactions, wallets, today, overview?.balance]
+  );
   const incomes = recurrences.filter((item) => item.direction === 'IN' && item.status === 'CONFIRMED');
   const sources = overview?.sources;
   // Nothing to project from: zeros and a flat line would read as "you have R$ 0", not "we know nothing yet".
@@ -181,9 +215,15 @@ export default function Future() {
     sources.pendingQuestions === 0 &&
     sources.cards === 0 &&
     sources.loans === 0;
-  // The card answers the first negative window itself; separate alerts only when there is no card.
   const showCard = Boolean(overview?.spendingLimit) && forecastReady({ sources });
   const firstRisk = projection?.riskWindows[0];
+  const firstRun = overview?.sources.confirmedRecurrences === 0;
+  const pendingCount =
+    recurrences.filter((item) => item.status === 'PENDING').length +
+    [overview?.dailySpending, overview?.cardSpending].filter((item) => item?.status === 'PENDING').length;
+  const nextIncome = projection?.events.find((event) => Number(event.amount) > 0 && event.date > today);
+  const bankData = overview?.sources.bankData;
+
   const questions =
     overview &&
     (state.recurrencesError ? (
@@ -203,6 +243,9 @@ export default function Future() {
         dailySpending={overview.dailySpending}
         cardSpending={overview.cardSpending}
         onAnswered={load}
+        // Before the first answer the questions are the page; after it, they fold into one row.
+        collapsible={!firstRun}
+        title={pendingCount > 0 ? t('future.questionsPending', { count: pendingCount }) : t('future.questionsTitle')}
       />
     ));
 
@@ -214,7 +257,6 @@ export default function Future() {
       <Container maxWidth="lg">
         <PageHeading
           title={t('future.heading')}
-          description={t('future.description')}
           action={
             <ToggleButtonGroup
               exclusive
@@ -223,7 +265,7 @@ export default function Future() {
               aria-label={t('future.horizonLabel')}
             >
               {[30, 60, 90].map((days) => (
-                <ToggleButton key={days} value={days} sx={{ px: 1.5 }} aria-label={t('future.horizonOption', { days })}>
+                <ToggleButton key={days} value={days} aria-label={t('future.horizonOption', { days })}>
                   {t('future.horizonShort', { days })}
                 </ToggleButton>
               ))}
@@ -234,7 +276,7 @@ export default function Future() {
         <Box role="status" aria-live="polite" sx={visuallyHidden}>
           {announce}
         </Box>
-        {state.loading && !overview && <PageSkeleton rows={3} />}
+        {state.loading && !overview && <FutureSkeleton />}
         {state.error && (
           <Alert
             severity="error"
@@ -249,43 +291,38 @@ export default function Future() {
         )}
 
         {noData && (
-          <Card>
-            <EmptyState
-              icon="bank"
-              title={t('future.noData')}
-              description={t('future.noDataHelp')}
-              action={
-                <Button component={RouterLink} to="/open-finance" variant="contained">
-                  {t('openFinance.connectShort')}
-                </Button>
-              }
-            />
-          </Card>
+          <EmptyState
+            icon="bank"
+            title={t('future.noData')}
+            description={t('future.noDataHelp')}
+            action={
+              <Button component={RouterLink} to="/open-finance" variant="contained">
+                {t('openFinance.connectShort')}
+              </Button>
+            }
+          />
         )}
 
         {overview && !noData && (
           <Stack
-            spacing={3}
+            spacing={{ xs: 4, md: 5 }}
             aria-busy={state.loading}
             sx={{ opacity: state.loading ? 0.6 : 1, transition: 'opacity 150ms' }}
           >
-            {/* The projection is only as fresh as the bank data under it (B50): say so before any number. */}
-            <BankDataNotice bankData={overview.sources.bankData} />
-            {/* The one answer people open this page for; the numbers below explain it. */}
+            {/* Old bank data changes every number below: say so before them (B50). */}
+            {bankData?.stale && <BankDataNotice bankData={bankData} />}
+
+            {/* (1) The answer. */}
             {showCard && (
               <DailyLimitCard
                 limit={overview.spendingLimit}
                 risk={firstRisk}
-                laterRisks={projection.riskWindows.slice(1)}
                 exitPlan={overview.exitPlan}
                 onWhy={setWhy}
-              >
-                <AlertToggle />
-              </DailyLimitCard>
+              />
             )}
-            {/* Without answers there is no limit nor projection: the questions come first. */}
-            {overview.sources.confirmedRecurrences === 0 && (
-              <>
+            {firstRun && (
+              <Stack spacing={2}>
                 {overview.sources.pendingQuestions > 0 && (
                   <Alert severity="info">
                     <AlertTitle>{t('future.needsAnswers')}</AlertTitle>
@@ -293,77 +330,9 @@ export default function Future() {
                   </Alert>
                 )}
                 {questions}
-              </>
+              </Stack>
             )}
-            <Card sx={{ p: 3 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
-                  <StatBlock
-                    compact
-                    label={t('future.balanceNow')}
-                    value={money(overview.balance, lang)}
-                    help={t('future.balanceNowHelp')}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <StatBlock
-                    compact
-                    label={t('future.committed')}
-                    value={money(overview.committed.total, lang)}
-                    help={t('future.committedHelp', { date: dayLabel(overview.committed.until, lang) })}
-                  >
-                    <Typography variant="caption" color="text.secondary" component="p">
-                      {t('future.committedSplit', {
-                        confirmed: money(overview.committed.confirmed, lang),
-                        estimated: money(overview.committed.estimated, lang),
-                      })}
-                    </Typography>
-                  </StatBlock>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <StatBlock
-                    compact
-                    label={t('future.free')}
-                    value={money(overview.freeAfterCommitments, lang)}
-                    emphasis={Number(overview.freeAfterCommitments) >= 0}
-                    negative={Number(overview.freeAfterCommitments) < 0}
-                    help={t(Number(overview.freeAfterCommitments) < 0 ? 'future.freeNegativeHelp' : 'future.freeHelp')}
-                  />
-                </Grid>
-              </Grid>
-            </Card>
-
-            {!showCard &&
-              projection.riskWindows.map((risk) => (
-                <Alert
-                  key={risk.start}
-                  severity="warning"
-                  icon={<WalletIcon name="info" />}
-                  action={
-                    <Button
-                      color="inherit"
-                      onClick={() => setWhy(risk)}
-                      sx={{ whiteSpace: 'nowrap' }}
-                      aria-label={t('future.whyLabel', {
-                        start: dayLabel(risk.start, lang),
-                        end: dayLabel(risk.end, lang),
-                      })}
-                    >
-                      {t('future.whyButton')}
-                    </Button>
-                  }
-                >
-                  <AlertTitle>{t('future.riskTitle')}</AlertTitle>
-                  {t(risk.untilHorizon ? 'future.riskUntilHorizon' : 'future.risk', {
-                    start: dayLabel(risk.start, lang),
-                    end: dayLabel(risk.end, lang),
-                    amount: money(Math.abs(Number(risk.lowestBalance)), lang),
-                  })}{' '}
-                  {t('future.riskReason')}
-                  {Number(risk.overdraftCostCap) > 0 && ` ${overdraftCostText(t, risk, lang)}`}
-                </Alert>
-              ))}
-            {!projection.riskWindows.length && overview.sources.confirmedRecurrences > 0 && (
+            {!showCard && !firstRun && !projection.riskWindows.length && (
               <Alert severity="success">
                 <AlertTitle>{t('future.allClear', { days: horizon })}</AlertTitle>
                 {t('future.allClearHelp', {
@@ -373,136 +342,163 @@ export default function Future() {
               </Alert>
             )}
 
-            {/* Box keeps Stack's margin reset off the Grid's negative margins. */}
+            {/* (2) The line in time: full width, no card around it. */}
             <Box>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={7}>
-                  <SectionCard title={t('future.chartTitle')}>
-                    <Box sx={{ px: { xs: 1, sm: 3 }, pb: 2 }}>
-                      <ProjectionChart
-                        ariaLabel={
-                          firstRisk
-                            ? t('future.chartLabelNegative', {
-                                days: horizon,
-                                start: dayLabel(firstRisk.start, lang),
-                                end: dayLabel(firstRisk.end, lang),
-                                amount: money(projection.minBalance, lang),
-                                date: dayLabel(projection.minDate, lang),
-                                endBalance: money(projection.endBalance, lang),
-                              })
-                            : t('future.chartLabelClear', {
-                                days: horizon,
-                                amount: money(projection.minBalance, lang),
-                                date: dayLabel(projection.minDate, lang),
-                              })
-                        }
-                        series={[
-                          {
-                            key: 'projection',
-                            color: theme.palette.chart.projection,
-                            days: projection.days.map((day) => ({ date: day.date, balance: Number(day.balance) })),
-                          },
-                        ]}
-                        lowest={{ date: projection.minDate, balance: Number(projection.minBalance) }}
-                      />
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        component="p"
-                        sx={{ mt: 1, px: { xs: 2, sm: 0 } }}
-                      >
-                        {t('future.chartLegend')}
-                      </Typography>
-                      <Box sx={{ px: { xs: 2, sm: 0 } }}>
-                        <CertaintyLegend />
-                      </Box>
-                      <Button
-                        size="small"
-                        onClick={() => setShowDays(!showDays)}
-                        aria-expanded={showDays}
-                        sx={{ mt: 1, px: { xs: 2, sm: 0 } }}
-                      >
-                        {t(showDays ? 'future.hideDays' : 'future.showDays')}
-                      </Button>
-                      <Collapse in={showDays} unmountOnExit>
-                        <Box sx={{ px: { xs: 2, sm: 0 } }}>
-                          {projection.events.map((event) => (
-                            <EventRow key={`${event.reference}-${event.date}`} event={event} dense />
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Box>
-                  </SectionCard>
-                </Grid>
-                <Grid item xs={12} md={5}>
-                  <SectionCard
-                    title={t('future.whereItGoes')}
-                    action={
-                      <Button component={RouterLink} to="/commitments" size="small">
-                        {t('navigation.commitments')}
-                      </Button>
-                    }
-                  >
-                    {overview.committed.groups.length ? (
-                      <Box sx={{ pb: 1 }}>
-                        {overview.committed.groups.map((group) => (
-                          <Box key={group.category} sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-                            <Button
-                              fullWidth
-                              color="inherit"
-                              onClick={() => setOpenGroup(openGroup === group.category ? null : group.category)}
-                              aria-expanded={openGroup === group.category}
-                              sx={{ justifyContent: 'space-between', px: 3, py: 1.5, borderRadius: 0 }}
-                            >
-                              <span>{t(`future.categories.${group.category}`, { defaultValue: group.category })}</span>
-                              <Typography
-                                component="span"
-                                variant="subtitle2"
-                                sx={{ fontVariantNumeric: 'tabular-nums' }}
-                              >
-                                {money(group.total, lang)}
-                              </Typography>
-                            </Button>
-                            <Collapse in={openGroup === group.category} unmountOnExit>
-                              <Box sx={{ px: 3, pb: 1 }}>
-                                {group.items.map((event) => (
-                                  <Box key={`${event.reference}-${event.date}`}>
-                                    <EventRow event={event} dense />
-                                    {group.category === 'SUBSCRIPTION' && <CancelGuide label={event.label} />}
-                                  </Box>
-                                ))}
-                              </Box>
-                            </Collapse>
-                          </Box>
-                        ))}
-                      </Box>
-                    ) : (
-                      <EmptyState
-                        icon="bank"
-                        title={t('future.noCommitments')}
-                        description={t('future.noCommitmentsHelp')}
-                        action={
-                          <Button component={RouterLink} to="/open-finance" variant="outlined">
-                            {t('openFinance.connectShort')}
-                          </Button>
-                        }
-                      />
-                    )}
-                  </SectionCard>
-                </Grid>
-              </Grid>
+              <ProjectionChart
+                ariaLabel={
+                  firstRisk
+                    ? t('future.chartLabelNegative', {
+                        days: horizon,
+                        start: dayLabel(firstRisk.start, lang),
+                        end: dayLabel(firstRisk.end, lang),
+                        amount: money(projection.minBalance, lang),
+                        date: dayLabel(projection.minDate, lang),
+                        endBalance: money(projection.endBalance, lang),
+                      })
+                    : t('future.chartLabelClear', {
+                        days: horizon,
+                        amount: money(projection.minBalance, lang),
+                        date: dayLabel(projection.minDate, lang),
+                      })
+                }
+                history={history}
+                series={[
+                  {
+                    key: 'projection',
+                    color: theme.palette.chart.projection,
+                    dashed: true,
+                    days: projection.days.map((day) => ({ date: day.date, balance: Number(day.balance) })),
+                  },
+                ]}
+                lowest={{ date: projection.minDate, balance: Number(projection.minBalance) }}
+                markers={nextIncome ? [{ date: nextIncome.date, label: t('future.chartIncome'), kind: 'income' }] : []}
+              />
+              {bankData && !bankData.stale && <BankDataNotice bankData={bankData} sx={{ mt: 1.5 }} />}
             </Box>
 
-            <Accuracy />
-            {overview.sources.confirmedRecurrences > 0 && questions && (
-              <Fold title={t('future.questionsTitle')}>{questions}</Fold>
-            )}
-            <Fold title={t('future.simulatorTitle')}>
-              <Simulator incomes={incomes} hasCard={overview.sources.cards > 0} />
-            </Fold>
-            <Fold title={t('future.goals.title')}>
-              <Goals onChanged={load} />
-            </Fold>
+            {/* (3) Three numbers in columns, no boxes. */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+                gap: { xs: 3, md: 4 },
+                pt: 3,
+                borderTop: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <StatBlock
+                compact
+                label={t('future.balanceNow')}
+                value={money(overview.balance, lang)}
+                tooltip={t('future.balanceNowHelp')}
+              />
+              <StatBlock
+                compact
+                label={t('future.committed')}
+                value={money(overview.committed.total, lang)}
+                tooltip={`${t('future.committedHelp', { date: dayLabel(overview.committed.until, lang) })} ${t(
+                  'future.committedSplit',
+                  {
+                    confirmed: money(overview.committed.confirmed, lang),
+                    estimated: money(overview.committed.estimated, lang),
+                  }
+                )}`}
+              />
+              {/* The conclusion of the three; on a phone it takes the whole second row. */}
+              <Box sx={{ gridColumn: { xs: 'span 2', md: 'auto' } }}>
+                <StatBlock
+                  compact
+                  label={t('future.free')}
+                  value={money(overview.freeAfterCommitments, lang)}
+                  emphasis
+                  negative={Number(overview.freeAfterCommitments) < 0}
+                  tooltip={t(Number(overview.freeAfterCommitments) < 0 ? 'future.freeNegativeHelp' : 'future.freeHelp')}
+                />
+              </Box>
+            </Box>
+
+            {/* (4) The negative windows. */}
+            {projection.riskWindows.length > 0 && <NegativeWindows windows={projection.riskWindows} onWhy={setWhy} />}
+
+            {/* (5) and (6): pending questions in one row, then every tool folded. */}
+            <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+              {!firstRun && questions}
+              <SectionCard
+                collapsible
+                title={t('future.whereItGoes')}
+                summary={money(overview.committed.total, lang)}
+                action={
+                  <Button component={RouterLink} to="/commitments" size="small" sx={{ ml: -1.5 }}>
+                    {t('navigation.commitments')}
+                  </Button>
+                }
+              >
+                {overview.committed.groups.length ? (
+                  <Box sx={{ pb: 1 }}>
+                    {overview.committed.groups.map((group) => (
+                      <Box key={group.category} sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                        <Button
+                          fullWidth
+                          color="inherit"
+                          onClick={() => setOpenGroup(openGroup === group.category ? null : group.category)}
+                          aria-expanded={openGroup === group.category}
+                          sx={{ justifyContent: 'space-between', px: 3, minHeight: 52, borderRadius: 0 }}
+                        >
+                          <span>{t(`future.categories.${group.category}`, { defaultValue: group.category })}</span>
+                          <Typography component="span" variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            {money(group.total, lang)}
+                          </Typography>
+                        </Button>
+                        <Collapse in={openGroup === group.category} unmountOnExit timeout={150}>
+                          <Box sx={{ px: 3, pb: 1 }}>
+                            {group.items.map((event) => (
+                              <Box key={`${event.reference}-${event.date}`}>
+                                <EventRow event={event} dense />
+                                {group.category === 'SUBSCRIPTION' && <CancelGuide label={event.label} />}
+                              </Box>
+                            ))}
+                          </Box>
+                        </Collapse>
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <EmptyState
+                    icon="bank"
+                    title={t('future.noCommitments')}
+                    description={t('future.noCommitmentsHelp')}
+                    action={
+                      <Button component={RouterLink} to="/open-finance" variant="outlined">
+                        {t('openFinance.connectShort')}
+                      </Button>
+                    }
+                  />
+                )}
+              </SectionCard>
+              {projection.events.length > 0 && (
+                <SectionCard collapsible title={t('future.eventsTitle')} summary={String(projection.events.length)}>
+                  <Box sx={{ px: 3, pb: 1 }}>
+                    {projection.events.map((event) => (
+                      <EventRow key={`${event.reference}-${event.date}`} event={event} dense />
+                    ))}
+                  </Box>
+                </SectionCard>
+              )}
+              <Simulator
+                collapsible
+                defaultOpen={hash === '#simulator'}
+                incomes={incomes}
+                hasCard={overview.sources.cards > 0}
+              />
+              <Goals collapsible onChanged={load} />
+              <Accuracy collapsible />
+              <SectionCard collapsible title={t('future.alertsTitle')}>
+                <Box sx={{ px: 3, pb: 3 }}>
+                  <AlertToggle />
+                </Box>
+              </SectionCard>
+            </Box>
           </Stack>
         )}
       </Container>

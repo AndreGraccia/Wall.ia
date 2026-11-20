@@ -59,7 +59,7 @@ function summaryLines(result, request, t, language) {
   return lines;
 }
 
-export default function Simulator({ incomes, hasCard }) {
+export default function Simulator({ incomes, hasCard, collapsible, defaultOpen }) {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
   const [type, setType] = useState('PURCHASE');
@@ -126,7 +126,7 @@ export default function Simulator({ incomes, hasCard }) {
   };
 
   return (
-    <SectionCard title={t('future.simulatorTitle')}>
+    <SectionCard title={t('future.simulatorTitle')} collapsible={collapsible} defaultOpen={defaultOpen}>
       <Typography variant="body2" color="text.secondary" sx={{ px: 3 }}>
         {t('future.simulatorHelp')}
       </Typography>
@@ -310,6 +310,7 @@ export default function Simulator({ incomes, hasCard }) {
             </TableContainer>
             <Box sx={{ mt: 3 }}>
               <ProjectionChart
+                animate={false}
                 ariaLabel={t('future.chartLabel', {
                   amount: money(result.scenario.minBalance90, i18n.language),
                   date: dayLabel(result.scenario.minDate, i18n.language),
@@ -320,6 +321,7 @@ export default function Simulator({ incomes, hasCard }) {
                     key: 'baseline',
                     label: t('future.chartBaseline'),
                     color: theme.palette.chart.projection,
+                    dashed: true,
                     days: result.baselineProjection.days.map((day) => ({
                       date: day.date,
                       balance: Number(day.balance),
@@ -329,7 +331,7 @@ export default function Simulator({ incomes, hasCard }) {
                     key: 'scenario',
                     label: t('future.chartScenario'),
                     color: theme.palette.chart.scenario,
-                    dashed: true,
+                    dotted: true,
                     days: result.scenarioProjection.days.map((day) => ({
                       date: day.date,
                       balance: Number(day.balance),
@@ -348,4 +350,9 @@ export default function Simulator({ incomes, hasCard }) {
     </SectionCard>
   );
 }
-Simulator.propTypes = { incomes: PropTypes.array.isRequired, hasCard: PropTypes.bool };
+Simulator.propTypes = {
+  incomes: PropTypes.array.isRequired,
+  hasCard: PropTypes.bool,
+  collapsible: PropTypes.bool,
+  defaultOpen: PropTypes.bool,
+};

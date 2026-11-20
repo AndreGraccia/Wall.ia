@@ -37,15 +37,14 @@ export default function WalletCard({ wallet, index = 0, selected = false, onClic
     <Card
       sx={{
         height: 202,
-        borderRadius: '20px',
-        background: THEMES[color],
-        color: 'common.white',
+        borderRadius: '16px',
+        bgcolor: THEMES[color],
+        color: 'text.primary',
         border: '1px solid',
-        borderColor: (th) => alpha(th.palette.common.white, 0.12),
-        boxShadow: (th) => th.customShadows.z12,
+        borderColor: (th) => alpha(th.palette.common.white, 0.08),
         overflow: 'visible',
         position: 'relative',
-        '&:focus-within': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3 },
+        '&:focus-within': { outline: '2px solid', outlineColor: 'secondary.main', outlineOffset: 3 },
       }}
     >
       <ButtonBase
@@ -61,7 +60,7 @@ export default function WalletCard({ wallet, index = 0, selected = false, onClic
             <Typography variant="subtitle1" noWrap sx={{ flex: 1 }}>
               {wallet.name}
             </Typography>
-            {!selected && <WalletIcon name="wallet" sx={{ opacity: 0.6 }} />}
+            {!selected && <WalletIcon name="wallet" sx={{ color: 'text.secondary' }} />}
           </Stack>
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -69,7 +68,6 @@ export default function WalletCard({ wallet, index = 0, selected = false, onClic
             </Typography>
             <Typography
               sx={{
-                fontFamily: (th) => th.typography.h3.fontFamily,
                 fontSize: 28,
                 fontWeight: 600,
                 letterSpacing: '-0.035em',
@@ -112,8 +110,8 @@ export default function WalletCard({ wallet, index = 0, selected = false, onClic
                 height: 17,
                 borderRadius: '50%',
                 border: '2px solid currentColor',
-                background: (th) =>
-                  `conic-gradient(${th.palette.brand.lamp},${th.palette.brand.fog},${th.palette.brand.lineStrong},${th.palette.brand.lamp})`,
+                // The next finish, so the button shows what it does.
+                bgcolor: THEMES[(color + 1) % THEMES.length],
               }}
             />
           </IconButton>

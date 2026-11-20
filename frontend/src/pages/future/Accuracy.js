@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Button,
@@ -22,7 +23,7 @@ import { dayLabel, money } from '../../utils/wallet';
  * "How right was Wall.ia?" Old forecasts graded against the real balance, misses included. No finance
  * app publishes its own error; showing it is what earns trust in the numbers above.
  */
-export default function Accuracy() {
+export default function Accuracy({ collapsible }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [data, setData] = useState(null);
@@ -62,7 +63,7 @@ export default function Accuracy() {
     });
 
   return (
-    <SectionCard title={t('future.accuracy.title')}>
+    <SectionCard title={t('future.accuracy.title')} collapsible={collapsible}>
       <Box sx={{ px: 3, pb: 2 }}>
         <Grid container spacing={3}>
           <Grid item xs={12} sm={4}>
@@ -134,3 +135,4 @@ export default function Accuracy() {
     </SectionCard>
   );
 }
+Accuracy.propTypes = { collapsible: PropTypes.bool };
