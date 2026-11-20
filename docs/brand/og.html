@@ -3,36 +3,32 @@
 <head>
 <meta charset="utf-8">
 <title>Wall.ia OG 1200x630</title>
-<!-- Fonte da imagem de compartilhamento (public/og.png). Gerar: python frontend/scripts/build-icons.py -->
+<!-- Fonte da imagem de compartilhamento (frontend/public/og.png). Gerar: python frontend/scripts/build-icons.py -->
 <link rel="stylesheet" href="brand.css">
 <style>
   body { width: 1200px; height: 630px; }
-  .top { position: absolute; left: 64px; top: 56px; font-size: 30px; }
-  .copy { position: absolute; left: 64px; top: 132px; width: 820px; }
-  .headline { font-size: 68px; }
-  .body { font-size: 26px; margin-top: 24px; max-width: 700px; }
-  .chart { position: absolute; left: 0; bottom: 0; width: 1200px; height: 240px; }
+  .top { position: absolute; left: 72px; top: 64px; font-size: 34px; }
+  .copy { position: absolute; left: 72px; top: 140px; width: 980px; }
+  .headline { font-size: 58px; }
+  .body { font-size: 26px; margin-top: 20px; max-width: 640px; }
+  .chart { position: absolute; left: 0; bottom: 0; width: 1200px; height: 230px; }
 </style>
 </head>
 <body>
-  <div class="top wordmark">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#15282E"/><line x1="3.5" y1="19" x2="28.5" y2="19" stroke="#5F8792" stroke-width="1.2" stroke-linecap="round"/><polyline points="15.5,11 20.5,24 25.5,12" fill="none" stroke="#A3B5FF" stroke-width="2.3" pathLength="100" stroke-dasharray="12 9" stroke-dashoffset="17.2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,8.5 10.5,16.5 15.5,11" fill="none" stroke="#EAF2F0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="15.5" cy="11" r="2.7" fill="#FFD25E"/></svg>
-    <span>Wall<span class="dot">.</span>ia</span>
-  </div>
+  <div class="top wordmark"><span>Wall</span><span class="dot"></span><span>ia</span></div>
   <div class="copy">
-    <h1 class="headline">Veja o futuro antes de mexer no dinheiro.</h1>
-    <p class="body">Saldo projetado dia a dia, com o confirmado separado do <span class="estimate">estimado</span>. A Wall.ia avisa antes do negativo.</p>
+    <h1 class="headline">Veja quanto dá para gastar até o próximo salário.</h1>
+    <p class="body">Saldo projetado dia a dia, com o confirmado separado do estimado.</p>
   </div>
-  <svg class="chart" viewBox="0 0 1200 240" aria-hidden="true">
-    <polygon class="hole" points="660.6,140 690,180 790,196 806,140"/>
-    <line class="waterline" x1="0" x2="1200" y1="140" y2="140"/>
-    <text class="tick" x="64" y="130">R$ 0</text>
-    <path class="past" d="M-10 70 L120 96 L210 60 L300 88 L390 52 L470 74"/>
-    <path class="ahead" d="M470 74 L560 92 L640 112 L690 180 L790 196 L830 56 L960 80 L1080 62 L1210 86"/>
-    <circle class="today" cx="470" cy="74" r="12"/>
-    <text class="tick" x="470" y="40" text-anchor="middle">hoje</text>
-    <text class="tick" x="676" y="214" text-anchor="end">fatura</text>
-    <text class="tick" x="846" y="46">salário</text>
+  <svg class="chart" viewBox="0 0 1200 250" aria-hidden="true">
+    <path class="hole" d="M662 150 L690 196 L790 210 L806 150 Z"/>
+    <line class="zero" x1="0" x2="1200" y1="150" y2="150"/>
+    <text class="tick" x="1128" y="138" text-anchor="end">R$ 0</text>
+    <path class="past" d="M-10 80 L120 104 L210 70 L300 96 L390 62 L470 84"/>
+    <path class="ahead" d="M470 84 L560 102 L640 122 L690 196 L790 210 L830 66 L960 90 L1080 72 L1210 96"/>
+    <circle class="today" cx="470" cy="84" r="13"/>
+    <text class="tick" x="470" y="46" text-anchor="middle">hoje</text>
+    <text class="tick negative" x="740" y="240" text-anchor="middle">-R$ 707,72</text>
   </svg>
 </body>
 </html>

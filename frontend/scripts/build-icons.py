@@ -2,7 +2,7 @@
 
 - public/favicon.svg  -> favicon PNGs, favicon.ico, apple-touch, mstile, logo.png
 - docs/brand/og.html  -> public/og.png (1200x630)
-- docs/brand/comunicacao/*.html -> PNG next to each HTML (LinkedIn pieces)
+- docs/brand/comunicacao/*.html -> PNG next to each HTML (communication pieces, when they exist)
 
 The SVG/HTML files are the source of truth; this script only takes pictures of them.
 Run from the repo root:  python frontend/scripts/build-icons.py   (needs Pillow and Chrome or Edge)
@@ -19,7 +19,7 @@ from PIL import Image
 FRONT = Path(__file__).resolve().parents[1]
 PUBLIC = FRONT / 'public'
 BRAND = FRONT.parent / 'docs' / 'brand'
-INK = '#0A1519'
+INK = '#0F1116'
 
 CANDIDATES = [
     os.environ.get('CHROME'),
@@ -73,10 +73,11 @@ def main():
         padded(mark, 150, 0.2).save(icons / 'mstile-150x150.png')
         padded(mark, 512, 0.12).save(PUBLIC / 'logo.png')
     shoot(BRAND / 'og.html', PUBLIC / 'og.png', 1200, 630)
+    # Pieces are optional: the Farol ones were removed with the Grafite identity (docs/brand/DESIGN.md).
     for page in sorted((BRAND / 'comunicacao').glob('*.html')):
         width, height = (1584, 396) if 'capa' in page.stem else (1200, 1200)
         shoot(page, page.with_suffix('.png'), width, height)
-    print('icons, og.png and LinkedIn pieces written')
+    print('icons, og.png and communication pieces written')
 
 
 if __name__ == '__main__':
