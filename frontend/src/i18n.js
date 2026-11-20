@@ -56,7 +56,7 @@ const resources = {
         newWalletHelp: 'Um nome é tudo o que você precisa para começar.',
         nameHelp: 'Use de 3 a 50 caracteres.',
         zeroBalanceHelp:
-          'A carteira começa com R$ 0,00. Depois, use Adicionar para colocar saldo fictício. O código é criado automaticamente.',
+          'A carteira começa com R$ 0,00 e o código é criado automaticamente.',
         sources: 'Referências oficiais',
         authHeadline: 'Veja quanto dá para gastar até o próximo salário.',
         authDescription:
@@ -128,11 +128,11 @@ const resources = {
         aboutSections: {
           simulation: {
             title: 'O que você pode fazer',
-            body: 'Criar carteiras, adicionar saldo fictício, enviar para outras carteiras do projeto, retirar saldo e consultar o extrato. A demonstração usa reais (BRL) e não cobra tarifas.',
+            body: 'Conectar uma conta de teste pelo Open Finance, ver quanto dá para gastar por dia até o próximo salário, separar envelopes e simular uma decisão antes de tomá-la. Tudo em reais (BRL), sem tarifa.',
           },
           apple: {
-            title: 'Referência visual: Apple Wallet',
-            body: 'A organização em cartões e a navegação simples inspiram o visual. Este projeto é independente, não tem vínculo com a Apple e não oferece Apple Pay, NFC ou cartões bancários.',
+            title: 'Projeto independente',
+            body: 'Sem vínculo com a Apple, com bancos ou com o Banco Central. Não oferece Apple Pay, NFC nem cartões bancários.',
           },
           bcb: {
             title: 'Dinheiro real exige outra estrutura',
@@ -164,7 +164,14 @@ const resources = {
       },
       transactions: {
         pageTitle: 'Movimentações | Wall.ia',
-        heading: 'Minhas movimentações',
+        heading: 'Extrato',
+        today: 'Hoje',
+        yesterday: 'Ontem',
+        showing: '{{shown}} de {{total}} movimentações',
+        showMore: 'Mostrar mais',
+        noMatch: 'Nada encontrado com esses filtros',
+        clearFilters: 'Limpar filtros',
+        emptyHelp: 'Conecte sua conta para trazer o extrato do banco.',
         columns: {
           createdAt: 'Data e hora',
           status: 'Status',
@@ -176,8 +183,11 @@ const resources = {
         },
       },
       insights: {
-        pageTitle: 'Inteligência financeira | Wall.ia',
-        heading: 'Inteligência financeira',
+        pageTitle: 'Análise | Wall.ia',
+        heading: 'Análise',
+        monthsShort_one: '1 mês',
+        monthsShort_other: '{{count}} meses',
+        flowRow: 'Entradas {{inflow}}, saídas {{outflow}}',
         description:
           'Quanto entrou e saiu das suas contas, pela data em que o dinheiro se moveu. Compras no cartão entram no dia em que a fatura é paga, não no dia da compra.',
         dashboardTitle: 'Seu extrato, explicado',
@@ -188,8 +198,8 @@ const resources = {
         months_other: 'Últimos {{count}} meses',
         generate: 'Gerar relatório',
         refresh: 'Atualizar relatório',
-        aggregateOnly: 'Privacidade por padrão: apenas totais agregados são usados na análise.',
-        emptyTitle: 'Seu relatório começa com os números',
+        aggregateOnly: 'Só os totais do período entram na análise, nunca a lista de movimentações.',
+        emptyTitle: 'Veja para onde foi o dinheiro',
         emptyDescription:
           'Escolha um período para receber uma análise objetiva do fluxo de caixa, próximos passos e leituras com referências verificáveis.',
         generatedAt: 'Gerado em {{date}}',
@@ -211,7 +221,7 @@ const resources = {
           eyebrow: 'Simulador de escolhas',
           title: 'E se parte desse consumo virasse uma reserva?',
           description:
-            'Escolha um valor mensal que você considera evitável e veja uma projeção matemática. O sistema sugere 10% da média mensal de saídas, mas a decisão e o valor são seus.',
+            'Escolha um valor por mês que daria para evitar e veja quanto ele vira. A sugestão é 10% da média de saídas.',
           monthlyAmount: 'Valor mensal (R$)',
           term: 'Prazo',
           years_one: '{{count}} ano',
@@ -755,7 +765,7 @@ const resources = {
         pageTitle: 'Envelopes | Wall.ia',
         heading: 'Envelopes',
         description:
-          'Separe parte do saldo para gastos que a projeção não conhece, como viagem ou IPVA. O dinheiro não sai da conta, só deixa de contar no limite diário.',
+          'Separe dinheiro para o que a projeção não conhece, como viagem ou IPVA. Ele sai do limite diário, não da conta.',
         balance: 'Saldo agora',
         balanceHelp: 'Soma das suas contas.',
         reserved: 'Nos envelopes',
@@ -1092,8 +1102,10 @@ const resources = {
         pageTitle: 'Visão geral | Wall.ia',
       },
       wallet: {
-        pageTitle: 'Minhas carteiras | Wall.ia',
-        heading: 'Minhas carteiras',
+        pageTitle: 'Carteiras | Wall.ia',
+        heading: 'Carteiras',
+        choose: 'Escolher carteira',
+        backToWallets: 'Ver carteiras',
         newWallet: 'Nova carteira',
         availableBalance: 'Saldo disponível',
         changeColor: 'Mudar cor do cartão',
@@ -1109,6 +1121,8 @@ const resources = {
         statement: {
           title: 'Extrato da carteira',
           recent: 'Movimentações recentes',
+          empty: 'Nenhuma movimentação nesta carteira ainda.',
+          emptySync: 'Nenhuma movimentação ainda. Sincronize para trazer o extrato do banco.',
         },
 
         create: {
@@ -1116,7 +1130,7 @@ const resources = {
           name: 'Nome da carteira',
           namePlaceholder: 'Exemplo: Carteira principal',
           save: 'Criar carteira',
-          success: 'Carteira criada com sucesso!',
+          success: 'Carteira criada.',
         },
       },
       auth: {
@@ -1231,7 +1245,7 @@ const resources = {
         newWalletHelp: 'A name is all you need to get started.',
         nameHelp: 'Use 3 to 50 characters.',
         zeroBalanceHelp:
-          'Your wallet starts at R$0.00. Use Add to add simulated funds. A wallet code is created automatically.',
+          'Your wallet starts at R$0.00 and its code is created automatically.',
         sources: 'Official sources',
         authHeadline: 'See how much you can spend until your next paycheck.',
         authDescription:
@@ -1304,11 +1318,11 @@ const resources = {
         aboutSections: {
           simulation: {
             title: 'What you can do',
-            body: 'Create wallets, add simulated funds, send to other wallets in the project, withdraw funds and view activity. This demo uses Brazilian reais (BRL) and does not charge fees.',
+            body: 'Connect a test account through Open Finance, see how much you can spend per day until your next paycheck, set envelopes aside and try a decision before you make it. All in Brazilian reais (BRL), with no fees.',
           },
           apple: {
-            title: 'Visual reference: Apple Wallet',
-            body: 'Cards and simple navigation inspire the design. This independent project is not affiliated with Apple and does not provide Apple Pay, NFC or bank cards.',
+            title: 'Independent project',
+            body: 'Not affiliated with Apple, any bank or the Central Bank of Brazil. It does not provide Apple Pay, NFC or bank cards.',
           },
           bcb: {
             title: 'Real money needs a different setup',
@@ -1340,7 +1354,14 @@ const resources = {
       },
       transactions: {
         pageTitle: 'Transactions | Wall.ia',
-        heading: 'My transactions',
+        heading: 'Statement',
+        today: 'Today',
+        yesterday: 'Yesterday',
+        showing: '{{shown}} of {{total}} transactions',
+        showMore: 'Show more',
+        noMatch: 'Nothing matches these filters',
+        clearFilters: 'Clear filters',
+        emptyHelp: 'Connect your account to bring in your bank statement.',
         columns: {
           createdAt: 'Date and time',
           status: 'Status',
@@ -1352,8 +1373,11 @@ const resources = {
         },
       },
       insights: {
-        pageTitle: 'Financial intelligence | Wall.ia',
-        heading: 'Financial intelligence',
+        pageTitle: 'Analysis | Wall.ia',
+        heading: 'Analysis',
+        monthsShort_one: '1 month',
+        monthsShort_other: '{{count}} months',
+        flowRow: 'In {{inflow}}, out {{outflow}}',
         description:
           'What came into and left your accounts, by the date the money moved. Card purchases count on the day the bill is paid, not the day you bought.',
         dashboardTitle: 'Your activity, explained',
@@ -1364,8 +1388,8 @@ const resources = {
         months_other: 'Last {{count}} months',
         generate: 'Generate report',
         refresh: 'Refresh report',
-        aggregateOnly: 'Privacy by default: only aggregate totals are used in the analysis.',
-        emptyTitle: 'Your report starts with the numbers',
+        aggregateOnly: 'Only the period totals go into the analysis, never the list of transactions.',
+        emptyTitle: 'See where the money went',
         emptyDescription:
           'Choose a period for a concise cash-flow analysis, practical next steps and reading with verifiable references.',
         generatedAt: 'Generated {{date}}',
@@ -1387,7 +1411,7 @@ const resources = {
           eyebrow: 'Choice simulator',
           title: 'What if part of this spending became a reserve?',
           description:
-            'Choose a monthly amount you consider avoidable and review a mathematical projection. The suggested value is 10% of average monthly outflows, but the choice and amount are yours.',
+            'Pick a monthly amount you could avoid and see what it grows into. The suggestion is 10% of average outflows.',
           monthlyAmount: 'Monthly amount (R$)',
           term: 'Term',
           years_one: '{{count}} year',
@@ -1930,7 +1954,7 @@ const resources = {
         pageTitle: 'Envelopes | Wall.ia',
         heading: 'Envelopes',
         description:
-          'Set part of the balance aside for what the projection does not know: a trip, the car tax, a reserve. The money stays where it is; the daily limit stops counting on it.',
+          'Set money aside for what the projection does not know, like a trip or the car tax. It leaves the daily limit, not the account.',
         balance: 'Balance now',
         balanceHelp: 'Sum of your accounts.',
         reserved: 'In envelopes',
@@ -2264,8 +2288,10 @@ const resources = {
         pageTitle: 'Overview | Wall.ia',
       },
       wallet: {
-        pageTitle: 'My wallets | Wall.ia',
-        heading: 'My wallets',
+        pageTitle: 'Wallets | Wall.ia',
+        heading: 'Wallets',
+        choose: 'Choose wallet',
+        backToWallets: 'See wallets',
         newWallet: 'New wallet',
         availableBalance: 'Available balance',
         changeColor: 'Change card color',
@@ -2281,6 +2307,8 @@ const resources = {
         statement: {
           title: 'Wallet statement',
           recent: 'Recent transactions',
+          empty: 'No transactions in this wallet yet.',
+          emptySync: 'No transactions yet. Sync to bring in your bank statement.',
         },
 
         create: {
@@ -2288,7 +2316,7 @@ const resources = {
           name: 'Wallet name',
           namePlaceholder: 'Example: Main wallet',
           save: 'Create wallet',
-          success: 'Wallet created successfully!',
+          success: 'Wallet created.',
         },
       },
       auth: {
