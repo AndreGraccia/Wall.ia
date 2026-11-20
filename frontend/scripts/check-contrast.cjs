@@ -1,34 +1,24 @@
 // Checks every text/background pair the UI uses against WCAG 2.2 (1.4.3 text, 1.4.11 non-text).
-// Reads the hex values straight from src/theme/palette.js, so changing a colour there re-runs the gate.
+// Reads the hex values straight from src/theme/palette.js (`primitives`), so changing a colour there re-runs the gate.
 // Usage: npm run test:contrast   (exits 1 if any pair fails)
 const fs = require('fs');
 const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'theme', 'palette.js'), 'utf8');
-
-function block(name) {
-  const match = source.match(new RegExp(`${name}\\s*[:=]\\s*\\{([\\s\\S]*?)\\n\\s*\\}`));
-  if (!match) throw new Error(`palette.js: block "${name}" not found`);
-  return Object.fromEntries([...match[1].matchAll(/(\w+):\s*'(#[0-9A-Fa-f]{6})'/g)].map((m) => [m[1], m[2]]));
-}
-
-const c = { ...block('primitives'), ...prefix(block('chart'), 'chart.') };
-function prefix(obj, p) {
-  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [p + k, v]));
-}
+const match = source.match(/primitives\s*=\s*\{([\s\S]*?)\n\};/);
+if (!match) throw new Error('palette.js: block "primitives" not found');
+const c = Object.fromEntries([...match[1].matchAll(/(\w+):\s*'(#[0-9A-Fa-f]{6})'/g)].map((m) => [m[1], m[2]]));
 
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 // Colour with alpha laid over an opaque background (how MUI's `alpha()` tints render).
-const over = (fg, a, bg) => {
-  const [f, b] = [rgb(fg), rgb(bg)];
-  return `#${f
+const over = (fg, a, bg) =>
+  `#${rgb(fg)
     .map((v, i) =>
-      Math.round(v * a + b[i] * (1 - a))
+      Math.round(v * a + rgb(bg)[i] * (1 - a))
         .toString(16)
         .padStart(2, '0')
     )
     .join('')}`;
-};
 const lum = (hex) => {
   const [r, g, b] = rgb(hex).map((v) => {
     const s = v / 255;
@@ -42,28 +32,35 @@ const ratio = (a, b) => {
 };
 
 const TEXT = 4.5;
-const LARGE = 3; // text >= 24px or >= 18.66px bold, and UI components / graphics
-const surfaces = ['ink', 'surface1', 'surface2', 'surface3'];
+const NON_TEXT = 3; // UI components, graphics and text >= 24px
+const TONES = ['future', 'positive', 'negative', 'warning'];
 const pairs = [];
 const add = (fg, bg, min, use) => pairs.push({ fg, bg, min, use });
 
-for (const s of surfaces) {
+// Text sits on the page, panels, fields and floating layers (menus, tooltips, dialogs).
+for (const s of ['bg', 'surface1', 'surface2', 'surface3']) {
   add('text', s, TEXT, 'texto principal');
-  add('text2', s, TEXT, 'texto secundário');
-  add('muted', s, TEXT, 'placeholder / desabilitado');
-  for (const tone of ['lamp', 'fog', 'kelp', 'buoy', 'ember']) add(tone, s, TEXT, `texto/ícone ${tone}`);
-  add('lineStrong', s, LARGE, 'borda de campo (1.4.11)');
+  add('text2', s, TEXT, 'texto de apoio / placeholder');
+  for (const tone of TONES) add(tone, s, TEXT, `texto/número ${tone}`);
 }
-// Text on filled tones (contained buttons, filled chips, snackbars): contrastText = void.
-for (const tone of ['lamp', 'lampDeep', 'fog', 'kelp', 'buoy', 'ember']) add('void', tone, TEXT, `texto sobre ${tone}`);
-// Tinted chips and alerts: tone text over a 14% tint of itself on the paper surface.
-for (const tone of ['lamp', 'fog', 'kelp', 'buoy', 'ember']) {
-  add(tone, { hex: over(c[tone], 0.14, c.surface1), name: `${tone}@14% sobre surface1` }, TEXT, 'chip/alerta tonal');
+// Labels and metadata only on the page and on panels (DESIGN.md: muted >= 4,5:1 on bg and surface1).
+for (const s of ['bg', 'surface1']) add('muted', s, TEXT, 'rótulo / metadado');
+// Dark text on filled pills: the white action and the filled tones.
+for (const tone of ['action', ...TONES]) add('bg', tone, TEXT, `texto sobre ${tone}`);
+// Tinted seals and translucent marks: tone text over a 14% tint of itself on surface1.
+for (const tone of TONES) {
+  add(tone, { hex: over(c[tone], 0.14, c.surface1), name: `${tone}@14% sobre surface1` }, TEXT, 'selo tonal');
 }
-// Focus ring (lamp) must be seen against every surface.
-for (const s of surfaces) add('lamp', s, LARGE, 'anel de foco');
-// Chart lines on the chart surface.
-for (const mark of ['chart.projection', 'chart.scenario']) add(mark, 'surface1', LARGE, 'linha do gráfico');
+for (const s of ['bg', 'surface1', 'surface2']) {
+  add('lineStrong', s, NON_TEXT, 'borda de campo (1.4.11)');
+  add('future', s, NON_TEXT, 'anel de foco');
+}
+// Chart marks on the page (the Future chart has no card) and on a panel (simulator).
+for (const s of ['bg', 'surface1']) {
+  add('text', s, NON_TEXT, 'linha do gráfico até hoje');
+  add('future', s, NON_TEXT, 'linha projetada');
+  add('lineStrong', s, NON_TEXT, 'linha do zero');
+}
 
 let failed = 0;
 const rows = pairs.map(({ fg, bg, min, use }) => {

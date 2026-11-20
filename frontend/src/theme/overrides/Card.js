@@ -1,9 +1,10 @@
+// Panels: surface1 and a 1 px line, no shadow. Radius by hierarchy: large panel 20.
 export default function Card(theme) {
   return {
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: theme.customShadows.card,
+          boxShadow: 'none',
           borderRadius: 20,
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
@@ -13,22 +14,9 @@ export default function Card(theme) {
       },
     },
     MuiCardHeader: {
-      defaultProps: {
-        titleTypographyProps: { variant: 'h6' },
-        subheaderTypographyProps: { variant: 'body2' },
-      },
-      styleOverrides: {
-        root: {
-          padding: theme.spacing(3, 3, 0),
-        },
-      },
+      defaultProps: { titleTypographyProps: { variant: 'h6' }, subheaderTypographyProps: { variant: 'body2' } },
+      styleOverrides: { root: { padding: theme.spacing(3, 3, 0) } },
     },
-    MuiCardContent: {
-      styleOverrides: {
-        root: {
-          padding: theme.spacing(3),
-        },
-      },
-    },
+    MuiCardContent: { styleOverrides: { root: { padding: theme.spacing(3) } } },
   };
 }

@@ -1,108 +1,89 @@
 import { alpha } from '@mui/material/styles';
 
-// Wall.ia "Farol" — primitives. Components never use these directly; they use the semantic palette below
-// (or `brand.*` for the few brand-only moments). Every text/background pair is checked by
-// `npm run test:contrast` (scripts/check-contrast.cjs); the rationale is in docs/brand/wallia-brand.md.
+// Wall.ia "Grafite" (docs/brand/DESIGN.md) — primitives. Components never use these directly; they use the
+// semantic palette below. Every text/background pair is checked by `npm run test:contrast`
+// (scripts/check-contrast.cjs).
 export const primitives = {
-  // The sea at night: every surface carries the same blue-green, never a neutral black.
-  void: '#060D10',
-  ink: '#0A1519',
-  surface1: '#0F1E23',
-  surface2: '#15282E',
-  surface3: '#1C333A',
-  line: '#24414A',
-  // 3:1 against surface1-3 (WCAG 1.4.11): field borders must be seen to be used.
-  lineStrong: '#5F8792',
-  // Foam: text sits on the water like foam, slightly cool.
-  text: '#EAF2F0',
-  text2: '#A6BCBD',
-  muted: '#8AA4A8',
-  // Lamp: the lighthouse light. The only colour that means "you can press this".
-  lamp: '#FFD25E',
-  lampDeep: '#F2BC35',
-  // Fog: what the engine expects but has not happened yet.
-  fog: '#A3B5FF',
-  // Kelp and buoy: above and below the waterline.
-  kelp: '#5ED6A2',
-  buoy: '#FF8590',
-  ember: '#FFA463',
+  // Depth by layer, not by shadow: bg -> surface1 -> surface2 -> surface3 (floating: menus, tooltips).
+  bg: '#08090C',
+  surface1: '#0F1116',
+  surface2: '#161920',
+  surface3: '#1D2129',
+  line: '#222631',
+  // Field and control boundaries: >= 3:1 against bg and surfaces 1-2 (WCAG 1.4.11).
+  lineStrong: '#616B7F',
+  text: '#F3F5F9',
+  text2: '#A4ABBA',
+  muted: '#7A8294',
+  // The action is white. Colour only says what a number is.
+  action: '#F3F5F9',
+  future: '#8FA3FF',
+  positive: '#4FD1A1',
+  negative: '#FF7B7B',
+  warning: '#F2B85B',
 };
 
 const GREY = {
   0: '#FFFFFF',
   100: primitives.text,
-  200: '#C8D8D7',
+  200: '#D3D7DF',
   300: primitives.text2,
   400: primitives.muted,
-  500: '#4E6B73',
+  500: '#4A5160',
   600: primitives.lineStrong,
   700: primitives.surface3,
   800: primitives.surface2,
   900: primitives.surface1,
 };
 
-const tone = (main, light, dark, darker) => ({
+const tone = (main, light, dark) => ({
   lighter: alpha(main, 0.14),
   light,
   main,
   dark,
-  darker,
-  contrastText: primitives.void,
+  darker: dark,
+  contrastText: primitives.bg,
 });
 
 const palette = {
   mode: 'dark',
-  common: { black: primitives.void, white: '#FFFFFF' },
+  common: { black: primitives.bg, white: '#FFFFFF' },
 
-  // Action: the lamp. The only colour that means "you can press this".
-  primary: tone(primitives.lamp, '#FFE08F', primitives.lampDeep, '#8A6400'),
-  // Projection / estimate: fog, anything the engine expects but has not happened yet.
-  secondary: tone(primitives.fog, '#C7D2FF', '#7D93F0', '#33408A'),
-  info: tone(primitives.fog, '#C7D2FF', '#7D93F0', '#33408A'),
-  // Above the waterline.
-  success: tone(primitives.kelp, '#93E6C2', '#34B07D', '#0F6B45'),
-  warning: tone(primitives.ember, '#FFC79E', '#E5813A', '#7A3A0A'),
-  // Below the waterline.
-  error: tone(primitives.buoy, '#FFB3B9', '#E85A68', '#7A1F28'),
+  // Action: white pill, dark text.
+  primary: tone(primitives.action, '#FFFFFF', '#D3D7DF'),
+  // Projection / estimate: anything the engine expects but has not happened yet.
+  secondary: tone(primitives.future, '#B7C4FF', '#7186E6'),
+  info: tone(primitives.future, '#B7C4FF', '#7186E6'),
+  success: tone(primitives.positive, '#8AE3C2', '#34B386'),
+  warning: tone(primitives.warning, '#F7D08F', '#D99B3B'),
+  error: tone(primitives.negative, '#FFA8A8', '#E65C5C'),
   grey: GREY,
 
-  // Brand-only tokens (logo, illustration, certainty markers). Never used as a button colour.
+  // Brand-only tokens (logo, chart marks). `fog` is the Farol name of `future`, kept for screens not yet
+  // migrated (Insights, Open Finance); new code uses `future`.
   brand: {
-    lamp: primitives.lamp,
-    fog: primitives.fog,
-    ink: primitives.ink,
-    waterline: primitives.lineStrong,
-    surface3: primitives.surface3,
+    future: primitives.future,
+    fog: primitives.future,
+    line: primitives.line,
     lineStrong: primitives.lineStrong,
+    surface3: primitives.surface3,
   },
-  // Chart marks: darker steps of fog/lamp that keep >= 3:1 on surface1 without glowing
-  // (checked by `npm run test:contrast`).
   chart: {
-    projection: '#7D93F0',
-    scenario: '#D9A92E',
-    negative: alpha(primitives.buoy, 0.12),
+    history: primitives.text,
+    projection: primitives.future,
+    scenario: primitives.text,
+    negative: alpha(primitives.negative, 0.16),
     grid: primitives.line,
+    zero: primitives.lineStrong,
   },
-  // Wallet card finishes (the physical-card metaphor). White text passes AA on every finish.
-  cardFinishes: [
-    'linear-gradient(160deg, #1C333A 0%, #0A1519 100%)',
-    `radial-gradient(120% 90% at 100% 0%, ${alpha(
-      primitives.lamp,
-      0.24
-    )} 0%, transparent 55%), linear-gradient(160deg, #1F2A22 0%, #0A1519 100%)`,
-    `radial-gradient(120% 90% at 100% 0%, ${alpha(
-      primitives.fog,
-      0.26
-    )} 0%, transparent 55%), linear-gradient(160deg, #18213A 0%, #0A1519 100%)`,
-    'linear-gradient(160deg, #123A33 0%, #07120F 100%)',
-    'linear-gradient(160deg, #3A2418 0%, #120B07 100%)',
-  ],
+  // Wallet card finishes: flat tints of the surfaces, never a gradient. White text passes AA on all of them.
+  cardFinishes: ['#161920', '#141A2C', '#11201B', '#221B12', '#1F1524'],
   // How sure a number is. Each state also has a text label, a line style and (for estimates) italics,
   // never colour alone.
   certainty: {
     confirmed: primitives.text,
-    estimated: primitives.fog,
-    hypothetical: primitives.lamp,
+    estimated: primitives.future,
+    hypothetical: primitives.text2,
   },
 
   divider: primitives.line,
@@ -113,9 +94,8 @@ const palette = {
     disabled: primitives.muted,
   },
 
-  // Elevation by lightness: the higher the surface, the closer to the surface of the water.
   background: {
-    default: primitives.ink,
+    default: primitives.bg,
     paper: primitives.surface1,
     neutral: primitives.surface2,
     raised: primitives.surface3,
@@ -123,12 +103,12 @@ const palette = {
 
   action: {
     active: primitives.text2,
-    hover: alpha(primitives.text, 0.06),
-    selected: alpha(primitives.lamp, 0.12),
-    disabled: alpha(primitives.text2, 0.4),
+    hover: alpha(primitives.text, 0.05),
+    selected: primitives.surface2,
+    disabled: alpha(primitives.text2, 0.45),
     disabledBackground: alpha(primitives.text2, 0.12),
-    focus: alpha(primitives.lamp, 0.24),
-    hoverOpacity: 0.06,
+    focus: alpha(primitives.future, 0.24),
+    hoverOpacity: 0.05,
     disabledOpacity: 0.48,
   },
 };

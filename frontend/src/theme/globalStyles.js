@@ -9,8 +9,15 @@ export default function GlobalStyles() {
         },
 
         '*::selection': {
-          color: theme.palette.primary.contrastText,
-          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.text.primary,
+          backgroundColor: theme.palette.action.focus,
+        },
+
+        // The one orchestrated moment (DESIGN.md): the balance line draws itself, 600 ms, on mount only.
+        // The reduced-motion rule below cuts it to nothing.
+        '@keyframes wallia-reveal': {
+          from: { transform: 'scaleX(1)' },
+          to: { transform: 'scaleX(0)' },
         },
 
         html: {
@@ -32,6 +39,7 @@ export default function GlobalStyles() {
           fontFamily: theme.typography.fontFamily,
           // Money lines up: every digit has the same width.
           fontVariantNumeric: 'tabular-nums',
+          fontFeatureSettings: '"tnum"',
           WebkitFontSmoothing: 'antialiased',
           MozOsxFontSmoothing: 'grayscale',
         },
