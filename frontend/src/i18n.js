@@ -58,7 +58,7 @@ const resources = {
         zeroBalanceHelp:
           'A carteira começa com R$ 0,00. Depois, use Adicionar para colocar saldo fictício. O código é criado automaticamente.',
         sources: 'Referências oficiais',
-        authHeadline: 'Veja o futuro antes de mexer no dinheiro.',
+        authHeadline: 'Veja quanto dá para gastar até o próximo salário.',
         authDescription:
           'A Wall.ia entende seus compromissos, mostra de onde vem cada número e deixa você testar uma decisão antes de tomá-la.',
         pillars: { clarity: 'Clareza', control: 'Controle', trust: 'Confiança' },
@@ -326,6 +326,28 @@ const resources = {
         english: 'Inglês',
       },
       future: {
+        hero: {
+          canSpendLead: 'Você pode gastar',
+          perDay: 'por dia',
+          canSpendTail: 'até {{date}}, sem nenhum dia negativo.',
+          canSpendTailDays: 'nos próximos {{days}} dias, sem nenhum dia negativo.',
+          shortLead: 'Faltam',
+          shortEnvelopesLead: 'Sem mexer nos envelopes, faltam',
+          shortTail: 'até {{date}}, mesmo sem gastar nada.',
+          shortTailDays: 'nos próximos {{days}} dias, mesmo sem gastar nada.',
+          why: 'Por quê?',
+        },
+        chartToday: 'hoje',
+        chartIncome: 'entrada',
+        chartPast: 'Até hoje',
+        chartAhead: 'Projeção',
+        negativeTitle: 'Dias no negativo',
+        windowDates: '{{start}} a {{end}}',
+        windowLowest: 'chega a {{amount}}',
+        questionsPending_one: '1 pergunta melhora a projeção',
+        questionsPending_other: '{{count}} perguntas melhoram a projeção',
+        eventsTitle: 'Movimentos previstos',
+        alertsTitle: 'Avisos de saldo negativo',
         chargeRadar: {
           title: 'Cobranças para revisar',
           description:
@@ -633,7 +655,7 @@ const resources = {
         chartLabel: 'Gráfico do saldo projetado. Menor saldo {{amount}} em {{date}}; saldo final {{end}}.',
         chartLowest: 'Menor saldo',
         chartKeys: 'Use as setas para ver o saldo de cada dia.',
-        chartZero: 'Zero',
+        chartZero: 'R$ 0',
         chartScenario: 'Com a decisão',
         chartBaseline: 'Hoje',
         chartLegend:
@@ -682,7 +704,7 @@ const resources = {
           REJECTED: 'Ignorado',
         },
         saved: 'Resposta salva. A projeção foi atualizada.',
-        simulatorTitle: 'Modo Futuro',
+        simulatorTitle: 'Simular uma decisão',
         simulatorHelp: 'Teste uma decisão antes de tomá-la. Nada é movimentado e nada é salvo.',
         scenarioTypes: {
           PURCHASE: 'Comprar algo',
@@ -1002,6 +1024,9 @@ const resources = {
           'Este radar encontra padrões, não confirma fraude nem cancela serviços. Cobranças repetidas podem ser legítimas; confirme no banco antes de contestar. Valores e datas futuras são estimativas.',
       },
       navigation: {
+        groups: { overview: 'Visão', money: 'Dinheiro', debts: 'Dívidas', more: 'Mais' },
+        debts: 'Dívidas',
+        more: 'Mais',
         metrics: 'Métricas',
         envelopes: 'Envelopes',
         dashboard: 'Início',
@@ -1057,6 +1082,13 @@ const resources = {
         openFuture: 'Ver no Futuro',
       },
       dashboard: {
+        upcoming: 'Próximos compromissos',
+        noUpcoming: 'Nada previsto nos próximos 30 dias.',
+        openFuture: 'Abrir Futuro',
+        simulate: 'Simular compra',
+        loadError: 'Não foi possível carregar a projeção.',
+        answerFirst: 'Responda às perguntas do Futuro para ver quanto dá para gastar por dia.',
+        answer: 'Responder perguntas',
         pageTitle: 'Visão geral | Wall.ia',
       },
       wallet: {
@@ -1201,7 +1233,7 @@ const resources = {
         zeroBalanceHelp:
           'Your wallet starts at R$0.00. Use Add to add simulated funds. A wallet code is created automatically.',
         sources: 'Official sources',
-        authHeadline: 'See the future before you touch your money.',
+        authHeadline: 'See how much you can spend until your next paycheck.',
         authDescription:
           'Wall.ia understands your commitments, shows where every number comes from and lets you try a decision before making it.',
         pillars: { clarity: 'Clarity', control: 'Control', trust: 'Trust' },
@@ -1470,6 +1502,28 @@ const resources = {
         english: 'English',
       },
       future: {
+        hero: {
+          canSpendLead: 'You can spend',
+          perDay: 'a day',
+          canSpendTail: 'until {{date}}, with no day below zero.',
+          canSpendTailDays: 'over the next {{days}} days, with no day below zero.',
+          shortLead: 'You are short',
+          shortEnvelopesLead: 'Keeping your envelopes, you are short',
+          shortTail: 'until {{date}}, even spending nothing.',
+          shortTailDays: 'over the next {{days}} days, even spending nothing.',
+          why: 'Why?',
+        },
+        chartToday: 'today',
+        chartIncome: 'income',
+        chartPast: 'So far',
+        chartAhead: 'Projection',
+        negativeTitle: 'Days below zero',
+        windowDates: '{{start}} to {{end}}',
+        windowLowest: 'down to {{amount}}',
+        questionsPending_one: '1 question improves the projection',
+        questionsPending_other: '{{count}} questions improve the projection',
+        eventsTitle: 'Expected movements',
+        alertsTitle: 'Negative balance alerts',
         chargeRadar: {
           title: 'Charges to review',
           description:
@@ -1776,7 +1830,7 @@ const resources = {
         chartLabel: 'Projected balance chart. Lowest balance {{amount}} on {{date}}; final balance {{end}}.',
         chartLowest: 'Lowest balance',
         chartKeys: 'Use the arrow keys to read each day.',
-        chartZero: 'Zero',
+        chartZero: 'R$ 0',
         chartScenario: 'With the decision',
         chartBaseline: 'Today',
         chartLegend:
@@ -1825,7 +1879,7 @@ const resources = {
           REJECTED: 'Ignored',
         },
         saved: 'Answer saved. The projection was updated.',
-        simulatorTitle: 'Future Mode',
+        simulatorTitle: 'Simulate a decision',
         simulatorHelp: 'Try a decision before making it. Nothing is moved and nothing is saved.',
         scenarioTypes: {
           PURCHASE: 'Buy something',
@@ -2140,6 +2194,9 @@ const resources = {
           'This radar finds patterns; it does not confirm fraud or cancel services. Repeated charges can be legitimate; check with your bank before disputing. Future values and dates are estimates.',
       },
       navigation: {
+        groups: { overview: 'Overview', money: 'Money', debts: 'Debts', more: 'More' },
+        debts: 'Debts',
+        more: 'More',
         metrics: 'Metrics',
         envelopes: 'Envelopes',
         dashboard: 'Home',
@@ -2197,6 +2254,13 @@ const resources = {
         openFuture: 'See in Future',
       },
       dashboard: {
+        upcoming: 'Coming up',
+        noUpcoming: 'Nothing expected in the next 30 days.',
+        openFuture: 'Open Future',
+        simulate: 'Simulate a purchase',
+        loadError: 'Could not load the projection.',
+        answerFirst: 'Answer the questions in Future to see how much you can spend per day.',
+        answer: 'Answer questions',
         pageTitle: 'Overview | Wall.ia',
       },
       wallet: {
