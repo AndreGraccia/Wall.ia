@@ -96,7 +96,7 @@ class ForecastServiceTest {
         FutureResponses.Projection projection = new FutureResponses.Projection(2, new BigDecimal("1000.00"),
                 new BigDecimal("-20.50"), TODAY.plusDays(2), new BigDecimal("-20.50"), 1, days, List.of(), List.of());
         return new FutureResponses.Overview(Instant.now(), TODAY, new BigDecimal("1000.00"), BigDecimal.ZERO, null,
-                projection, new FutureResponses.Sources(1, 0, 0, confirmed, 0, null, false), null, null, null, List.of(), BigDecimal.ZERO);
+                projection, new FutureResponses.Sources(1, 0, 0, confirmed, 0, null), null, null, null, List.of(), BigDecimal.ZERO);
     }
 
     private static FutureResponses.DayPoint day(int offset, String balance) {

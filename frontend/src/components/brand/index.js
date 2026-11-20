@@ -1,9 +1,19 @@
 import PropTypes from 'prop-types';
 import { Box, Stack } from '@mui/material';
 
-// The mark is a "W" drawn as a balance line; its last point is the "." of Wall.ia: the future,
-// projected. Same geometry as public/favicon.svg — change both together.
+// "Farol" mark: a W drawn as a balance line over the waterline (zero). The past is solid; the lamp dot is
+// today; from there the line is a dashed estimate that dips below the waterline — the hole between the
+// card bill and the paycheck — and comes back up. Same geometry as public/favicon.svg and
+// scripts/build-icons.py — change all three together.
+export const MARK = {
+  waterline: { x1: 3.5, x2: 28.5, y: 19 },
+  past: '6,8.5 10.5,16.5 15.5,11',
+  ahead: '15.5,11 20.5,24 25.5,12',
+  today: { cx: 15.5, cy: 11, r: 2.7 },
+};
+
 export function WalliaMark({ size = 32, title }) {
+  const { waterline, today } = MARK;
   return (
     <Box
       component="svg"
@@ -17,28 +27,37 @@ export function WalliaMark({ size = 32, title }) {
     >
       <Box component="rect" width="32" height="32" rx="9" sx={{ fill: (theme) => theme.palette.background.neutral }} />
       <Box
+        component="line"
+        x1={waterline.x1}
+        x2={waterline.x2}
+        y1={waterline.y}
+        y2={waterline.y}
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        sx={{ stroke: (theme) => theme.palette.brand.waterline }}
+      />
+      <Box
         component="polyline"
-        points="6.5,10 11,21.5 16,13.5 21,21.5"
+        points={MARK.ahead}
+        fill="none"
+        strokeWidth="2.3"
+        pathLength="100"
+        strokeDasharray="12 9"
+        strokeDashoffset="17.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        sx={{ stroke: (theme) => theme.palette.brand.fog }}
+      />
+      <Box
+        component="polyline"
+        points={MARK.past}
         fill="none"
         strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
         sx={{ stroke: (theme) => theme.palette.text.primary }}
       />
-      {[
-        [22.55, 17.75],
-        [24.05, 14.15],
-      ].map(([cx, cy]) => (
-        <Box
-          key={cx}
-          component="circle"
-          cx={cx}
-          cy={cy}
-          r="1.3"
-          sx={{ fill: (theme) => theme.palette.brand.horizon }}
-        />
-      ))}
-      <Box component="circle" cx="25.6" cy="10.4" r="2.6" sx={{ fill: (theme) => theme.palette.brand.volt }} />
+      <Box component="circle" {...today} sx={{ fill: (theme) => theme.palette.brand.lamp }} />
     </Box>
   );
 }
@@ -54,13 +73,13 @@ export function WalliaLogo({ size = 32, hideWordmark = false }) {
           sx={{
             fontFamily: (theme) => theme.typography.h6.fontFamily,
             fontWeight: 700,
-            fontSize: size * 0.62,
-            letterSpacing: '-0.03em',
+            fontSize: size * 0.64,
+            letterSpacing: '-0.02em',
             lineHeight: 1,
           }}
         >
           Wall
-          <Box component="span" sx={{ color: 'brand.volt' }}>
+          <Box component="span" sx={{ color: 'brand.lamp' }}>
             .
           </Box>
           ia

@@ -22,6 +22,7 @@ import { StatBlock } from '../../components/future-ui';
 import { EmptyState, PageHeading, PageSkeleton, SectionCard } from '../../components/wallet-ui';
 import { dayLabel, errorKey, money, monthLabel, percent, subtractMoney } from '../../utils/wallet';
 import DebtPayoff from './DebtPayoff';
+import BankDataNotice from '../../components/bank-data';
 
 const FULL_DATE = { day: '2-digit', month: 'short', year: 'numeric' };
 
@@ -323,6 +324,7 @@ export default function Commitments() {
       <Container maxWidth="lg">
         <PageHeading title={t('commitments.heading')} description={t('commitments.description')} />
         {state.loading && !data && <PageSkeleton rows={2} />}
+        {data && <BankDataNotice bankData={data.bankData} sx={{ mb: 3 }} />}
         {state.error && (
           <Alert
             severity="error"
@@ -372,7 +374,6 @@ export default function Commitments() {
                   {data.loans.map((loan) => (
                     <LoanSection key={loan.id} loan={loan} market={rate('PERSONAL_LOAN')} />
                   ))}
-                  <DebtPayoff />
                 </Stack>
               </Box>
             )}
@@ -397,6 +398,12 @@ export default function Commitments() {
               </Card>
             )}
           </Stack>
+        )}
+        {/* Open Finance does not send "Pix no crédito" (B14): it can be typed even without a bank connected. */}
+        {data && (
+          <Box sx={{ mt: 4 }}>
+            <DebtPayoff manualDebts={data.manualDebts || []} onChange={load} />
+          </Box>
         )}
       </Container>
     </>

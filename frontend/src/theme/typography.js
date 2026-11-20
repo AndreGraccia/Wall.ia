@@ -20,11 +20,12 @@ export function responsiveFontSizes({ sm, md, lg }) {
   };
 }
 
-// Inter for reading, Space Grotesk for headings and big numbers, JetBrains Mono for codes.
+// Inter for reading and money (tabular figures; italic marks an estimate), Bricolage Grotesque for headings
+// and big numbers, JetBrains Mono only for codes (Pix keys, consent ids).
 // Loaded from @fontsource (self-hosted, so the nginx CSP can stay 'self').
 const SYSTEM = ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'];
 export const FONT_PRIMARY = ['"Inter Variable"', 'Inter', ...SYSTEM].join(',');
-export const FONT_DISPLAY = ['"Space Grotesk Variable"', '"Space Grotesk"', ...SYSTEM].join(',');
+export const FONT_DISPLAY = ['"Bricolage Grotesque Variable"', '"Bricolage Grotesque"', ...SYSTEM].join(',');
 export const FONT_MONO = [
   '"JetBrains Mono Variable"',
   '"JetBrains Mono"',
@@ -42,9 +43,9 @@ const typography = {
 
   h1: {
     fontFamily: FONT_DISPLAY,
-    fontWeight: 700,
+    fontWeight: 600,
     lineHeight: 1.08,
-    letterSpacing: '-0.045em',
+    letterSpacing: '-0.015em',
     fontSize: pxToRem(40),
     ...responsiveFontSizes({
       sm: 48,
@@ -55,9 +56,9 @@ const typography = {
 
   h2: {
     fontFamily: FONT_DISPLAY,
-    fontWeight: 700,
+    fontWeight: 600,
     lineHeight: 1.12,
-    letterSpacing: '-0.04em',
+    letterSpacing: '-0.01em',
     fontSize: pxToRem(34),
     ...responsiveFontSizes({
       sm: 38,
@@ -68,9 +69,9 @@ const typography = {
 
   h3: {
     fontFamily: FONT_DISPLAY,
-    fontWeight: 700,
+    fontWeight: 600,
     lineHeight: 1.18,
-    letterSpacing: '-0.035em',
+    letterSpacing: '-0.02em',
     fontSize: pxToRem(28),
     ...responsiveFontSizes({
       sm: 30,
@@ -81,9 +82,9 @@ const typography = {
 
   h4: {
     fontFamily: FONT_DISPLAY,
-    fontWeight: 700,
+    fontWeight: 600,
     lineHeight: 1.22,
-    letterSpacing: '-0.03em',
+    letterSpacing: '-0.012em',
     fontSize: pxToRem(23),
     ...responsiveFontSizes({
       sm: 25,
@@ -139,11 +140,11 @@ const typography = {
   },
 
   overline: {
+    // Sentence case, not tracked caps: a calm product does not shout its labels.
     fontWeight: 600,
     lineHeight: 1.5,
-    letterSpacing: '0.1em',
-    fontSize: pxToRem(11),
-    textTransform: 'uppercase',
+    letterSpacing: '0.01em',
+    fontSize: pxToRem(12),
   },
 
   button: {

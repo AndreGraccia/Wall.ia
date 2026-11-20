@@ -85,6 +85,38 @@ class AccountDeletionServiceTest {
         assertFalse(AccountDeletionService.OWN_ROWS.stream().anyMatch(sql -> sql.contains("\"user\"")));
     }
 
+    /**
+     * The user row is pseudonymised, never deleted, so ON DELETE CASCADE from "user" never fires. Every table with a
+     * user_id has to be cleaned explicitly; this reads the migrations so a new table cannot be forgotten
+     * (charge_alert_decision, V33, was).
+     */
+    @Test
+    void everyTableWithAUserIdIsCleanedOnDeletion() throws java.io.IOException {
+        // credit_card and loan go through OpenFinanceImportService.purge; wallet is pseudonymised when it has history.
+        var handledElsewhere = java.util.Set.of("credit_card", "loan");
+        var renamed = java.util.Map.of("open_finance_email_challenge", "email_verification_challenge");
+        var createTable = java.util.regex.Pattern.compile(
+                "CREATE TABLE\\s+(?:IF NOT EXISTS\\s+)?(?:public\\.)?\"?(\\w+)\"?\\s*\\((.*?)\\n\\);",
+                java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL);
+        var tables = new java.util.TreeSet<String>();
+        try (var files = java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/db/migration"))) {
+            for (var file : files.toList()) {
+                var matcher = createTable.matcher(java.nio.file.Files.readString(file));
+                while (matcher.find()) {
+                    if (matcher.group(2).matches("(?s).*\\buser_id\\b.*")) {
+                        tables.add(renamed.getOrDefault(matcher.group(1), matcher.group(1)));
+                    }
+                }
+            }
+        }
+        assertTrue(tables.contains("charge_alert_decision"), "the migration scan must actually find the tables");
+        for (String table : tables) {
+            if (handledElsewhere.contains(table)) continue;
+            assertTrue(AccountDeletionService.OWN_ROWS.stream().anyMatch(sql -> sql.startsWith("DELETE FROM " + table + " ")),
+                    table + " has a user_id and is not cleaned when the account is deleted");
+        }
+    }
+
     @Test
     void theAnonymisedNameAndEmailCanNeverBeTakenBySomeoneSigningUpFirst() {
         // Otherwise registering "excluido-<id>" in advance made the victim's deletion fail on the unique index.

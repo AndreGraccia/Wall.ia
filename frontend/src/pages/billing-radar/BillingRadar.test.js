@@ -49,8 +49,7 @@ test('renders the price-change alert with transaction evidence', async () => {
   HttpService.getWithAuth.mockResolvedValue({
     generatedAt: '2026-10-26T10:00:00Z',
     dataThrough: '2026-10-26',
-    bankDataAsOf: '2026-10-26T09:00:00Z',
-    bankDataStale: false,
+    bankData: { institution: 'Banco Aurora', asOf: '2026-10-26T09:00:00Z', stale: false, staleAfterHours: 36 },
     accounts: 1,
     recurringCount: 1,
     priceIncreaseCount: 1,
@@ -119,7 +118,7 @@ test('renders the price-change alert with transaction evidence', async () => {
 
 test('explains that more history is needed and offers Open Finance', async () => {
   HttpService.getWithAuth.mockResolvedValue({
-    bankDataStale: false,
+    bankData: null,
     recurringCount: 0,
     priceIncreaseCount: 0,
     possibleDuplicateCount: 0,
@@ -135,7 +134,7 @@ test('explains that more history is needed and offers Open Finance', async () =>
 
 test('warns when bank data is stale before the signal list', async () => {
   HttpService.getWithAuth.mockResolvedValue({
-    bankDataStale: true,
+    bankData: { institution: 'Banco Aurora', asOf: '2026-10-20T09:00:00Z', stale: true, staleAfterHours: 36 },
     recurringCount: 0,
     priceIncreaseCount: 0,
     possibleDuplicateCount: 0,
@@ -144,6 +143,6 @@ test('warns when bank data is stale before the signal list', async () => {
   });
   await renderPage();
 
-  expect(pageText()).toContain('billingRadar.staleTitle');
-  expect(pageText().indexOf('billingRadar.staleTitle')).toBeLessThan(pageText().indexOf('billingRadar.emptyTitle'));
+  expect(pageText()).toContain('bankData.staleTitle');
+  expect(pageText().indexOf('bankData.staleTitle')).toBeLessThan(pageText().indexOf('billingRadar.emptyTitle'));
 });

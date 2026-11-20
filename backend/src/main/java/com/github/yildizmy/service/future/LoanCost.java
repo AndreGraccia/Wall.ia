@@ -54,7 +54,17 @@ public final class LoanCost {
         return interest.setScale(2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * Monthly percent to the equivalent annual percent: 8 (% a.m.) becomes 151.817... (% a.a.). Used for the CET
+     * a person types for "Pix no crédito", which banks show per month (B14).
+     */
+    public static BigDecimal annualFromMonthly(BigDecimal monthlyRatePercent) {
+        BigDecimal factor = BigDecimal.ONE.add(monthlyRatePercent.movePointLeft(2)).pow(12, MathContext.DECIMAL64);
+        return factor.subtract(BigDecimal.ONE).movePointRight(2).setScale(6, java.math.RoundingMode.HALF_UP);
+    }
+
     static BigDecimal monthlyRate(BigDecimal annualRatePercent) {
-        return new BigDecimal(Math.pow(1 + annualRatePercent.doubleValue() / 100, 1.0 / 12) - 1, MathContext.DECIMAL64);
+        // valueOf keeps the double's shortest decimal; new BigDecimal(double) carried the binary expansion (Sonar S2111).
+        return BigDecimal.valueOf(Math.pow(1 + annualRatePercent.doubleValue() / 100, 1.0 / 12) - 1).round(MathContext.DECIMAL64);
     }
 }

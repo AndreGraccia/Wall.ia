@@ -71,9 +71,11 @@ logging:
     org.springframework.security: error
 
 server:
-  port: ${backend_port:8082}
+  # PORT is what Render (and most PaaS) inject; the compose file sets SERVER_PORT, which wins over both.
+  port: ${PORT:${backend_port:8082}}
   # Behind nginx every request comes from the proxy's IP; trust X-Forwarded-For only from private addresses
-  # so per-IP limits (sign-up, login) see the real client.
+  # so per-IP limits (sign-up, login) see the real client. Tomcat walks the header from the right and stops at the
+  # first public address, so a forged left-most entry is ignored (docs/deploy-producao.md, "IP do cliente").
   forward-headers-strategy: native
   error:
     include-message: never

@@ -16,7 +16,9 @@ public record InsightReportResponse(
         List<InsightItem> recommendedActions,
         List<InsightReference> references,
         String disclaimer,
-        String privacyNotice
+        String privacyNotice,
+        /* Freshness of the Open Finance accounts behind the totals; null without them (B50, ADR 0020). */
+        com.github.yildizmy.service.future.BankDataFreshness.Status bankData
 ) {
     public record FinancialMetrics(
             BigDecimal inflow,

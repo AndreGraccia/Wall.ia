@@ -222,6 +222,26 @@ public class FutureController {
         return noStore(futureService.debtPayoff(user.getId(), extra));
     }
 
+    /**
+     * "Pix no crédito" typed by the person (B14, ADR 0020). 201 with the debt; 422 for an invalid body or
+     * MANUAL_DEBT_LIMIT. It only enters the payoff plan.
+     */
+    @PostMapping("/manual-debts")
+    public ResponseEntity<FutureResponses.ManualDebt> createManualDebt(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @Valid @RequestBody FutureRequests.ManualDebt request) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .cacheControl(CacheControl.noStore())
+                .body(futureService.createManualDebt(user.getId(), request));
+    }
+
+    /** 204; 404 MANUAL_DEBT_NOT_FOUND when the id is not the caller's. */
+    @DeleteMapping("/manual-debts/{id}")
+    public ResponseEntity<Void> deleteManualDebt(@AuthenticationPrincipal UserDetailsImpl user, @PathVariable long id) {
+        futureService.deleteManualDebt(user.getId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/commitments")
     public ResponseEntity<FutureResponses.Commitments> commitments(@AuthenticationPrincipal UserDetailsImpl user) {
         return noStore(futureService.commitments(user.getId()));

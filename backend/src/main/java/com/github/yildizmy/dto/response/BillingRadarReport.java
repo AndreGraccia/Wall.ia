@@ -12,8 +12,8 @@ import java.util.List;
 public record BillingRadarReport(
         Instant generatedAt,
         LocalDate dataThrough,
-        Instant bankDataAsOf,
-        boolean bankDataStale,
+        /* Freshness of the Open Finance accounts behind the signals; null without them (B50, ADR 0020). */
+        com.github.yildizmy.service.future.BankDataFreshness.Status bankData,
         int accounts,
         int recurringCount,
         int priceIncreaseCount,

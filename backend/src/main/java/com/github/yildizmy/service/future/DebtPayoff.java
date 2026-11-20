@@ -23,12 +23,20 @@ public final class DebtPayoff {
 
     public enum Strategy {AVALANCHE, SNOWBALL}
 
-    /** @param annualRatePercent e.g. 29.84 for 29,84% a.a. */
-    public record Debt(String id, String label, BigDecimal balance, BigDecimal installment, BigDecimal annualRatePercent) {
+    /**
+     * @param annualRatePercent e.g. 29.84 for 29,84% a.a.
+     * @param origin            OPEN_FINANCE (sent by the bank) or MANUAL (typed by the person, B14), so the screen
+     *                          can say where each line of the order came from
+     */
+    public record Debt(String id, String label, BigDecimal balance, BigDecimal installment, BigDecimal annualRatePercent,
+                       String origin) {
+        public Debt(String id, String label, BigDecimal balance, BigDecimal installment, BigDecimal annualRatePercent) {
+            this(id, label, balance, installment, annualRatePercent, "OPEN_FINANCE");
+        }
     }
 
     /** @param month 1 for the first month from now; null when it never ends within {@link #MAX_MONTHS} */
-    public record Payoff(String id, String label, Integer month) {
+    public record Payoff(String id, String label, Integer month, String origin) {
     }
 
     /**
@@ -105,7 +113,7 @@ public final class DebtPayoff {
         }
 
         List<Payoff> payoffs = new ArrayList<>();
-        for (int i = 0; i < n; i++) payoffs.add(new Payoff(order.get(i).id(), order.get(i).label(), endedIn[i]));
+        for (int i = 0; i < n; i++) payoffs.add(new Payoff(order.get(i).id(), order.get(i).label(), endedIn[i], order.get(i).origin()));
         return new Plan(ended == n ? month : null, interest.setScale(2, RoundingMode.HALF_UP), payoffs);
     }
 }

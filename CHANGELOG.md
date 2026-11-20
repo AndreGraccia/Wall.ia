@@ -1,5 +1,76 @@
 # Changelog
 
+## 19/11/2026: achados da inspeção da V2 (A3, checkpoint 3)
+
+Bug Hunt e SonarQube na V2, com os mesmos métodos usados no e-wallet.
+
+### Corrigido
+- **Pergunta de investimento virava simulação de compra.** "Qual ação devo comprar na bolsa?" casava com "comprar" e o motor pedia o valor. Agora investimento cai em "ainda não sei" antes de qualquer outra intenção; "comprar uma bolsa de 300" continua sendo compra (caso de teste CT-V19).
+- **Taxa a partir de `double`.** `LoanCost.monthlyRate` e `OfbResponses.annualRatePercent` usavam `new BigDecimal(double)`, que carrega a expansão binária; agora `BigDecimal.valueOf` (Sonar S2111).
+- **Invariante explícita no alerta.** `FutureAlertService` só envia com janela negativa; a garantia estava implícita entre dois métodos (Sonar S2259).
+
+### Revisado sem mudança
+- `FieldCipher` (S3077): o `volatile` publica um record imutável com `Map.copyOf`. `EmailVerificationService.maskEmail` (S2259): o nulo retorna antes do `substring`.
+- Seis hotspots revisados como seguros: CSRF numa API stateless com JWT; SQL com nome de tabela de constante; regex sobre entrada limitada a 300 caracteres ou sobre configuração; aleatório só no atraso entre tentativas.
+
+## 19/11/2026: identidade visual "Farol"
+
+### Mudou
+- **Nova identidade.** Sai o preto com verde-limão (ink/volt/horizon); entra o mar à noite com a luz do farol. Fundo azul-esverdeado `#0A1519`, ação em `#FFD25E`, estimado em `#A3B5FF`, positivo `#5ED6A2`, negativo `#FF8590`. Conceito, regras e aplicações em [docs/brand/wallia-brand.md](docs/brand/wallia-brand.md), que o `palette.js` já citava e não existia.
+- **Símbolo novo:** um W desenhado como a linha do saldo, sólido até hoje (o ponto de luz) e tracejado depois, com o vale passando abaixo da linha d'água: o buraco entre a fatura e o salário. Favicon, PNG, ICO e `logo.png` regenerados a partir do SVG.
+- **Tipografia:** Bricolage Grotesque (tamanho óptico) no lugar da Space Grotesk nos títulos e botões; Inter com algarismos tabulares em todo o corpo. O `overline` deixou de ser caixa-alta espaçada.
+- **Certeza também no itálico:** os chips Estimado e Simulado ficam em itálico, além da cor e do estilo da borda.
+- Tokens de marca renomeados para o que significam (`brand.lamp`, `brand.fog`, `brand.waterline`).
+- Login com a ilustração da linha d'água; `index.html` com descrição nova, Open Graph e `og.png` 1200×630; `theme_color` do manifest atualizado.
+
+### Novo
+- `npm run test:contrast`: lê os hex do `palette.js` e confere 53 pares de texto, borda, foco e linha de gráfico (WCAG 2.2). Falha com código 1 se um par cair; provado trocando `muted` por um tom escuro (4 falhas).
+- Peças de LinkedIn editáveis em `docs/brand/comunicacao/` (2 posts 1200×1200 e capa 1584×396), com texto do produto e números só do README. `frontend/scripts/build-icons.py` agora gera ícones, OG e peças com Chrome/Edge headless.
+
+### Limites
+- O produto continua só no tema escuro; não existia tema claro.
+- `og:image` usa `%PUBLIC_URL%`: para os cartões de compartilhamento funcionarem, o build de produção precisa de `PUBLIC_URL` absoluta.
+
+## 19/11/2026: dado atrasado em toda tela, Pix no crédito e fatura contada uma vez (B50, B14, B12 parcial)
+
+Decisões em [ADR 0020](docs/adr/0020-dado-atrasado-pix-no-credito-e-fatura.md). Migração V34.
+
+### Novo
+- **Dado atrasado em toda tela com Open Finance (B50).** Futuro, Início, Radar de cobranças, Compromissos e Análises dizem de qual instituição e de quando é o dado. Quando a última sincronização passa de 36 horas, um alerta aparece antes dos números, com o botão para atualizar.
+- **Pix no crédito na quitação (B14).** Em Compromissos, a pessoa informa saldo, parcela e CET ao mês do Pix pago com o limite do cartão. Ele entra na ordem de quitação ao lado dos empréstimos, marcado como "informado por você" e estimado. Não entra na projeção do saldo, porque as parcelas costumam vir na fatura. A seção aparece mesmo sem banco conectado. Entra na exportação e na exclusão da conta.
+
+### Corrigido
+- **Pagamento de fatura contado duas vezes (B12, parcial).** Um pagamento de fatura descrito sem a palavra "fatura" (por exemplo "NU PAGAMENTOS SA" ou "PAGTO CARTAO") entrava na média dos gastos do dia a dia, e as mesmas compras já estavam na fatura projetada. Agora o pagamento é reconhecido também pelo valor igual ao total da fatura, até 10 dias do vencimento.
+- **Futuro e Radar discordavam sobre dado atrasado.** Conta Open Finance que nunca sincronizou era atrasada no Radar e em dia no Futuro. Agora é atrasada nas duas.
+
+- **Exclusão da conta deixava as decisões do Radar.** `charge_alert_decision` (V33) não estava na limpeza: a conta é pseudonimizada, então o `ON DELETE CASCADE` nunca dispara. Um teste lê as migrações e falha se qualquer tabela com `user_id` ficar de fora.
+
+### Limites
+- Pagamento parcial da fatura (só o mínimo) com descrição neutra ainda não é reconhecido.
+- A Wall.ia não detecta Pix no crédito sozinha; o sandbox não tem o produto.
+
+## 19/11/2026: preparação para produção (Vercel + Render + Neon)
+
+### Novo
+- `render.yaml` (Blueprint): API em Docker no plano free, health check em `/actuator/health/readiness`, segredos com `sync: false`. Na URL pública do Render o actuator expõe só `health` e o Swagger fica desligado.
+- `frontend/vercel.json`: rewrite de `/api/*` para a API (mesma origem, sem CORS), fallback da SPA e os cabeçalhos do `nginx.conf`, mais HSTS. `frontend/.env.production` fixa `REACT_APP_API_URL=/api/v1` no build.
+- `server.port` lê `PORT` (Render) antes de `backend_port`; o Compose continua com `SERVER_PORT=8080`.
+- `.env.production.example` com cada variável da API, sem valores.
+- [`docs/deploy-producao.md`](docs/deploy-producao.md): Neon, Blueprint, Vercel, SMTP, IP do cliente, limites dos planos gratuitos e rollback.
+
+### Corrigido
+- **Posse da carteira também no serviço.** `transferFunds` e `withdrawFunds` confiavam só no `@PreAuthorize` do controller. Agora o serviço recusa com 403 uma carteira de origem de outro usuário, ou sem ninguém autenticado, antes de mexer em saldo. Os dois testes novos falham sem a checagem.
+
+### Limites
+- O plano free do Render bloqueia SMTP nas portas 25, 465 e 587: o e-mail do cadastro precisa da porta alternativa do provedor (Brevo 2525, Resend 2587).
+- Pela Vercel, os limites por endereço (cadastro e login) veem o IP do servidor de borda da Vercel, não o do usuário. Continua impossível forjar o IP com `X-Forwarded-For`; o limite por usuário não muda.
+- A API dorme após 15 minutos sem uso e os jobs agendados não rodam enquanto ela dorme.
+
+### Verificado
+- Backend: 383 testes, 0 falhas, 20 pulados (Testcontainers sem Docker na máquina).
+- Frontend: 74 testes, lint sem erros, `CI=true npm run build` ok, com `/api/v1` no bundle e nenhum `localhost:8082`.
+- Deploy real não foi feito: Render, Neon e Vercel ficam com o dono.
+
 ## 26/10/2026: Radar de cobranças (integrado; validação de mercado pendente)
 
 ### Novo
