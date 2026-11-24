@@ -228,6 +228,19 @@ const resources = {
         },
       },
       openFinance: {
+        steps: {
+          label: 'Passos do compartilhamento',
+          done: 'feito',
+          period: 'Escolha por quanto tempo',
+          periodHint: '3, 6 ou 12 meses. Dá para revogar antes.',
+          authorise: 'Autorize na tela do banco',
+          authoriseHint: 'Aqui a tela do banco é simulada. Você autoriza ou recusa; a senha nunca passa pela Wall.ia.',
+          sync: 'Sincronize',
+          syncHint: 'Traz saldos, extrato, cartões e empréstimos. Repita quando quiser atualizar.',
+          revoke: 'Revogue quando quiser',
+          revokeHint: 'O compartilhamento termina na hora.',
+          revokeWarning: 'Revogar apaga da Wall.ia tudo o que foi importado deste banco. Suas respostas, metas e envelopes ficam.',
+        },
         pageTitle: 'Open Finance | Wall.ia',
         heading: 'Open Finance',
         description: 'Traga saldos e movimentações consentidas para uma visão financeira consolidada.',
@@ -820,6 +833,23 @@ const resources = {
         syncDone: '{{synced}} sincronizados, {{skipped}} pulados (consentimento vencido ou e-mail não verificado).',
       },
       commitments: {
+        summary: {
+          bills: 'Próximas faturas',
+          billsHelp_one: 'a pagar em {{count}} cartão',
+          billsHelp_other: 'somadas de {{count}} cartões',
+          loans: 'Falta pagar em empréstimos',
+          loansHelp_one: '{{count}} contrato',
+          loansHelp_other: '{{count}} contratos',
+          monthly: 'Parcelas por mês',
+          monthlyHelp: 'dos empréstimos, sem os cartões',
+        },
+        interestLeft: 'Juros até o fim',
+        interestLeftHelp_one: 'na última parcela',
+        interestLeftHelp_other: 'nas {{count}} parcelas que faltam',
+        loanDetails: 'Taxa, CET e custo',
+        showItemsOf: 'Ver as compras da fatura de {{month}}',
+        moreInvoices_one: 'Mais {{count}} fatura',
+        moreInvoices_other: 'Mais {{count}} faturas',
         costTitle: 'Quanto este dinheiro custa',
         costNext:
           'Da próxima parcela de {{installment}}, cerca de {{interest}} são juros e {{principal}} abatem a dívida.',
@@ -835,6 +865,7 @@ const resources = {
         cardsTitle: 'Cartões',
         loansTitle: 'Empréstimos',
         payoff: {
+          calculating: 'Comparando',
           title: 'Quitar mais rápido',
           help: 'Quanto você consegue pôr a mais por mês nas dívidas? A Wall.ia compara duas ordens de quitação com só pagar as parcelas.',
           extra: 'A mais por mês (R$)',
@@ -856,6 +887,9 @@ const resources = {
           note: 'Nenhum crédito é oferecido. Pagar antes com redução proporcional dos juros é direito seu (Código de Defesa do Consumidor, art. 52). Peça ao banco o valor para amortizar.',
         },
         pix: {
+          helpShort: 'O Open Finance não traz o Pix pago com o limite do cartão. Digite o que o app do banco mostra.',
+          why: 'Por quê?',
+          lineMeta: 'parcela de {{installment}}, CET de {{cet}}% ao mês',
           title: 'Pix no crédito',
           help: 'O Open Finance não informa o Pix pago com o limite do cartão. Digite o que aparece no app do banco: o saldo, a parcela e o CET ao mês. Ele entra na ordem de quitação acima, nunca na projeção do saldo, porque as parcelas costumam vir na fatura do cartão.',
           label: 'Banco ou cartão',
@@ -918,6 +952,12 @@ const resources = {
         progressLabel: 'Parcelas pagas',
       },
       privacy: {
+        openFinanceLink: 'Ver o compartilhamento',
+        rightsTitle: 'Seus dados, suas decisões',
+        exportShort: 'Um arquivo JSON com tudo o que a Wall.ia guarda sobre você.',
+        exportMore: 'O que vem no arquivo',
+        deleteShort: 'Apaga seus dados e encerra o acesso. Não tem volta.',
+        deleteMore: 'O que é apagado e o que fica',
         pageTitle: 'Privacidade e dados | Wall.ia',
         heading: 'Privacidade e dados',
         description: 'O que a Wall.ia guarda, para que serve e como apagar.',
@@ -963,6 +1003,12 @@ const resources = {
       },
       // Copy and thresholds for the recurring-charge radar.
       billingRadar: {
+        hero: { lead: 'Suas cobranças recorrentes somam', perMonth: 'por mês' },
+        signalsTitle: 'Sinais',
+        lastChargeOn: 'Última em {{date}}',
+        nextChargeShort: 'Próxima por volta de {{date}}',
+        evidenceFor: 'Ver as movimentações de {{name}}',
+        impactMinBalanceLabel: 'menor saldo',
         pageTitle: 'Radar de cobranças | Wall.ia',
         heading: 'Radar de cobranças',
         description:
@@ -1005,7 +1051,7 @@ const resources = {
         openHistory: 'Ver no extrato',
         emptyTitle: 'Ainda não há sinais suficientes',
         emptyDescription:
-          'Conecte uma conta no Open Finance e sincronize o histórico. A Wall.ia precisa de transações anteriores para comparar recorrências; não inventa cobranças.',
+          'Conecte um banco e sincronize o extrato. Sem histórico, a Wall.ia não compara nem inventa cobranças.',
         connect: 'Conectar conta',
         chargeAlerts: 'Cobranças que merecem uma segunda olhada',
         chargeAlertsHelp:
@@ -1040,6 +1086,15 @@ const resources = {
         billingRadar: 'Radar de cobranças',
       },
       ask: {
+        headline: {
+          purchase: 'Menor saldo em 90 dias, com a compra',
+          daily: 'Dá para gastar',
+          short: 'Falta',
+          lowest: 'O saldo pode chegar a',
+          committed: 'Já tem destino',
+          income: 'Próxima entrada, em {{date}}',
+        },
+        whereFrom: 'De onde veio',
         pageTitle: 'Perguntar | Wall.ia',
         heading: 'Pergunte à Wall.ia',
         description: 'Respostas calculadas com os seus números. Nenhuma resposta é inventada e nada é movimentado.',
@@ -1404,6 +1459,19 @@ const resources = {
         },
       },
       openFinance: {
+        steps: {
+          label: 'Sharing steps',
+          done: 'done',
+          period: 'Choose how long',
+          periodHint: '3, 6 or 12 months. You can revoke earlier.',
+          authorise: 'Authorise on the bank screen',
+          authoriseHint: 'Here the bank screen is simulated. You authorise or decline; your password never goes through Wall.ia.',
+          sync: 'Sync',
+          syncHint: 'Brings balances, statement, cards and loans. Repeat whenever you want to update.',
+          revoke: 'Revoke whenever you want',
+          revokeHint: 'Sharing ends right away.',
+          revokeWarning: 'Revoking deletes from Wall.ia everything imported from this bank. Your answers, goals and envelopes stay.',
+        },
         pageTitle: 'Open Finance | Wall.ia',
         heading: 'Open Finance',
         description: 'Bring consented balances and transactions into one consolidated financial view.',
@@ -1993,6 +2061,23 @@ const resources = {
         syncDone: '{{synced}} synced, {{skipped}} skipped (expired consent or unverified e-mail).',
       },
       commitments: {
+        summary: {
+          bills: 'Next bills',
+          billsHelp_one: 'to pay on {{count}} card',
+          billsHelp_other: 'across {{count}} cards',
+          loans: 'Left to pay on loans',
+          loansHelp_one: '{{count}} contract',
+          loansHelp_other: '{{count}} contracts',
+          monthly: 'Instalments a month',
+          monthlyHelp: 'from loans, cards not included',
+        },
+        interestLeft: 'Interest until the end',
+        interestLeftHelp_one: 'on the last instalment',
+        interestLeftHelp_other: 'over the {{count}} instalments left',
+        loanDetails: 'Rate, CET and cost',
+        showItemsOf: 'See the purchases on the {{month}} bill',
+        moreInvoices_one: '{{count}} more bill',
+        moreInvoices_other: '{{count}} more bills',
         costTitle: 'What this money costs',
         costNext:
           'Of the next instalment of {{installment}}, about {{interest}} is interest and {{principal}} pays down the debt.',
@@ -2008,6 +2093,7 @@ const resources = {
         cardsTitle: 'Cards',
         loansTitle: 'Loans',
         payoff: {
+          calculating: 'Comparing',
           title: 'Pay off faster',
           help: 'How much more can you put into your debts each month? Wall.ia compares two payoff orders with paying only the instalments.',
           extra: 'Extra per month (R$)',
@@ -2029,6 +2115,9 @@ const resources = {
           note: 'No credit is offered. Paying early with a proportional interest cut is your right in Brazil (Consumer Code, art. 52). Ask your bank for the payoff amount.',
         },
         pix: {
+          helpShort: 'Open Finance does not send a Pix paid with the card limit. Type what the bank app shows.',
+          why: 'Why?',
+          lineMeta: 'instalment of {{installment}}, CET of {{cet}}% a month',
           title: 'Pix on credit',
           help: 'Open Finance does not report a Pix paid with the card limit. Type what your bank app shows: the balance, the instalment and the monthly CET. It enters the payoff order above, never the balance forecast, because its instalments usually land on the card bill.',
           label: 'Bank or card',
@@ -2091,6 +2180,12 @@ const resources = {
         progressLabel: 'Instalments paid',
       },
       privacy: {
+        openFinanceLink: 'See the sharing',
+        rightsTitle: 'Your data, your call',
+        exportShort: 'A JSON file with everything Wall.ia keeps about you.',
+        exportMore: 'What the file holds',
+        deleteShort: 'Deletes your data and ends your access. It cannot be undone.',
+        deleteMore: 'What is deleted and what stays',
         pageTitle: 'Privacy and data | Wall.ia',
         heading: 'Privacy and data',
         description: 'What Wall.ia keeps, what it is for and how to delete it.',
@@ -2134,6 +2229,12 @@ const resources = {
         unknownInstitution: 'your institution',
       },
       billingRadar: {
+        hero: { lead: 'Your recurring charges add up to', perMonth: 'a month' },
+        signalsTitle: 'Signals',
+        lastChargeOn: 'Last on {{date}}',
+        nextChargeShort: 'Next around {{date}}',
+        evidenceFor: 'See the transactions for {{name}}',
+        impactMinBalanceLabel: 'lowest balance',
         pageTitle: 'Billing Radar | Wall.ia',
         heading: 'Billing radar',
         description:
@@ -2175,7 +2276,7 @@ const resources = {
         openHistory: 'View activity',
         emptyTitle: 'Not enough signals yet',
         emptyDescription:
-          'Connect an account through Open Finance and sync history. Wall.ia needs previous transactions to compare recurring patterns; it does not invent charges.',
+          'Connect a bank and sync the statement. Without history, Wall.ia does not compare or invent charges.',
         connect: 'Connect account',
         chargeAlerts: 'Charges worth a second look',
         chargeAlertsHelp:
@@ -2210,6 +2311,15 @@ const resources = {
         billingRadar: 'Billing radar',
       },
       ask: {
+        headline: {
+          purchase: 'Lowest balance in 90 days, with the purchase',
+          daily: 'You can spend',
+          short: 'Missing',
+          lowest: 'The balance may reach',
+          committed: 'Already spoken for',
+          income: 'Next income, on {{date}}',
+        },
+        whereFrom: 'Where this came from',
         pageTitle: 'Ask | Wall.ia',
         heading: 'Ask Wall.ia',
         description: 'Answers calculated from your own numbers. Nothing is made up and no money moves.',
