@@ -37,7 +37,7 @@ class FuturePixCreditTest {
     private final FutureService service = new FutureService(
             mock(WalletRepository.class), mock(TransactionRepository.class), mock(RecurrenceDecisionRepository.class),
             mock(CreditCardRepository.class), loans, mock(GoalRepository.class), mock(EnvelopeRepository.class),
-            manualDebts, mock(UserService.class), mock(com.github.yildizmy.service.market.MarketRatesService.class),
+            manualDebts, mock(com.github.yildizmy.repository.MonthPlanRepository.class), mock(UserService.class), mock(com.github.yildizmy.service.market.MarketRatesService.class),
             Clock.fixed(Instant.parse("2026-11-19T15:00:00Z"), ZoneOffset.UTC));
 
     private static ManualDebt pix(long id, String balance, String installment, String monthlyCet) {

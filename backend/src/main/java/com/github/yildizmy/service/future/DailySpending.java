@@ -47,23 +47,7 @@ public final class DailySpending {
         int days = (int) ChronoUnit.DAYS.between(firstSeen, today);
         if (days < MIN_HISTORY_DAYS) return Optional.empty();
 
-        // ponytail: a counterparty that both sends and receives money is treated as the user's own
-        // account (e.g. "reserva"), same idea as the detector's internal pairs. A friend who pays you
-        // back would be excluded too; refine with account ownership when real Open Finance data arrives.
-        Set<String> twoWay = recent.stream()
-                .collect(Collectors.groupingBy(movement -> RecurrenceDetector.counterpartyKey(movement.counterparty()),
-                        Collectors.mapping(Movement::direction, Collectors.toSet())))
-                .entrySet().stream()
-                .filter(entry -> entry.getValue().size() > 1)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-
-        List<Movement> variable = recent.stream()
-                .filter(movement -> movement.direction() == Direction.OUT)
-                .filter(movement -> !RecurrenceDetector.coveredElsewhere(movement.counterparty()))
-                .filter(movement -> !fixedKeys.contains(RecurrenceDetector.keyOf(movement)))
-                .filter(movement -> !twoWay.contains(RecurrenceDetector.counterpartyKey(movement.counterparty())))
-                .toList();
+        List<Movement> variable = everyday(recent, fixedKeys);
         if (variable.isEmpty()) return Optional.empty();
 
         BigDecimal total = variable.stream().map(Movement::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -84,6 +68,31 @@ public final class DailySpending {
                 days,
                 variable.size(),
                 top));
+    }
+
+    /**
+     * The outflows of {@code movements} that are everyday spending: not a bill projected on its own, not a card bill
+     * or loan, not money going to and coming back from the same counterparty. One rule for the average above, the
+     * leisure slice of the month plan and the "Entradas e saídas" categories (ADR 0021).
+     */
+    public static List<Movement> everyday(List<Movement> movements, Set<String> fixedKeys) {
+        // ponytail: a counterparty that both sends and receives money is treated as the user's own
+        // account (e.g. "reserva"), same idea as the detector's internal pairs. A friend who pays you
+        // back would be excluded too; refine with account ownership when real Open Finance data arrives.
+        Set<String> twoWay = movements.stream()
+                .collect(Collectors.groupingBy(movement -> RecurrenceDetector.counterpartyKey(movement.counterparty()),
+                        Collectors.mapping(Movement::direction, Collectors.toSet())))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        return movements.stream()
+                .filter(movement -> movement.direction() == Direction.OUT)
+                .filter(movement -> !RecurrenceDetector.coveredElsewhere(movement.counterparty()))
+                .filter(movement -> !fixedKeys.contains(RecurrenceDetector.keyOf(movement)))
+                .filter(movement -> !twoWay.contains(RecurrenceDetector.counterpartyKey(movement.counterparty())))
+                .toList();
     }
 
     /**

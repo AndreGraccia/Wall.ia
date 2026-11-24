@@ -17,8 +17,8 @@ public final class FutureResponses {
     /**
      * @param labelKey  set when the label is text the system wrote (not a counterparty or a name the user typed), so
      *                  the UI translates it: DAILY_SPENDING, CARD_SPENDING, SCENARIO_PURCHASE, SCENARIO_SAVING,
-     *                  TRANSFER_SENT, TRANSFER_RECEIVED, DEPOSIT, WITHDRAWAL
-     * @param originKey same for the origin: GOAL, USER_VALUE, AVERAGE_DAYS (with {@code originDays})
+     *                  TRANSFER_SENT, TRANSFER_RECEIVED, DEPOSIT, WITHDRAWAL (month plan events carry the person's own slice label)
+     * @param originKey same for the origin: GOAL, MONTH_PLAN, USER_VALUE, AVERAGE_DAYS (with {@code originDays})
      */
     public record Event(
             LocalDate date,

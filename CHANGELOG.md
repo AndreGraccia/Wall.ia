@@ -1,5 +1,20 @@
 # Changelog
 
+## 23/11/2026: Plano do mês, entradas e saídas e "Meu método" (proposta de André Graccia)
+
+Ideia de André Graccia, integrante do grupo, e documento de evolução do grupo. Decisões em [ADR 0021](docs/adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md). Migrações V35 e V36. Só backend: as telas vêm depois.
+
+### Novo
+- **Plano do mês.** A renda mensal confirmada dividida em até 12 fatias com nome próprio. A divisão do André (35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento pessoal e estudo, 12,5% reserva de emergência) é um dos presets. O Fixo mostra quanto das contas fixas confirmadas cabe na fatia; o Lazer mostra o gasto do dia a dia do mês contra o teto. Uma fatia só sai do saldo quando você marca "virar compromisso" e liga o plano: aí ela sai no dia em que o salário entra, e o limite diário já desconta. Antes de ligar, "ver se cabe" mostra os próximos 90 dias com e sem o plano, sem gravar nada. Um rascunho que não soma 100% fica salvo como incompleto e não liga.
+- **Entradas e saídas.** Ganhos e gastos de um mês (o atual ou um dos 12 anteriores) por conta, por forma de pagamento e por categoria, com os três totais do Início: ganhos, gastos e lazer + investimento. Transferência entre suas próprias contas não conta.
+- **Projeção mensal.** Entradas, saídas, plano e sobra de cada mês, para 3, 6 ou 12 meses, separando o que é confirmado do que é estimado.
+- **Meu método.** Nove métodos de organizar o dinheiro (50/30/20, plano do André, base zero, pague-se primeiro, prioridades, limite até a próxima entrada, envelopes, quitação avalanche e bola de neve), cada um com como funciona, quando ajuda, limitações e onde roda no Wall.ia. O Wall.ia sugere dois ou três com o motivo e os números usados, sem nota e sem impor nenhum.
+- **Perfil.** Preferência (simples ou detalhado) e objetivo principal, se você quiser dizer, e o histórico dos métodos escolhidos. Entra na exportação e sai na exclusão da conta.
+
+### Fora desta versão
+- Registro de investimentos e diário de desenvolvimento pessoal: o Wall.ia cuida do fluxo de caixa. Das duas ideias ficaram as fatias Investimento e Desenvolvimento pessoal e estudo no plano.
+- Meta com valor-alvo e data-alvo, e assistente com modelo de linguagem preparando ações (B56, B57).
+
 ## 19/11/2026: achados da inspeção da V2 (A3, checkpoint 3)
 
 Bug Hunt e SonarQube na V2, com os mesmos métodos usados no e-wallet.

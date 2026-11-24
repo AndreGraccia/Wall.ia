@@ -1,0 +1,21 @@
+ajuste para o wallia
+
+Tela de inicio com essas visualizações de ganhos totais, gastos totais, e lazer e investimentos totais
+
+Ramificar isso em abas dedicadas:
+uma para gastos totais ( com identificação de conta / método dos gastos ) 
+uma para ganhos totais ( com identificação de conta / método dos ganhos ) 
+uma para lazer e planejamento e gestão
+Investimento com, cateira ultilizada, metodo de investimento, modelo de investimento, planejamento de investimento, saldo do investimento 
+aba para desenvolvimento pessoal ( a ideia é a pessoa anotar o que ela faz hoje, e oq ela quer fazer ( onde eu estou e onde eu quero chegar) 
+a ideia é a pessoa visualizar as mudanças pessoais e financeiras para chegar onde ela idealiza que é o lugar que ele quer e precisa.
+
+Projeção de ganhos
+projeção de gastos 
+lazer e investimento ( curto prazo e longo prazo )
+
+35% de gasto fixo
+20% de lazer + 15% de investimento
+7,5% futuro 
+10% desenvolvimento pessoal e estudo 
+
