@@ -85,6 +85,11 @@ test('renders the price-change alert with transaction evidence', async () => {
   expect(pageText()).toContain('billingRadar.evidence');
   expect(pageText()).toContain('Conta principal');
   expect(container.querySelector('a[href="/transactions"]')).not.toBeNull();
+  // The evidence is folded behind the chevron of the line, and the chevron says whether it is open.
+  const fold = container.querySelector('button[aria-label="billingRadar.evidenceFor"]');
+  expect(fold.getAttribute('aria-expanded')).toBe('false');
+  await act(async () => fold.click());
+  expect(fold.getAttribute('aria-expanded')).toBe('true');
   expect(pageText()).toContain('billingRadar.simulatePriceReversion');
 
   HttpService.postWithAuth.mockResolvedValue({
