@@ -1,6 +1,8 @@
 export const localeFor = (language) => (language?.startsWith('en') ? 'en-US' : 'pt-BR');
+// U+2212 instead of the hyphen: the typographic minus, and no line break between it and "R$" on a phone.
+const minus = (text) => text.replace(/^-/, '−');
 export const money = (value, language) =>
-  new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
+  minus(new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'BRL' }).format(Number(value) || 0));
 /** Axis labels: "-R$ 12 mil" fits where "-R$ 12.345" loses its minus sign off the edge. */
 export const compactMoney = (value, language) =>
   new Intl.NumberFormat(localeFor(language), {
@@ -8,7 +10,7 @@ export const compactMoney = (value, language) =>
     currency: 'BRL',
     notation: 'compact',
     maximumFractionDigits: 1,
-  }).format(Number(value) || 0);
+  }).format(Number(value) || 0).replace(/^-/, '−');
 export const dateTime = (value, language) => {
   const date = new Date(value);
   return value && !Number.isNaN(date.getTime())

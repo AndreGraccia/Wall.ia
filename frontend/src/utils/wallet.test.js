@@ -4,6 +4,7 @@ import {
   subtractMoney,
   localDate,
   monthLabel,
+  money,
   overdraftCostText,
   projectRegularDeposits,
   savingsInAYear,
@@ -98,4 +99,9 @@ describe('savingsInAYear', () => {
   it('with a zero rate the money only adds up', () => {
     expect(savingsInAYear(100, 0, 0)).toEqual({ saved: 1200, withCdi: 1200, inTodaysMoney: 1200 });
   });
+});
+
+test('negative amounts use the typographic minus, which cannot break away from "R$"', () => {
+  expect(money(-707.72, 'pt-BR').startsWith('\u2212R$')).toBe(true);
+  expect(money(707.72, 'pt-BR').startsWith('R$')).toBe(true);
 });

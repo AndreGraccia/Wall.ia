@@ -68,7 +68,7 @@ test('envelopes show what is left without a destination and warn when they excee
   await render(<Envelopes />);
 
   expect(text()).toContain('IPVA');
-  expect(text()).toMatch(/-R\$\s200,00/);
+  expect(text()).toMatch(/\u2212R\$\s200,00/);
   expect(text()).toMatch(/envelopes\.unbacked:R\$\s200,00/);
 });
 
@@ -183,7 +183,7 @@ test('the daily limit card separates what the bank lacks, what keeping the envel
   expect(text()).toContain('future.hero.shortLead');
   expect(text()).toMatch(/future\.hero\.shortLead\s*R\$\s504,87/);
   expect(text()).toMatch(/future\.limit\.keepEnvelopes:R\$\s804,87/);
-  expect(text()).toMatch(/future\.limit\.shortPaceLowest:-R\$\s792,67/);
+  expect(text()).toMatch(/future\.limit\.shortPaceLowest:\u2212R\$\s792,67/);
   expect(text()).toContain('future.limit.bestWay');
   expect(button('future.limit.seeWayOut')).toBeDefined();
 });

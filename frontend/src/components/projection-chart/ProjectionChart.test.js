@@ -49,7 +49,7 @@ test('keyboard reaches the chart and walks the days, announcing each one', () =>
 
   act(() => Simulate.focus(chart));
   const status = () => container.querySelector('[role="status"]').textContent;
-  expect(status()).toMatch(/-R\$\s?50,00/);
+  expect(status()).toMatch(/\u2212R\$\s?50,00/);
 
   act(() => Simulate.keyDown(chart, { key: 'ArrowRight' }));
   expect(status()).toMatch(/R\$\s?20,00/);
