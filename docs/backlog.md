@@ -103,6 +103,9 @@ Nada aqui liga dados reais antes de E3 e E4 fechadas.
 - **B52 (P2) Rótulo de origem em todo número.** Manual, importado, simulado ou previsto.
 - **B53 (P3) Idioma sob demanda.** `i18n.js` tem 109 KB. Só depois de medir o pacote com gzip.
 - **B54 (P3) Dividir `FutureService` (979 linhas).** Só quando uma mudança real doer. Não ganha desempenho.
+- **B55 (P2) Plano do mês, entradas e saídas, projeção mensal e "Meu método".** Proposta de André Graccia e documento de evolução do grupo. Backend feito em 23/11/2026 ([ADR 0021](adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md), V35 e V36): fatias editáveis que só viram compromisso no motor quando marcadas, "ver se cabe" sem gravar, entradas e saídas do mês por conta, método e categoria com os três totais do Início, projeção de 3, 6 e 12 meses, catálogo de métodos com sugestões por regras explícitas e perfil declarado. Falta: as telas (Início, Gastos, Ganhos, Plano do mês, Projeção, Meu método), CI no GitHub e validação na homologação.
+- **B56 (P3) Meta com valor-alvo e data-alvo.** `targetAmount` e `targetDate` opcionais (migração aditiva) e a contribuição mensal necessária (restante / meses, HALF_EVEN), com "ver se cabe". Sem quebrar as metas existentes. Fica do ADR 0021.
+- **B57 (P3) Assistente com modelo de linguagem preparando ações.** Montar ou ajustar o plano a partir de texto, sempre com Java calculando e a pessoa confirmando (ADR 0001). Fase futura do ADR 0021.
 
 ### Pendências de fonte
 
