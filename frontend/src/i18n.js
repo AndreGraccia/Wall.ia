@@ -1239,11 +1239,17 @@ const resources = {
         activeLine: '{{amount}} por mês saem do saldo no dia da renda.',
         fit: {
           title: 'Próximos 90 dias',
-          before: 'Sem o plano',
-          after: 'Com o plano',
+          before: 'Agora',
+          after: 'Com estas fatias',
           negativeDays: 'Dias negativos',
           lowest: 'Menor saldo',
           nothingSaved: 'Simulação: nada foi gravado.',
+          yes: 'Cabe: nenhum dia fica abaixo de zero em 90 dias. O menor saldo seria {{amount}}, em {{date}}.',
+          sameHole: 'Não piora os dias negativos que já existem. O menor saldo seria {{amount}}, em {{date}}.',
+          no_one:
+            'Não cabe agora: com estas fatias, o saldo fica abaixo de zero em mais 1 dia, a partir de {{date}}, chegando a {{amount}}.',
+          no_other:
+            'Não cabe agora: com estas fatias, o saldo fica abaixo de zero em mais {{count}} dias, a partir de {{date}}, chegando a {{amount}}.',
           commitment: 'Compromissos: {{amount}} por mês.',
         },
         projection: {
@@ -2800,11 +2806,18 @@ const resources = {
         activeLine: '{{amount}} per month leaves the balance on income day.',
         fit: {
           title: 'Next 90 days',
-          before: 'Without the plan',
-          after: 'With the plan',
+          before: 'Now',
+          after: 'With these slices',
           negativeDays: 'Negative days',
           lowest: 'Lowest balance',
           nothingSaved: 'Simulation: nothing was saved.',
+          yes: 'It fits: no day below zero in 90 days. The lowest balance would be {{amount}}, on {{date}}.',
+          sameHole:
+            'It does not add negative days to the ones already there. The lowest balance would be {{amount}}, on {{date}}.',
+          no_one:
+            'It does not fit now: with these slices the balance goes below zero on 1 more day, from {{date}}, down to {{amount}}.',
+          no_other:
+            'It does not fit now: with these slices the balance goes below zero on {{count}} more days, from {{date}}, down to {{amount}}.',
           commitment: 'Commitments: {{amount}} per month.',
         },
         projection: {

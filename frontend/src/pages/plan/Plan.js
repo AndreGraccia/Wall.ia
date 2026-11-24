@@ -47,13 +47,14 @@ const body = (slices) => ({
 });
 
 let nextId = 0;
+const decimalComma = () => !document.documentElement.lang?.startsWith('en');
 const draftSlice = (slice) => {
   nextId += 1;
   return {
     id: nextId,
     kind: slice.kind,
     label: slice.label,
-    percent: String(Number(slice.percent)),
+    percent: decimalComma() ? String(Number(slice.percent)).replace('.', ',') : String(Number(slice.percent)),
     commitment: Boolean(slice.commitment),
   };
 };
@@ -135,7 +136,7 @@ function Meter({ used, goal, labelKey, overKey }) {
         {over
           ? t(overKey, { amount: money(used - goal, lang) })
           : `${t(labelKey, { used: money(used, lang), goal: money(goal, lang) })}, ${t('plan.roles.used', {
-              percent: percent(ratio * 100, lang),
+              percent: percent(Math.round(ratio * 100), lang),
             })}`}
       </Typography>
     </Box>
@@ -263,12 +264,12 @@ function FitResult({ result }) {
     <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: worse ? 'warning.main' : 'success.main' }}>
       <Typography variant="body2" sx={{ maxWidth: 640 }}>
         {worse
-          ? t('future.goals.fitNo', {
+          ? t('plan.fit.no', {
               count: after.negativeDays - before.negativeDays,
               date: dayLabel(after.firstNegativeDate, lang),
               amount: money(after.minBalance90, lang),
             })
-          : t(before.negativeDays > 0 ? 'future.goals.fitSameHole' : 'future.goals.fitYes', {
+          : t(before.negativeDays > 0 ? 'plan.fit.sameHole' : 'plan.fit.yes', {
               amount: money(after.minBalance90, lang),
               date: dayLabel(after.minDate, lang),
             })}
@@ -633,7 +634,7 @@ export default function Plan() {
   if (income === null) blocked = t('plan.blocked.income');
   else if (!complete) blocked = t('plan.blocked.incomplete');
   const missing = 10000 - total;
-  let sumText = t('plan.sum.complete');
+  let sumText = '';
   if (missing > 0) sumText = t('plan.sum.missing', { percent: percent(missing / 100, lang) });
   if (missing < 0) sumText = t('plan.sum.over', { percent: percent(-missing / 100, lang) });
 
@@ -774,7 +775,7 @@ export default function Plan() {
                 </Typography>
               ) : (
                 <>
-                  <Box sx={{ mt: 3 }}>
+                  <Box sx={{ mt: 3, maxWidth: 880 }}>
                     <SplitBar slices={draft} />
                     <Typography
                       variant="body2"
@@ -785,12 +786,21 @@ export default function Plan() {
                         color: complete ? 'text.secondary' : 'warning.main',
                       }}
                     >
-                      {t('plan.sum.total', { percent: percent(total / 100, lang) })}, {sumText}
+                      {t('plan.sum.total', { percent: percent(total / 100, lang) })}
+                      {sumText && `, ${sumText}`}
                     </Typography>
                   </Box>
                   <Box
                     component="ul"
-                    sx={{ m: 0, mt: 2, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}
+                    sx={{
+                      m: 0,
+                      mt: 2,
+                      p: 0,
+                      maxWidth: 880,
+                      listStyle: 'none',
+                      borderTop: '1px solid',
+                      borderColor: 'divider',
+                    }}
                   >
                     {draft.map((slice, index) => (
                       <SliceRow
