@@ -9,22 +9,23 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * Plano do mês (proposta de André Graccia, ADR 0021): the confirmed monthly income split in six slices.
+ * Plano do mês (proposta de André Graccia, ADR 0021): the confirmed monthly income split in slices the person edits.
  * <p>
- * Fixed and leisure are measured against what happened; investment, future, personal development and emergency
- * reserve become monthly commitments that leave the balance the day the main income arrives ("pague-se primeiro").
- * That is why the daily limit already discounts the plan: there is no second number.
+ * Fixed and leisure are measured against what happened. Any other slice becomes a monthly commitment only when the
+ * person marks it; a marked slice leaves the balance the day the main income arrives ("pague-se primeiro"), so the
+ * daily limit already discounts it and there is no second number.
  */
 public final class MonthPlanCalculator {
 
     public static final String ORIGIN = "Plano do mês";
+    public static final int MAX_SLICES = 12;
+    public static final int MAX_LABEL = 40;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
     private static final Set<Category> INCOME = Set.of(Category.SALARY, Category.OTHER_INCOME);
     private static final Set<Category> FIXED = Set.of(Category.RENT, Category.BILL, Category.SUBSCRIPTION);
@@ -32,64 +33,72 @@ public final class MonthPlanCalculator {
     private MonthPlanCalculator() {
     }
 
-    public enum Slice {
-        FIXED(false, "Fixo"),
-        LEISURE(false, "Lazer"),
-        INVESTMENT(true, "Investimento"),
-        FUTURE(true, "Futuro"),
-        DEVELOPMENT(true, "Desenvolvimento pessoal e estudo"),
-        EMERGENCY(true, "Reserva de emergência");
+    /**
+     * FIXED is a thermometer and LEISURE a ceiling: both are measured and never committed. FUTURE holds the goals.
+     * Every kind but CUSTOM appears at most once.
+     */
+    public enum Kind {
+        FIXED, LEISURE, INVESTMENT, FUTURE, DEVELOPMENT, EMERGENCY, CUSTOM;
 
-        private final boolean commitment;
-        private final String label;
-
-        Slice(boolean commitment, String label) {
-            this.commitment = commitment;
-            this.label = label;
-        }
-
-        /** True when the slice leaves the balance in the projection; fixed and leisure are only measured. */
-        public boolean commitment() {
-            return commitment;
-        }
-
-        /** The label of the event in the projection, e.g. "Plano do mês: Investimento". */
-        public String eventLabel() {
-            return ORIGIN + ": " + label;
+        public boolean committable() {
+            return this != FIXED && this != LEISURE;
         }
     }
 
-    /** Percent of the base per slice, two decimals at most (7.5 = 7,5%). */
-    public record Split(BigDecimal fixed, BigDecimal leisure, BigDecimal investment, BigDecimal future,
-                        BigDecimal development, BigDecimal emergency) {
-
-        public BigDecimal percent(Slice slice) {
-            return switch (slice) {
-                case FIXED -> fixed;
-                case LEISURE -> leisure;
-                case INVESTMENT -> investment;
-                case FUTURE -> future;
-                case DEVELOPMENT -> development;
-                case EMERGENCY -> emergency;
-            };
-        }
+    /** @param commitment the person marked it to leave the balance every month ("virar compromisso") */
+    public record Slice(Kind kind, String label, BigDecimal percent, boolean commitment) {
     }
 
-    public static final Split SUGGESTED = new Split(new BigDecimal("35.00"), new BigDecimal("20.00"),
-            new BigDecimal("15.00"), new BigDecimal("7.50"), new BigDecimal("10.00"), new BigDecimal("12.50"));
+    private static Slice slice(Kind kind, String label, String percent) {
+        return new Slice(kind, label, new BigDecimal(percent), false);
+    }
 
-    /** Null when the split is valid; otherwise the error code. */
-    public static String validate(Split split) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (Slice slice : Slice.values()) {
-            BigDecimal percent = split.percent(slice);
+    /** André Graccia's split, as he proposed it. Nothing is committed until the person marks it. */
+    public static final List<Slice> PRESET_ANDRE = List.of(
+            slice(Kind.FIXED, "Fixo", "35.00"),
+            slice(Kind.LEISURE, "Lazer", "20.00"),
+            slice(Kind.INVESTMENT, "Investimento", "15.00"),
+            slice(Kind.FUTURE, "Futuro", "7.50"),
+            slice(Kind.DEVELOPMENT, "Desenvolvimento pessoal e estudo", "10.00"),
+            slice(Kind.EMERGENCY, "Reserva de emergência", "12.50"));
+
+    /** 50/30/20: needs, wants, saving and debts. */
+    public static final List<Slice> PRESET_503020 = List.of(
+            slice(Kind.FIXED, "Necessidades", "50.00"),
+            slice(Kind.LEISURE, "Desejos", "30.00"),
+            slice(Kind.FUTURE, "Poupança e dívidas", "20.00"));
+
+    /**
+     * Null when the slices can be saved; otherwise the error code. The sum is not checked here: a draft that does not
+     * add up to 100 can be saved and is shown as incomplete ({@link #complete}); only a complete plan can be active.
+     */
+    public static String validate(List<Slice> slices) {
+        if (slices == null || slices.isEmpty()) return "MONTH_PLAN_EMPTY";
+        if (slices.size() > MAX_SLICES) return "MONTH_PLAN_TOO_MANY_SLICES";
+        Set<Kind> seen = EnumSet.noneOf(Kind.class);
+        for (Slice slice : slices) {
+            if (slice == null || slice.kind() == null) return "MONTH_PLAN_INVALID_SLICE";
+            if (slice.label() == null || slice.label().isBlank() || slice.label().length() > MAX_LABEL) {
+                return "MONTH_PLAN_INVALID_LABEL";
+            }
+            BigDecimal percent = slice.percent();
             if (percent == null || percent.stripTrailingZeros().scale() > 2
                     || percent.signum() < 0 || percent.compareTo(HUNDRED) > 0) {
                 return "MONTH_PLAN_INVALID_PERCENT";
             }
-            total = total.add(percent);
+            if (slice.commitment() && !slice.kind().committable()) return "MONTH_PLAN_SLICE_NOT_COMMITTABLE";
+            if (slice.kind() != Kind.CUSTOM && !seen.add(slice.kind())) return "MONTH_PLAN_DUPLICATE_SLICE";
         }
-        return total.compareTo(HUNDRED) == 0 ? null : "MONTH_PLAN_SUM_NOT_100";
+        return null;
+    }
+
+    public static BigDecimal total(List<Slice> slices) {
+        return slices.stream().map(Slice::percent).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** Adds up to exactly 100%: the only state that can be activated. */
+    public static boolean complete(List<Slice> slices) {
+        return total(slices).compareTo(HUNDRED) == 0;
     }
 
     /**
@@ -102,8 +111,7 @@ public final class MonthPlanCalculator {
 
     /** Empty when nothing was confirmed as income: the plan asks for it instead of guessing. */
     public static Optional<Income> income(List<ConfirmedRecurrence> confirmed) {
-        List<ConfirmedRecurrence> sources = confirmed.stream()
-                .filter(item -> item.pattern().direction() == Direction.IN && INCOME.contains(item.category()))
+        List<ConfirmedRecurrence> sources = incomes(confirmed).stream()
                 .sorted(Comparator.comparing((ConfirmedRecurrence item) -> item.category() == Category.SALARY).reversed()
                         .thenComparing(item -> item.pattern().typicalAmount(), Comparator.reverseOrder()))
                 .toList();
@@ -112,37 +120,78 @@ public final class MonthPlanCalculator {
         return Optional.of(new Income(monthly, sources.get(0), sources));
     }
 
-    public static BigDecimal amount(BigDecimal base, BigDecimal percent) {
-        return base.multiply(percent).divide(HUNDRED, 2, RoundingMode.HALF_EVEN);
+    /** The confirmed recurrences that are income (SALARY or OTHER_INCOME, money coming in). */
+    public static List<ConfirmedRecurrence> incomes(List<ConfirmedRecurrence> confirmed) {
+        return confirmed.stream()
+                .filter(item -> item.pattern().direction() == Direction.IN && INCOME.contains(item.category()))
+                .toList();
     }
 
     /**
-     * What each committed slice takes from the balance every month. Goals already leave the balance on their own
-     * day, so they live inside the Future slice: the slice only commits what the goals do not cover.
+     * Base x percent per slice, in cents, HALF_EVEN. When the plan is complete, the cents lost or gained by rounding go
+     * to the largest slice (the first one on a tie), so the slices add up to the base exactly. Deterministic.
      */
-    public static Map<Slice, BigDecimal> commitments(BigDecimal base, Split split, BigDecimal goalsMonthly) {
-        Map<Slice, BigDecimal> commitments = new EnumMap<>(Slice.class);
-        for (Slice slice : Slice.values()) {
+    public static List<BigDecimal> amounts(BigDecimal base, List<Slice> slices) {
+        List<BigDecimal> amounts = new ArrayList<>(slices.stream()
+                .map(slice -> base.multiply(slice.percent()).divide(HUNDRED, 2, RoundingMode.HALF_EVEN))
+                .toList());
+        if (!slices.isEmpty() && complete(slices)) {
+            BigDecimal residual = base.setScale(2, RoundingMode.HALF_EVEN)
+                    .subtract(amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add));
+            int largest = 0;
+            for (int i = 1; i < slices.size(); i++) {
+                if (slices.get(i).percent().compareTo(slices.get(largest).percent()) > 0) largest = i;
+            }
+            amounts.set(largest, amounts.get(largest).add(residual));
+        }
+        return amounts;
+    }
+
+    /** @param position index of the slice in the plan */
+    public record Commitment(int position, Kind kind, String label, BigDecimal amount) {
+    }
+
+    /**
+     * What each marked slice takes from the balance every month. Goals already leave the balance on their own day, so
+     * they live inside a committed FUTURE slice: the slice only commits what the goals do not cover.
+     */
+    public static List<Commitment> commitments(BigDecimal base, List<Slice> slices, BigDecimal goalsMonthly) {
+        List<BigDecimal> amounts = amounts(base, slices);
+        List<Commitment> commitments = new ArrayList<>();
+        for (int i = 0; i < slices.size(); i++) {
+            Slice slice = slices.get(i);
             if (!slice.commitment()) continue;
-            BigDecimal amount = amount(base, split.percent(slice));
-            if (slice == Slice.FUTURE) amount = amount.subtract(goalsMonthly).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_EVEN);
-            commitments.put(slice, amount);
+            BigDecimal amount = amounts.get(i);
+            if (slice.kind() == Kind.FUTURE) amount = amount.subtract(goalsMonthly).max(BigDecimal.ZERO.setScale(2));
+            commitments.add(new Commitment(i, slice.kind(), slice.label(), amount));
         }
         return commitments;
     }
 
-    /** One CONFIRMED outflow per committed slice on each future arrival of the main income (same dates as it). */
-    public static List<CashEvent> events(Map<Slice, BigDecimal> commitments, ConfirmedRecurrence mainIncome,
+    public static BigDecimal sum(List<Commitment> commitments) {
+        return commitments.stream().map(Commitment::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** One CONFIRMED outflow per commitment on each future arrival of the main income (same dates as it). */
+    public static List<CashEvent> events(List<Commitment> commitments, ConfirmedRecurrence mainIncome,
                                          LocalDate today, LocalDate end) {
         List<CashEvent> events = new ArrayList<>();
+        if (commitments.isEmpty()) return events;
         for (CashEvent income : CashEventPlanner.fromRecurrence(mainIncome, today, end)) {
-            commitments.forEach((slice, amount) -> {
-                if (amount.signum() <= 0) return;
-                events.add(new CashEvent(income.date(), amount.negate(), slice.eventLabel(), CashEvent.Kind.PLAN,
-                        "PLAN_" + slice.name(), CashEvent.Certainty.CONFIRMED, ORIGIN, "plan:" + slice.name()));
-            });
+            for (Commitment commitment : commitments) {
+                if (commitment.amount().signum() <= 0) continue;
+                events.add(new CashEvent(income.date(), commitment.amount().negate(), ORIGIN + ": " + commitment.label(),
+                        CashEvent.Kind.PLAN, "PLAN_" + commitment.kind().name(), CashEvent.Certainty.CONFIRMED, ORIGIN,
+                        "plan:" + commitment.position()));
+            }
         }
         return events;
+    }
+
+    /** Next day the main income (and so the plan) is expected, within two months; empty when none is. */
+    public static Optional<LocalDate> nextDate(ConfirmedRecurrence mainIncome, LocalDate today) {
+        return CashEventPlanner.fromRecurrence(mainIncome, today, today.plusMonths(2)).stream()
+                .map(CashEvent::date).filter(date -> date.isAfter(today)).findFirst();
     }
 
     /** @param recurring confirmed rent, bills and subscriptions (estimated values); @param loans instalments the bank reports */
@@ -161,7 +210,7 @@ public final class MonthPlanCalculator {
         return new FixedUsed(recurring, instalments, recurring.add(instalments));
     }
 
-    /** How much of the slice is used, in percent with one decimal; null when the slice is zero. */
+    /** How much of {@code slice} {@code used} is, in percent with one decimal; null when the slice is zero. */
     public static BigDecimal usedPercent(BigDecimal used, BigDecimal slice) {
         if (slice == null || slice.signum() <= 0) return null;
         return used.multiply(HUNDRED).divide(slice, 1, RoundingMode.HALF_UP);

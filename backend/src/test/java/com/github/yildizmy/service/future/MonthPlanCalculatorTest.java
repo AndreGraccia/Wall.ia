@@ -1,8 +1,9 @@
 package com.github.yildizmy.service.future;
 
 import com.github.yildizmy.service.future.CashEventPlanner.ConfirmedRecurrence;
+import com.github.yildizmy.service.future.MonthPlanCalculator.Commitment;
+import com.github.yildizmy.service.future.MonthPlanCalculator.Kind;
 import com.github.yildizmy.service.future.MonthPlanCalculator.Slice;
-import com.github.yildizmy.service.future.MonthPlanCalculator.Split;
 import com.github.yildizmy.service.future.RecurrenceDetector.Category;
 import com.github.yildizmy.service.future.RecurrenceDetector.Confidence;
 import com.github.yildizmy.service.future.RecurrenceDetector.Direction;
@@ -12,66 +13,92 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Plano do mês (ADR 0021): the split, the base, the commitments and the dates they leave the balance. */
+/** Plano do mês (ADR 0021): slices, rounding, commitments and the dates they leave the balance. */
 class MonthPlanCalculatorTest {
 
     private static BigDecimal money(String value) {
         return new BigDecimal(value);
     }
 
-    private static Split split(String fixed, String leisure, String investment, String future, String development,
-                               String emergency) {
-        return new Split(money(fixed), money(leisure), money(investment), money(future), money(development), money(emergency));
+    private static Slice slice(Kind kind, String percent, boolean commitment) {
+        return new Slice(kind, kind.name(), money(percent), commitment);
+    }
+
+    /** André's split with the four slices he wanted committed actually marked. */
+    private static List<Slice> andreCommitted() {
+        return MonthPlanCalculator.PRESET_ANDRE.stream()
+                .map(item -> new Slice(item.kind(), item.label(), item.percent(), item.kind().committable()))
+                .toList();
     }
 
     static ConfirmedRecurrence recurrence(String key, Direction direction, String amount, int day, Category category,
                                           String lastSeen) {
-        RecurrencePattern pattern = new RecurrencePattern(key, key, key, direction, "Conta", "Banco", money(amount), true,
-                day, Confidence.HIGH, category, List.of(new Occurrence(1, LocalDate.parse(lastSeen), money(amount))));
+        return recurrence(key, direction, amount, day, category, lastSeen, true, Confidence.HIGH);
+    }
+
+    static ConfirmedRecurrence recurrence(String key, Direction direction, String amount, int day, Category category,
+                                          String lastSeen, boolean fixedAmount, Confidence confidence) {
+        RecurrencePattern pattern = new RecurrencePattern(key, key, key, direction, "Conta", "Banco", money(amount),
+                fixedAmount, day, confidence, category,
+                List.of(new Occurrence(1, LocalDate.parse(lastSeen), money(amount))));
         return new ConfirmedRecurrence(pattern, category);
     }
 
     @Test
-    void theSuggestedSplitIsTheOneTheOwnerAskedForAndAddsUpTo100() {
-        Split suggested = MonthPlanCalculator.SUGGESTED;
-        assertEquals(0, suggested.fixed().compareTo(money("35")));
-        assertEquals(0, suggested.leisure().compareTo(money("20")));
-        assertEquals(0, suggested.investment().compareTo(money("15")));
-        assertEquals(0, suggested.future().compareTo(money("7.5")));
-        assertEquals(0, suggested.development().compareTo(money("10")));
-        assertEquals(0, suggested.emergency().compareTo(money("12.5")));
-        assertNull(MonthPlanCalculator.validate(suggested));
+    void andresPresetIsTheSplitHeProposedAddsUpTo100AndCommitsNothingByItself() {
+        assertEquals(List.of("35.00", "20.00", "15.00", "7.50", "10.00", "12.50"),
+                MonthPlanCalculator.PRESET_ANDRE.stream().map(item -> item.percent().toPlainString()).toList());
+        assertTrue(MonthPlanCalculator.complete(MonthPlanCalculator.PRESET_ANDRE));
+        assertTrue(MonthPlanCalculator.complete(MonthPlanCalculator.PRESET_503020));
+        assertTrue(MonthPlanCalculator.PRESET_ANDRE.stream().noneMatch(Slice::commitment));
+        assertNull(MonthPlanCalculator.validate(MonthPlanCalculator.PRESET_ANDRE));
     }
 
     @Test
-    void aSplitMustAddUpToExactly100AndEachSliceStayBetween0And100() {
-        assertEquals("MONTH_PLAN_SUM_NOT_100", MonthPlanCalculator.validate(split("35", "20", "15", "7.5", "10", "12.49")));
-        assertEquals("MONTH_PLAN_SUM_NOT_100", MonthPlanCalculator.validate(split("35", "20", "15", "7.5", "10", "12.51")));
-        assertEquals("MONTH_PLAN_INVALID_PERCENT", MonthPlanCalculator.validate(split("-1", "21", "15", "7.5", "10", "12.5")));
-        assertEquals("MONTH_PLAN_INVALID_PERCENT", MonthPlanCalculator.validate(split("100.01", "0", "0", "0", "0", "0")));
-        assertEquals("MONTH_PLAN_INVALID_PERCENT", MonthPlanCalculator.validate(split("35.001", "20", "15", "7.5", "10", "12.499")));
-        assertEquals("MONTH_PLAN_INVALID_PERCENT", MonthPlanCalculator.validate(
-                new Split(null, money("20"), money("15"), money("7.5"), money("10"), money("47.5"))));
-        assertNull(MonthPlanCalculator.validate(split("100", "0", "0", "0", "0", "0")), "everything fixed is a valid choice");
+    void aDraftThatDoesNotAddUpTo100CanBeSavedButIsIncomplete() {
+        List<Slice> draft = List.of(slice(Kind.FIXED, "35", false), slice(Kind.LEISURE, "20", false));
+        assertNull(MonthPlanCalculator.validate(draft));
+        assertFalse(MonthPlanCalculator.complete(draft));
+        assertEquals(money("55"), MonthPlanCalculator.total(draft));
+    }
+
+    @Test
+    void eachRuleOfASliceHasItsOwnCode() {
+        assertEquals("MONTH_PLAN_EMPTY", MonthPlanCalculator.validate(List.of()));
+        List<Slice> thirteen = new ArrayList<>();
+        for (int i = 0; i < 13; i++) thirteen.add(new Slice(Kind.CUSTOM, "Fatia " + i, money("1"), false));
+        assertEquals("MONTH_PLAN_TOO_MANY_SLICES", MonthPlanCalculator.validate(thirteen));
+        assertNull(MonthPlanCalculator.validate(thirteen.subList(0, 12)), "twelve custom slices are allowed");
+        assertEquals("MONTH_PLAN_INVALID_PERCENT", MonthPlanCalculator.validate(List.of(slice(Kind.CUSTOM, "-1", false))));
+        assertEquals("MONTH_PLAN_INVALID_PERCENT", MonthPlanCalculator.validate(List.of(slice(Kind.CUSTOM, "100.01", false))));
+        assertEquals("MONTH_PLAN_INVALID_PERCENT", MonthPlanCalculator.validate(List.of(slice(Kind.CUSTOM, "7.501", false))));
+        assertEquals("MONTH_PLAN_INVALID_LABEL", MonthPlanCalculator.validate(List.of(new Slice(Kind.CUSTOM, " ", money("1"), false))));
+        assertEquals("MONTH_PLAN_INVALID_LABEL", MonthPlanCalculator.validate(
+                List.of(new Slice(Kind.CUSTOM, "x".repeat(41), money("1"), false))));
+        assertEquals("MONTH_PLAN_SLICE_NOT_COMMITTABLE", MonthPlanCalculator.validate(List.of(slice(Kind.FIXED, "35", true))));
+        assertEquals("MONTH_PLAN_SLICE_NOT_COMMITTABLE", MonthPlanCalculator.validate(List.of(slice(Kind.LEISURE, "20", true))));
+        assertEquals("MONTH_PLAN_DUPLICATE_SLICE", MonthPlanCalculator.validate(
+                List.of(slice(Kind.FUTURE, "10", false), slice(Kind.FUTURE, "10", false))));
     }
 
     @Test
     void theBaseIsOnlyConfirmedIncomeAndTheMainOneIsTheLargestSalary() {
         var salary = recurrence("in:empresa", Direction.IN, "4000.00", 5, Category.SALARY, "2026-11-05");
-        var freela = recurrence("in:freela", Direction.IN, "1000.00", 20, Category.OTHER_INCOME, "2026-11-20");
+        var freela = recurrence("in:freela", Direction.IN, "6000.00", 20, Category.OTHER_INCOME, "2026-11-20");
         var rent = recurrence("out:aluguel", Direction.OUT, "1500.00", 10, Category.RENT, "2026-11-10");
 
         var income = MonthPlanCalculator.income(List.of(rent, freela, salary)).orElseThrow();
 
-        assertEquals(money("5000.00"), income.monthly());
-        assertEquals("in:empresa", income.main().pattern().key());
+        assertEquals(money("10000.00"), income.monthly());
+        assertEquals("in:empresa", income.main().pattern().key(), "a salary wins over a larger other income");
         assertEquals(2, income.sources().size());
         assertTrue(MonthPlanCalculator.income(List.of(rent)).isEmpty(), "no confirmed income: the plan has no base");
     }
@@ -85,36 +112,62 @@ class MonthPlanCalculatorTest {
     }
 
     @Test
-    void eachSliceIsTheBaseTimesItsPercentInCents() {
-        assertEquals(money("375.00"), MonthPlanCalculator.amount(money("5000.00"), money("7.5")));
-        assertEquals(money("0.33"), MonthPlanCalculator.amount(money("3.33"), money("10")));
+    void aCompletePlanAddsUpToTheBaseToTheCentAndTheResidualGoesToTheLargestSlice() {
+        List<Slice> thirds = List.of(slice(Kind.CUSTOM, "33.33", false), slice(Kind.CUSTOM, "33.34", false),
+                slice(Kind.CUSTOM, "33.33", false));
+
+        List<BigDecimal> amounts = MonthPlanCalculator.amounts(money("1000.01"), thirds);
+
+        // 333.303 -> 333.30, 333.403 -> 333.40, 333.303 -> 333.30: one cent short, given to the 33.34% slice.
+        assertEquals(List.of(money("333.30"), money("333.41"), money("333.30")), amounts);
+        assertEquals(money("1000.01"), amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add));
     }
 
     @Test
-    void onlyInvestmentFutureDevelopmentAndEmergencyBecomeCommitmentsAndGoalsLiveInsideFuture() {
-        Map<Slice, BigDecimal> commitments = MonthPlanCalculator.commitments(money("5000.00"), MonthPlanCalculator.SUGGESTED,
-                money("100.00"));
+    void roundingIsHalfEvenAndTheFirstLargestSliceTakesTheResidualOnATie() {
+        List<Slice> halves = List.of(slice(Kind.CUSTOM, "50", false), slice(Kind.CUSTOM, "50", false));
 
-        assertEquals(List.of(Slice.INVESTMENT, Slice.FUTURE, Slice.DEVELOPMENT, Slice.EMERGENCY), List.copyOf(commitments.keySet()));
-        assertEquals(money("750.00"), commitments.get(Slice.INVESTMENT));
-        assertEquals(money("275.00"), commitments.get(Slice.FUTURE), "375 of the slice minus 100 the goals already set aside");
-        assertEquals(money("500.00"), commitments.get(Slice.DEVELOPMENT));
-        assertEquals(money("625.00"), commitments.get(Slice.EMERGENCY));
+        // 0.05 x 50% = 0.025 -> 0.02 (half-even) twice = 0.04; the missing cent goes to the first slice.
+        assertEquals(List.of(money("0.03"), money("0.02")), MonthPlanCalculator.amounts(money("0.05"), halves));
+    }
+
+    @Test
+    void anIncompleteDraftKeepsPlainRoundingWithoutResidual() {
+        List<Slice> draft = List.of(slice(Kind.CUSTOM, "33.33", false));
+
+        assertEquals(List.of(money("333.30")), MonthPlanCalculator.amounts(money("1000.01"), draft));
+    }
+
+    @Test
+    void andresSplitOn5000IsExactlyTheExpectedSlices() {
+        assertEquals(List.of(money("1750.00"), money("1000.00"), money("750.00"), money("375.00"), money("500.00"),
+                money("625.00")), MonthPlanCalculator.amounts(money("5000.00"), MonthPlanCalculator.PRESET_ANDRE));
+    }
+
+    @Test
+    void onlyMarkedSlicesBecomeCommitmentsAndGoalsLiveInsideFuture() {
+        List<Slice> slices = new ArrayList<>(andreCommitted());
+        slices.set(5, new Slice(Kind.EMERGENCY, "Reserva", money("12.50"), false)); // the person left it unmarked
+
+        List<Commitment> commitments = MonthPlanCalculator.commitments(money("5000.00"), slices, money("100.00"));
+
+        assertEquals(List.of(Kind.INVESTMENT, Kind.FUTURE, Kind.DEVELOPMENT), commitments.stream().map(Commitment::kind).toList());
+        assertEquals(money("750.00"), commitments.get(0).amount());
+        assertEquals(money("275.00"), commitments.get(1).amount(), "375 of the slice minus 100 the goals already set aside");
+        assertEquals(money("1525.00"), MonthPlanCalculator.sum(commitments));
     }
 
     @Test
     void goalsLargerThanTheFutureSliceNeverMakeANegativeCommitment() {
-        Map<Slice, BigDecimal> commitments = MonthPlanCalculator.commitments(money("5000.00"), MonthPlanCalculator.SUGGESTED,
-                money("900.00"));
+        List<Commitment> commitments = MonthPlanCalculator.commitments(money("5000.00"), andreCommitted(), money("900.00"));
 
-        assertEquals(money("0.00"), commitments.get(Slice.FUTURE));
+        assertEquals(money("0.00"), commitments.get(1).amount());
     }
 
     @Test
     void commitmentsLeaveOnTheDayTheMainIncomeArrivesAndAreConfirmed() {
         var salary = recurrence("in:empresa", Direction.IN, "5000.00", 5, Category.SALARY, "2026-11-05");
-        Map<Slice, BigDecimal> commitments = MonthPlanCalculator.commitments(money("5000.00"), MonthPlanCalculator.SUGGESTED,
-                BigDecimal.ZERO);
+        List<Commitment> commitments = MonthPlanCalculator.commitments(money("5000.00"), andreCommitted(), BigDecimal.ZERO);
 
         List<CashEvent> events = MonthPlanCalculator.events(commitments, salary, LocalDate.parse("2026-11-23"),
                 LocalDate.parse("2027-01-31"));
@@ -125,21 +178,26 @@ class MonthPlanCalculatorTest {
         assertEquals(8, events.size());
         CashEvent investment = events.get(0);
         assertEquals(money("-750.00"), investment.amount());
+        assertEquals("Plano do mês: Investimento", investment.label());
         assertEquals(CashEvent.Kind.PLAN, investment.kind());
         assertEquals("PLAN_INVESTMENT", investment.category());
         assertEquals(CashEvent.Certainty.CONFIRMED, investment.certainty());
         assertEquals("Plano do mês", investment.origin());
-        assertEquals("plan:INVESTMENT", investment.reference());
+        assertEquals("plan:2", investment.reference());
+        assertEquals(LocalDate.parse("2026-12-04"), MonthPlanCalculator.nextDate(salary, LocalDate.parse("2026-11-23")).orElseThrow());
     }
 
     @Test
-    void aZeroCommitmentCreatesNoEvent() {
+    void aPlanWithNothingMarkedOrAZeroCommitmentCreatesNoEvent() {
         var salary = recurrence("in:empresa", Direction.IN, "5000.00", 5, Category.SALARY, "2026-11-05");
-        Map<Slice, BigDecimal> commitments = MonthPlanCalculator.commitments(money("5000.00"),
-                split("50", "50", "0", "0", "0", "0"), BigDecimal.ZERO);
+        LocalDate today = LocalDate.parse("2026-11-23");
+        LocalDate end = LocalDate.parse("2027-01-31");
 
-        assertTrue(MonthPlanCalculator.events(commitments, salary, LocalDate.parse("2026-11-23"),
-                LocalDate.parse("2027-01-31")).isEmpty());
+        assertTrue(MonthPlanCalculator.events(MonthPlanCalculator.commitments(money("5000.00"),
+                MonthPlanCalculator.PRESET_ANDRE, BigDecimal.ZERO), salary, today, end).isEmpty());
+        assertTrue(MonthPlanCalculator.events(MonthPlanCalculator.commitments(money("5000.00"),
+                List.of(slice(Kind.FIXED, "100", false), slice(Kind.EMERGENCY, "0", true)), BigDecimal.ZERO),
+                salary, today, end).isEmpty());
     }
 
     @Test
