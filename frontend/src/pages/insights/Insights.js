@@ -160,7 +160,11 @@ export default function Insights() {
         )}
 
         {report && (
-          <Stack spacing={{ xs: 5, md: 6 }} aria-busy={busy} sx={{ opacity: busy ? 0.6 : 1, transition: 'opacity 150ms' }}>
+          <Stack
+            spacing={{ xs: 5, md: 6 }}
+            aria-busy={busy}
+            sx={{ opacity: busy ? 0.6 : 1, transition: 'opacity 150ms' }}
+          >
             {/* (1) The answer, then where it came from. */}
             <Box>
               {/* The totals are only as fresh as the bank data under them (B50). */}
@@ -233,7 +237,10 @@ export default function Insights() {
                   ))}
                 </Stack>
               </Stack>
-              <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}>
+              <Box
+                component="ul"
+                sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}
+              >
                 {report.monthlyFlow.map((flow) => {
                   const net = Number(flow.inflow) - Number(flow.outflow);
                   return (
@@ -251,9 +258,7 @@ export default function Insights() {
                         borderColor: 'divider',
                       }}
                     >
-                      <Typography variant="body2">
-                        {formatMonth(flow.month)}
-                      </Typography>
+                      <Typography variant="body2">{formatMonth(flow.month)}</Typography>
                       {/* The bars repeat what the screen reader hears in the sentence below them. */}
                       <Box>
                         <Stack spacing={0.5} aria-hidden="true">

@@ -1,17 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Container,
-  IconButton,
-  Stack,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Card, Container, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { useSnackbar } from 'notistack';
@@ -190,7 +179,10 @@ export default function Envelopes() {
                   </Button>
                 )}
               </Stack>
-              <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}>
+              <Box
+                component="ul"
+                sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}
+              >
                 {data.items.map((envelope) => (
                   <Stack
                     component="li"

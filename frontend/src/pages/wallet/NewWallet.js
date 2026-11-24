@@ -54,39 +54,39 @@ export default function NewWallet() {
       <Container maxWidth="lg">
         {/* Left-aligned like every other page; the form keeps a readable width. */}
         <Box sx={{ maxWidth: 560 }}>
-        <Button
-          component={RouterLink}
-          to="/wallets"
-          startIcon={<WalletIcon name="back" />}
-          sx={{ ml: -1.5, mb: 1, color: 'text.secondary' }}
-        >
-          {t('navigation.wallets')}
-        </Button>
-        <PageHeading title={t('wallet.newWallet')} description={t('app.newWalletHelp')} />
-        {/* A form is an interactive group: the one place a panel is allowed (DESIGN.md). */}
-        <Card component="form" onSubmit={submit} noValidate sx={{ p: { xs: 3, sm: 4 } }}>
-          <Stack spacing={3}>
-            {error && !short && <Alert severity="error">{t(error)}</Alert>}
-            <TextField
-              label={t('wallet.create.name')}
-              placeholder={t('wallet.create.namePlaceholder')}
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                if (short) setError(null);
-              }}
-              required
-              autoFocus
-              error={short}
-              inputProps={{ minLength: 3, maxLength: 50 }}
-              helperText={t('app.nameHelp')}
-            />
-            <Box sx={{ typography: 'body2', color: 'text.secondary' }}>{t('app.zeroBalanceHelp')}</Box>
-            <LoadingButton type="submit" variant="contained" loading={busy} sx={{ alignSelf: { sm: 'flex-start' } }}>
-              {t('wallet.create.save')}
-            </LoadingButton>
-          </Stack>
-        </Card>
+          <Button
+            component={RouterLink}
+            to="/wallets"
+            startIcon={<WalletIcon name="back" />}
+            sx={{ ml: -1.5, mb: 1, color: 'text.secondary' }}
+          >
+            {t('navigation.wallets')}
+          </Button>
+          <PageHeading title={t('wallet.newWallet')} description={t('app.newWalletHelp')} />
+          {/* A form is an interactive group: the one place a panel is allowed (DESIGN.md). */}
+          <Card component="form" onSubmit={submit} noValidate sx={{ p: { xs: 3, sm: 4 } }}>
+            <Stack spacing={3}>
+              {error && !short && <Alert severity="error">{t(error)}</Alert>}
+              <TextField
+                label={t('wallet.create.name')}
+                placeholder={t('wallet.create.namePlaceholder')}
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (short) setError(null);
+                }}
+                required
+                autoFocus
+                error={short}
+                inputProps={{ minLength: 3, maxLength: 50 }}
+                helperText={t('app.nameHelp')}
+              />
+              <Box sx={{ typography: 'body2', color: 'text.secondary' }}>{t('app.zeroBalanceHelp')}</Box>
+              <LoadingButton type="submit" variant="contained" loading={busy} sx={{ alignSelf: { sm: 'flex-start' } }}>
+                {t('wallet.create.save')}
+              </LoadingButton>
+            </Stack>
+          </Card>
         </Box>
       </Container>
     </>
