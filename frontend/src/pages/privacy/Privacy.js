@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -17,11 +18,58 @@ import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
-import { PageHeading, SectionCard } from '../../components/wallet-ui';
+import { PageHeading } from '../../components/wallet-ui';
+import { Disclosure } from '../../components/detail-ui';
 import { errorKey } from '../../utils/wallet';
 
 // What the account keeps and why (LGPD art. 9), and the way out (art. 18). ADR 0012.
 const STORED = ['account', 'wallets', 'openFinance', 'answers', 'alerts'];
+
+/** A titled part of the page: divider on top, then the content. */
+function Section({ id, title, children }) {
+  return (
+    <Box component="section" aria-labelledby={id}>
+      <Typography id={id} variant="h6" component="h2" sx={{ mb: 1.5 }}>
+        {title}
+      </Typography>
+      {children}
+    </Box>
+  );
+}
+Section.propTypes = { id: PropTypes.string.isRequired, title: PropTypes.string.isRequired, children: PropTypes.node };
+
+/** One right the person can use now: what it does in a line, the full text behind a disclosure, the button. */
+function Action({ title, text, more, detail, button, children }) {
+  return (
+    <Box sx={{ py: 2, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={2}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="subtitle2" component="h3">
+            {title}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {text}
+          </Typography>
+        </Box>
+        <Box sx={{ flexShrink: 0 }}>{button}</Box>
+      </Stack>
+      <Disclosure label={more} sx={{ mt: 0.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
+          {detail}
+        </Typography>
+      </Disclosure>
+      {children}
+    </Box>
+  );
+}
+Action.propTypes = {
+  title: PropTypes.string.isRequired,
+  text: PropTypes.string.isRequired,
+  more: PropTypes.string.isRequired,
+  detail: PropTypes.string.isRequired,
+  button: PropTypes.node.isRequired,
+  children: PropTypes.node,
+};
 
 export default function Privacy() {
   const { t } = useTranslation();
@@ -74,68 +122,87 @@ export default function Privacy() {
       </Helmet>
       <Container maxWidth="md">
         <PageHeading title={t('privacy.heading')} description={t('privacy.description')} />
-        <Stack spacing={3}>
-          <SectionCard title={t('privacy.storedTitle')}>
-            <Box component="ul" sx={{ px: 3, pb: 2, m: 0, pl: 5 }}>
+        <Stack spacing={{ xs: 5, md: 6 }}>
+          <Section id="privacy-stored" title={t('privacy.storedTitle')}>
+            <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}>
               {STORED.map((item) => (
-                <Typography component="li" variant="body2" key={item} sx={{ mb: 1 }}>
+                <Typography
+                  component="li"
+                  variant="body2"
+                  key={item}
+                  sx={{
+                    py: 1.75,
+                    maxWidth: 720,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    '&:last-of-type': { borderBottom: 0 },
+                  }}
+                >
                   {t(`privacy.stored.${item}`)}
                 </Typography>
               ))}
             </Box>
-          </SectionCard>
+          </Section>
 
-          <SectionCard title={t('privacy.aiTitle')}>
-            <Typography variant="body2" sx={{ px: 3, pb: 2 }}>
+          <Section id="privacy-ai" title={t('privacy.aiTitle')}>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
               {t('privacy.ai')}
             </Typography>
-          </SectionCard>
+          </Section>
 
-          <SectionCard
-            title={t('privacy.openFinanceTitle')}
-            action={
-              <Button component={RouterLink} to="/open-finance" size="small">
-                {t('navigation.openFinance')}
-              </Button>
-            }
-          >
-            <Typography variant="body2" sx={{ px: 3, pb: 2 }}>
+          <Section id="privacy-of" title={t('privacy.openFinanceTitle')}>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
               {t('privacy.openFinance')}
             </Typography>
-          </SectionCard>
+            <Button component={RouterLink} to="/open-finance" size="small" color="inherit" sx={{ mt: 1, ml: -1 }}>
+              {t('privacy.openFinanceLink')}
+            </Button>
+          </Section>
 
-          <SectionCard title={t('privacy.exportTitle')}>
-            <Box sx={{ px: 3, pb: 3 }}>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {t('privacy.exportText')}
-              </Typography>
-              {exporting.error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {t(exporting.error)}
-                </Alert>
-              )}
-              <Button variant="outlined" onClick={download} disabled={exporting.busy}>
-                {t('privacy.exportButton')}
-              </Button>
+          <Section id="privacy-rights" title={t('privacy.rightsTitle')}>
+            <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+              <Action
+                title={t('privacy.exportTitle')}
+                text={t('privacy.exportShort')}
+                more={t('privacy.exportMore')}
+                detail={t('privacy.exportText')}
+                button={
+                  <Button variant="outlined" onClick={download} disabled={exporting.busy}>
+                    {t('privacy.exportButton')}
+                  </Button>
+                }
+              >
+                {exporting.error && (
+                  <Alert severity="error" role="alert" sx={{ mt: 1 }}>
+                    {t(exporting.error)}
+                  </Alert>
+                )}
+              </Action>
+              <Action
+                title={t('privacy.deleteTitle')}
+                text={t('privacy.deleteShort')}
+                more={t('privacy.deleteMore')}
+                detail={t('privacy.deleteText')}
+                button={
+                  <Button color="error" variant="outlined" onClick={() => setOpen(true)}>
+                    {t('privacy.deleteButton')}
+                  </Button>
+                }
+              />
             </Box>
-          </SectionCard>
-
-          <SectionCard title={t('privacy.deleteTitle')}>
-            <Box sx={{ px: 3, pb: 3 }}>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {t('privacy.deleteText')}
-              </Typography>
-              <Button color="error" variant="outlined" onClick={() => setOpen(true)}>
-                {t('privacy.deleteButton')}
-              </Button>
-            </Box>
-          </SectionCard>
+          </Section>
         </Stack>
       </Container>
 
-      <Dialog open={open} onClose={state.busy ? undefined : close} fullWidth maxWidth="xs">
+      <Dialog
+        open={open}
+        onClose={state.busy ? undefined : close}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="delete-title"
+      >
         <Box component="form" onSubmit={remove}>
-          <DialogTitle>{t('privacy.dialogTitle')}</DialogTitle>
+          <DialogTitle id="delete-title">{t('privacy.dialogTitle')}</DialogTitle>
           <DialogContent>
             <Typography variant="body2" sx={{ mb: 2 }}>
               {t('privacy.dialogText')}

@@ -24,22 +24,22 @@ export function groupPermissions(permissions = []) {
 export function PermissionGroups({ permissions }) {
   const { t } = useTranslation();
   return (
-    <Stack spacing={2}>
+    <Box>
       {groupPermissions(permissions).map(({ group, items }) => (
-        <Box key={group}>
+        <Box key={group} sx={{ py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <Typography variant="subtitle2" component="h3">
             {t(`openFinance.permissionGroups.${group}`)}
           </Typography>
           <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
             {items.map((permission) => (
-              <Typography component="li" variant="body2" color="text.secondary" key={permission}>
+              <Typography component="li" variant="body2" color="text.secondary" key={permission} sx={{ py: 0.25 }}>
                 {t(`openFinance.permissions.${permission}`, { defaultValue: permission })}
               </Typography>
             ))}
           </Box>
         </Box>
       ))}
-    </Stack>
+    </Box>
   );
 }
 PermissionGroups.propTypes = { permissions: PropTypes.arrayOf(PropTypes.string) };
@@ -78,25 +78,24 @@ export default function ConsentDialog({ consent, busy, error, onAuthorise, onRej
             </Stack>
             <Chip
               color="warning"
-              variant="outlined"
               size="small"
-              icon={<WalletIcon name="shield" />}
               label={t('openFinance.consent.sandbox')}
               sx={{ mt: 1.5, height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal', py: 0.5 } }}
             />
           </Box>
           <DialogContent>
-            <Stack spacing={2.5} sx={{ pt: 1 }}>
+            <Stack spacing={2} sx={{ pt: 2.5 }}>
               {error && <Alert severity="error">{t(error)}</Alert>}
               <Typography variant="subtitle1">{t('openFinance.consent.asks')}</Typography>
               <PermissionGroups permissions={shown.permissions} />
               <Typography variant="body2">{t('openFinance.consent.purpose')}</Typography>
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {t('openFinance.consent.until', { date: dateTime(shown.expiresAt, lang) })}
               </Typography>
-              <Alert severity="info" icon={<WalletIcon name="shield" />}>
-                {t('openFinance.consent.readOnly')}
-              </Alert>
+              <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                <WalletIcon name="shield" aria-hidden sx={{ fontSize: 20, color: 'success.main', mt: 0.25 }} />
+                <Typography variant="body2">{t('openFinance.consent.readOnly')}</Typography>
+              </Stack>
               {shown.authoriseBefore && (
                 <Typography variant="caption" color="text.secondary">
                   {t('openFinance.consent.authoriseBefore', { time: dateTime(shown.authoriseBefore, lang) })}
@@ -105,7 +104,7 @@ export default function ConsentDialog({ consent, busy, error, onAuthorise, onRej
             </Stack>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-            <Button color="inherit" disabled={busy} onClick={onReject}>
+            <Button variant="outlined" disabled={busy} onClick={onReject}>
               {t('openFinance.consent.reject')}
             </Button>
             <LoadingButton variant="contained" loading={busy} onClick={onAuthorise}>

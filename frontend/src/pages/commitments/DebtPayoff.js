@@ -4,6 +4,7 @@ import { Alert, Box, Button, Card, Chip, Stack, TextField, Typography } from '@m
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
 import { CertaintyChip } from '../../components/future-ui';
+import { Disclosure, ListRow } from '../../components/detail-ui';
 import { errorKey, money, parseAmount } from '../../utils/wallet';
 
 /** CET in % a month as the bank app shows it ("8,5"): up to 4 decimals, above 0 and at most 30 (same as the API). */
@@ -63,52 +64,57 @@ function PixCredit({ manualDebts, onChange, lang, t }) {
   };
 
   return (
-    <Box
-      component="section"
-      aria-labelledby="pix-credit"
-      sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}
-    >
-      <Typography id="pix-credit" variant="subtitle1" component="h3">
+    <Card component="section" aria-labelledby="pix-credit" sx={{ p: { xs: 2.5, md: 3 } }}>
+      <Typography id="pix-credit" variant="h6" component="h2">
         {t('commitments.pix.title')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-        {t('commitments.pix.help')}
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+        {t('commitments.pix.helpShort')}
       </Typography>
-      {manualDebts.map((debt) => (
-        <Stack
-          key={debt.id}
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1}
-          alignItems={{ sm: 'center' }}
-          justifyContent="space-between"
-          sx={{ py: 1 }}
-        >
-          <Box>
-            <Typography variant="body2">
-              {t('commitments.pix.line', {
-                label: debt.label,
-                balance: money(debt.outstandingBalance, lang),
+      <Disclosure label={t('commitments.pix.why')} sx={{ mt: 0.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 680 }}>
+          {t('commitments.pix.help')}
+        </Typography>
+      </Disclosure>
+      {manualDebts.length > 0 && (
+        <Box sx={{ mt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+          {manualDebts.map((debt) => (
+            <ListRow
+              key={debt.id}
+              title={debt.label}
+              meta={t('commitments.pix.lineMeta', {
                 installment: money(debt.installmentAmount, lang),
                 cet: Number(debt.monthlyCet).toLocaleString(lang === 'en' ? 'en-US' : 'pt-BR'),
               })}
-            </Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-              <Chip size="small" variant="outlined" label={t('commitments.pix.typedByYou')} />
-              <CertaintyChip certainty={debt.certainty} />
-            </Stack>
-          </Box>
-          <Button
-            size="small"
-            color="inherit"
-            disabled={state.busy}
-            onClick={() => run(() => HttpService.deleteWithAuth(`/future/manual-debts/${debt.id}`), false)}
-          >
-            {t('commitments.pix.remove')}
-          </Button>
-        </Stack>
-      ))}
-      <Stack component="form" spacing={1.5} onSubmit={add} sx={{ mt: 1 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              value={money(debt.outstandingBalance, lang)}
+              aside={
+                <Stack direction="row" flexWrap="wrap" justifyContent="flex-end" alignItems="center" sx={{ gap: 0.5 }}>
+                  <Chip size="small" variant="outlined" label={t('commitments.pix.typedByYou')} />
+                  <CertaintyChip certainty={debt.certainty} />
+                  <Button
+                    size="small"
+                    color="inherit"
+                    disabled={state.busy}
+                    onClick={() => run(() => HttpService.deleteWithAuth(`/future/manual-debts/${debt.id}`), false)}
+                    aria-label={`${t('commitments.pix.remove')} ${debt.label}`}
+                  >
+                    {t('commitments.pix.remove')}
+                  </Button>
+                </Stack>
+              }
+            />
+          ))}
+        </Box>
+      )}
+      <Box component="form" onSubmit={add} sx={{ mt: 2 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+            gap: 1.5,
+            alignItems: 'start',
+          }}
+        >
           <TextField
             size="small"
             name="pixLabel"
@@ -145,19 +151,17 @@ function PixCredit({ manualDebts, onChange, lang, t }) {
             error={cetInvalid}
             helperText={cetInvalid ? t('commitments.pix.cetInvalid') : t('commitments.pix.cetHelp')}
           />
-        </Stack>
-        <Box>
-          <Button type="submit" variant="outlined" disabled={!ready || state.busy}>
-            {t('commitments.pix.add')}
-          </Button>
         </Box>
-      </Stack>
+        <Button type="submit" variant="outlined" disabled={!ready || state.busy} sx={{ mt: 2 }}>
+          {t('commitments.pix.add')}
+        </Button>
+      </Box>
       {state.error && (
-        <Alert severity="error" sx={{ mt: 1 }}>
+        <Alert severity="error" sx={{ mt: 2 }} role="alert">
           {t(state.error)}
         </Alert>
       )}
-    </Box>
+    </Card>
   );
 }
 
@@ -178,21 +182,18 @@ PixCredit.propTypes = {
 // extra the person types; nothing here offers credit.
 function Row({ title, plan, saves, lang, t }) {
   return (
-    <Box sx={{ py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={0.5}>
-        <Typography variant="subtitle2">{title}</Typography>
-        <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-          {plan.months == null
-            ? t('commitments.payoff.never')
-            : t('commitments.payoff.months', { count: plan.months, interest: money(plan.interest, lang) })}
-        </Typography>
-      </Stack>
-      {saves != null && Number(saves) > 0 && (
-        <Typography variant="caption" color="success.main" component="p">
-          {t('commitments.payoff.saves', { amount: money(saves, lang) })}
-        </Typography>
-      )}
-    </Box>
+    <ListRow
+      title={title}
+      meta={
+        plan.months == null
+          ? t('commitments.payoff.never')
+          : t('commitments.payoff.months', { count: plan.months, interest: money(plan.interest, lang) })
+      }
+      value={
+        saves != null && Number(saves) > 0 ? t('commitments.payoff.saves', { amount: money(saves, lang) }) : undefined
+      }
+      valueColor="success.main"
+    />
   );
 }
 
@@ -229,77 +230,92 @@ export default function DebtPayoff({ manualDebts = [], onChange = () => {} }) {
   const { answer } = state;
   const plan = answer?.plan;
   return (
-    <Card component="section" aria-labelledby="debt-payoff" sx={{ p: 3 }}>
-      <Typography id="debt-payoff" variant="h6" component="h2">
-        {t('commitments.payoff.title')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {t('commitments.payoff.help')}
-      </Typography>
-      <Stack component="form" direction={{ xs: 'column', sm: 'row' }} spacing={1.5} onSubmit={calculate}>
-        <TextField
-          size="small"
-          label={t('commitments.payoff.extra')}
-          value={extra}
-          onChange={(event) => setExtra(event.target.value)}
-          inputProps={{ inputMode: 'decimal' }}
-          error={invalid}
-          helperText={invalid ? t('commitments.payoff.extraInvalid') : undefined}
-        />
-        <Button type="submit" variant="contained" disabled={invalid || state.loading} sx={{ flexShrink: 0 }}>
-          {t('commitments.payoff.calculate')}
-        </Button>
-      </Stack>
+    <Stack spacing={3}>
+      <Card component="section" aria-labelledby="debt-payoff" sx={{ p: { xs: 2.5, md: 3 } }}>
+        <Typography id="debt-payoff" variant="h6" component="h2">
+          {t('commitments.payoff.title')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2, maxWidth: 640 }}>
+          {t('commitments.payoff.help')}
+        </Typography>
+        <Stack
+          component="form"
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ sm: 'flex-start' }}
+          spacing={1.5}
+          onSubmit={calculate}
+        >
+          <TextField
+            size="small"
+            label={t('commitments.payoff.extra')}
+            value={extra}
+            onChange={(event) => setExtra(event.target.value)}
+            inputProps={{ inputMode: 'decimal' }}
+            error={invalid}
+            helperText={invalid ? t('commitments.payoff.extraInvalid') : undefined}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={invalid || state.loading}
+            sx={{ flexShrink: 0, alignSelf: { xs: 'flex-start', sm: 'auto' } }}
+          >
+            {state.loading ? t('commitments.payoff.calculating') : t('commitments.payoff.calculate')}
+          </Button>
+        </Stack>
 
-      <Box aria-live="polite" sx={{ mt: 2 }}>
-        {state.error && <Alert severity="error">{t(state.error)}</Alert>}
-        {plan && plan.avalanche.order.length === 0 && (
-          <Typography variant="body2">{t('commitments.payoff.noLoans')}</Typography>
-        )}
-        {plan && plan.avalanche.order.length > 0 && (
-          <>
-            <Row title={t('commitments.payoff.baseline')} plan={plan.baseline} lang={lang} t={t} />
-            <Row
-              title={t('commitments.payoff.avalanche')}
-              plan={plan.avalanche}
-              saves={plan.avalancheSaves}
-              lang={lang}
-              t={t}
-            />
-            <Row
-              title={t('commitments.payoff.snowball')}
-              plan={plan.snowball}
-              saves={plan.snowballSaves}
-              lang={lang}
-              t={t}
-            />
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>
-              {t('commitments.payoff.orderTitle')}
+        <Box aria-live="polite" sx={{ mt: plan || state.error ? 2 : 0 }}>
+          {state.error && <Alert severity="error">{t(state.error)}</Alert>}
+          {plan && plan.avalanche.order.length === 0 && (
+            <Typography variant="body2">{t('commitments.payoff.noLoans')}</Typography>
+          )}
+          {plan && plan.avalanche.order.length > 0 && (
+            <>
+              <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                <Row title={t('commitments.payoff.baseline')} plan={plan.baseline} lang={lang} t={t} />
+                <Row
+                  title={t('commitments.payoff.avalanche')}
+                  plan={plan.avalanche}
+                  saves={plan.avalancheSaves}
+                  lang={lang}
+                  t={t}
+                />
+                <Row
+                  title={t('commitments.payoff.snowball')}
+                  plan={plan.snowball}
+                  saves={plan.snowballSaves}
+                  lang={lang}
+                  t={t}
+                />
+              </Box>
+              <Typography variant="subtitle2" component="h3" sx={{ mt: 3 }}>
+                {t('commitments.payoff.orderTitle')}
+              </Typography>
+              <Box component="ol" sx={{ m: 0, mt: 1, pl: 3 }}>
+                {plan.avalanche.order.map((payoff) => (
+                  <Typography component="li" variant="body2" key={payoff.id} sx={{ py: 0.5 }}>
+                    {payoff.label}
+                    {payoff.month != null ? `: ${t('commitments.payoff.endsIn', { count: payoff.month })}` : ''}
+                    {payoff.origin === 'MANUAL' && ` (${t('commitments.pix.typedByYou')})`}
+                  </Typography>
+                ))}
+              </Box>
+            </>
+          )}
+          {answer?.loansWithoutRate > 0 && (
+            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
+              {t('commitments.payoff.withoutRate', { count: answer.loansWithoutRate })}
             </Typography>
-            <Box component="ol" sx={{ m: 0, pl: 3 }}>
-              {plan.avalanche.order.map((payoff) => (
-                <Typography component="li" variant="body2" key={payoff.id}>
-                  {payoff.label}
-                  {payoff.month != null ? `: ${t('commitments.payoff.endsIn', { count: payoff.month })}` : ''}
-                  {payoff.origin === 'MANUAL' && ` (${t('commitments.pix.typedByYou')})`}
-                </Typography>
-              ))}
-            </Box>
-          </>
-        )}
-        {answer?.loansWithoutRate > 0 && (
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-            {t('commitments.payoff.withoutRate', { count: answer.loansWithoutRate })}
-          </Typography>
-        )}
-        {plan && (
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-            {t('commitments.payoff.note')}
-          </Typography>
-        )}
-      </Box>
+          )}
+          {plan && (
+            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1, maxWidth: 680 }}>
+              {t('commitments.payoff.note')}
+            </Typography>
+          )}
+        </Box>
+      </Card>
       <PixCredit manualDebts={manualDebts} onChange={onChange} lang={lang} t={t} />
-    </Card>
+    </Stack>
   );
 }
 
