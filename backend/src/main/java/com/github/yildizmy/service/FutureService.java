@@ -773,16 +773,20 @@ public class FutureService {
      */
     List<Movement> movements(long userId, List<Wallet> wallets) {
         LocalDate today = LocalDate.now(clock.withZone(ZONE));
-        return movements(transactionRepository.findAllByUserIdSince(userId,
-                today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant()), wallets);
+        List<CardPlan> cardPlans = creditCardRepository.findByUserIdOrderById(userId).stream().map(this::toPlan).toList();
+        // Same cash view as the projection: the card bill is the invoice's purchases, not a monthly charge (B12).
+        return CardBillPayment.withoutBillPayments(movements(transactionRepository.findAllByUserIdSince(userId,
+                today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant()), wallets), cardPlans);
     }
 
     static List<Movement> movements(List<Transaction> transactions, List<Wallet> wallets) {
         Set<Long> own = wallets.stream().map(Wallet::getId).collect(Collectors.toSet());
         Map<Long, Wallet> byId = wallets.stream().collect(Collectors.toMap(Wallet::getId, Function.identity()));
         List<Movement> movements = new ArrayList<>();
+        // Open Finance imports each side of a move between own accounts on its own; the pair is not cash flow.
+        Set<Transaction> ownMoves = InsightsService.ownAccountPairs(transactions);
         for (Transaction transaction : transactions) {
-            if (transaction.getStatus() != Status.SUCCESS) continue;
+            if (transaction.getStatus() != Status.SUCCESS || ownMoves.contains(transaction)) continue;
             Long from = transaction.getFromWallet().getId();
             Long to = transaction.getToWallet().getId();
             long typeId = transaction.getType().getId();
