@@ -23,6 +23,7 @@ import { WalletIcon } from '../wallet-ui';
 import HttpService from '../../services/HttpService';
 import { dayLabel, money, overdraftCostText } from '../../utils/wallet';
 import { limitSummary } from '../../utils/forecast';
+import { HIDDEN_AMOUNT } from '../../utils/hiddenAmounts';
 
 // Lead, tail and the "why" sentence of the hero, per kind of answer.
 const LIMIT_KEYS = {
@@ -61,7 +62,7 @@ export function CertaintyChip({ certainty }) {
 CertaintyChip.propTypes = { certainty: PropTypes.oneOf(['CONFIRMED', 'ESTIMATED', 'HYPOTHETICAL']).isRequired };
 
 /** One expected movement with its provenance: when, what, from where, how sure, how much. A 56 px row. */
-export function EventRow({ event, dense = false }) {
+export function EventRow({ event, dense = false, hideAmount = false }) {
   const { t, i18n } = useTranslation();
   const inflow = Number(event.amount) > 0;
   // Everyday spending arrives folded into one line; its reference carries how many days it covers.
@@ -101,14 +102,14 @@ export function EventRow({ event, dense = false }) {
       <Stack alignItems="flex-end" spacing={0.5} sx={{ flexShrink: 0 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: inflow ? 'success.main' : 'text.primary' }}>
           {inflow ? '+ ' : '− '}
-          {money(Math.abs(Number(event.amount)), i18n.language)}
+          {hideAmount ? HIDDEN_AMOUNT : money(Math.abs(Number(event.amount)), i18n.language)}
         </Typography>
         <CertaintyChip certainty={event.certainty} />
       </Stack>
     </Stack>
   );
 }
-EventRow.propTypes = { event: PropTypes.object.isRequired, dense: PropTypes.bool };
+EventRow.propTypes = { event: PropTypes.object.isRequired, dense: PropTypes.bool, hideAmount: PropTypes.bool };
 
 /**
  * A labelled number. `help` stays on screen under the number; `tooltip` moves the explanation behind an
@@ -311,7 +312,7 @@ ExitPlanList.propTypes = { actions: PropTypes.array };
  * Two shortfalls can differ and both are true: the limit keeps the envelopes out, the bank does not.
  * With envelopes, "missing" is split into what the bank balance lacks and what keeping the envelopes costs.
  */
-export function DailyLimitCard({ limit, risk, exitPlan = [], onWhy, compact = false, action }) {
+export function DailyLimitCard({ limit, risk, exitPlan = [], onWhy, compact = false, action, hideAmount = false }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [whyOpen, setWhyOpen] = useState(false);
@@ -363,7 +364,7 @@ export function DailyLimitCard({ limit, risk, exitPlan = [], onWhy, compact = fa
           variant={compact ? 'h2' : 'h1'}
           sx={{ display: 'block', color: tone, my: compact ? 0.5 : 1 }}
         >
-          {money(summary.amount, lang)}
+          {hideAmount ? HIDDEN_AMOUNT : money(summary.amount, lang)}
           {!short && (
             <Typography
               component="span"
@@ -448,6 +449,7 @@ export function DailyLimitCard({ limit, risk, exitPlan = [], onWhy, compact = fa
   );
 }
 DailyLimitCard.propTypes = {
+  hideAmount: PropTypes.bool,
   limit: PropTypes.object.isRequired,
   risk: PropTypes.object,
   exitPlan: PropTypes.array,

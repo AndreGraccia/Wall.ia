@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { visuallyHidden } from '../wallet-ui';
 import { compactMoney, dayLabel, money } from '../../utils/wallet';
+import { HIDDEN_AMOUNT } from '../../utils/hiddenAmounts';
 
 const PAD = { top: 28, right: 12, bottom: 28, left: 56 };
 const DASH = { dashed: '6 5', dotted: '1 5' };
@@ -55,6 +56,7 @@ export default function ProjectionChart({
   ariaLabel,
   height = 260,
   animate = true,
+  hideValues = false,
 }) {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
@@ -103,7 +105,7 @@ export default function ProjectionChart({
       ? {
           index: lowestIndex,
           kind: 'lowest',
-          label: `${t('future.chartLowest')} ${money(lowest.balance, lang)}`,
+          label: hideValues ? t('future.chartLowest') : `${t('future.chartLowest')} ${money(lowest.balance, lang)}`,
           negative: Number(lowest.balance) < 0,
         }
       : null,
@@ -171,7 +173,9 @@ export default function ProjectionChart({
     [
       dayLabel(all[hover].date, lang, { weekday: 'short', day: '2-digit', month: 'short' }),
       ...valuesAt(hover).map((item) =>
-        [series.length > 1 ? item.label : null, money(item.balance, lang)].filter(Boolean).join(': ')
+        [series.length > 1 ? item.label : null, hideValues ? HIDDEN_AMOUNT : money(item.balance, lang)]
+          .filter(Boolean)
+          .join(': ')
       ),
     ].join(', ');
   const primary = series[0];
@@ -259,7 +263,7 @@ export default function ProjectionChart({
               fontSize="11"
               fill={tick === 0 ? theme.palette.text.secondary : theme.palette.text.disabled}
             >
-              {tick === 0 ? t('future.chartZero') : compactMoney(tick, lang)}
+              {tick === 0 ? t('future.chartZero') : !hideValues && compactMoney(tick, lang)}
             </text>
           </g>
         ))}
@@ -423,7 +427,7 @@ export default function ProjectionChart({
                 variant="subtitle2"
                 sx={{ color: Number(item.balance) < 0 ? 'error.main' : 'text.primary', fontWeight: 600 }}
               >
-                {money(item.balance, lang)}
+                {hideValues ? HIDDEN_AMOUNT : money(item.balance, lang)}
               </Typography>
             </Stack>
           ))}
@@ -477,4 +481,6 @@ ProjectionChart.propTypes = {
   height: PropTypes.number,
   /** The one draw-in of the screen; secondary charts (simulator) pass false. Assumes the page background. */
   animate: PropTypes.bool,
+  /** "Ocultar saldo": keeps the shape, drops every amount (axis, marks, readout). */
+  hideValues: PropTypes.bool,
 };

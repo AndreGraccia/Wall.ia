@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Alert, Box, Button, Container, Skeleton, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Container, IconButton, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { useWallets } from '../../context/WalletContext';
-import { EmptyState, PageHeading } from '../../components/wallet-ui';
+import { EmptyState, PageHeading, WalletIcon } from '../../components/wallet-ui';
 import { DailyLimitCard, EventRow } from '../../components/future-ui';
 import ProjectionChart from '../../components/projection-chart';
 import BankDataNotice from '../../components/bank-data';
@@ -13,6 +13,7 @@ import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
 import { dayLabel, errorKey, money } from '../../utils/wallet';
 import { balanceHistory, forecastReady } from '../../utils/forecast';
+import { HIDDEN_AMOUNT, useHiddenAmounts } from '../../utils/hiddenAmounts';
 
 /**
  * Início (docs/brand/DESIGN.md): a short greeting with the number of the day, a compact 30-day chart, the
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const { transactions, wallets } = useWallets() || {};
   const user = AuthService.getCurrentUser();
   const [state, setState] = useState({ loading: true, error: null, overview: null });
+  const [hidden, toggleHidden] = useHiddenAmounts();
 
   const load = useCallback(async () => {
     setState((previous) => ({ ...previous, loading: true, error: null }));
@@ -67,7 +69,20 @@ export default function Dashboard() {
         <title>{t('dashboard.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <PageHeading title={t('app.greeting', { name: user?.firstName || t('app.you') })} />
+        <PageHeading
+          title={t('app.greeting', { name: user?.firstName || t('app.you') })}
+          action={
+            <Tooltip title={t(hidden ? 'app.showBalance' : 'app.hideBalance')}>
+              <IconButton
+                aria-label={t(hidden ? 'app.showBalance' : 'app.hideBalance')}
+                aria-pressed={hidden}
+                onClick={toggleHidden}
+              >
+                <WalletIcon name={hidden ? 'eyeOff' : 'eye'} sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+          }
+        />
 
         {state.loading && !overview && (
           <Stack spacing={4} role="status" aria-busy="true" aria-label={t('common.loading')}>
@@ -108,7 +123,13 @@ export default function Dashboard() {
           <Stack spacing={{ xs: 4, md: 5 }}>
             {sources.bankData?.stale && <BankDataNotice bankData={sources.bankData} />}
             {ready && overview.spendingLimit ? (
-              <DailyLimitCard compact limit={overview.spendingLimit} exitPlan={overview.exitPlan} action={shortcuts} />
+              <DailyLimitCard
+                compact
+                hideAmount={hidden}
+                limit={overview.spendingLimit}
+                exitPlan={overview.exitPlan}
+                action={shortcuts}
+              />
             ) : (
               <Box>
                 <Typography variant="h5" component="p" sx={{ maxWidth: 560 }}>
@@ -145,7 +166,7 @@ export default function Dashboard() {
                     height={200}
                     ariaLabel={t('future.chartLabelClear', {
                       days: 30,
-                      amount: money(projection.minBalance, lang),
+                      amount: hidden ? HIDDEN_AMOUNT : money(projection.minBalance, lang),
                       date: dayLabel(projection.minDate, lang),
                     })}
                     history={history}
@@ -158,6 +179,7 @@ export default function Dashboard() {
                       },
                     ]}
                     lowest={{ date: projection.minDate, balance: Number(projection.minBalance) }}
+                    hideValues={hidden}
                   />
                   {sources.bankData && !sources.bankData.stale && (
                     <BankDataNotice bankData={sources.bankData} sx={{ mt: 1.5 }} />
@@ -176,7 +198,7 @@ export default function Dashboard() {
                 {upcoming.length ? (
                   <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
                     {upcoming.map((event) => (
-                      <EventRow key={`${event.reference}-${event.date}`} event={event} dense />
+                      <EventRow key={`${event.reference}-${event.date}`} event={event} dense hideAmount={hidden} />
                     ))}
                   </Box>
                 ) : (
