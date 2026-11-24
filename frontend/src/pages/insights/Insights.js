@@ -92,9 +92,11 @@ export default function Insights() {
     }
   };
 
-  // "2026-09" is a calendar month: built as a local date so UTC-3 does not turn it into August.
+  // "2026-09" is a calendar month: built as a local date so UTC-3 does not turn it into August. "Set/26" fits a phone.
   const formatMonth = (value) =>
-    monthLabel(value, i18n.language, { month: 'short', year: '2-digit' }).replace(/^./, (letter) => letter.toLocaleUpperCase());
+    `${monthLabel(value, i18n.language, { month: 'short' })
+      .replace('.', '')
+      .replace(/^./, (letter) => letter.toLocaleUpperCase())}/${value.slice(2, 4)}`;
 
   const lang = i18n.language;
   const generateButton = (variant) => (
@@ -240,7 +242,7 @@ export default function Insights() {
                       key={flow.month}
                       sx={{
                         display: 'grid',
-                        gridTemplateColumns: { xs: '56px minmax(0, 1fr) auto', sm: '88px minmax(0, 1fr) 140px' },
+                        gridTemplateColumns: { xs: '56px minmax(0, 1fr) auto', sm: '72px minmax(0, 1fr) 140px' },
                         alignItems: 'center',
                         columnGap: 2,
                         minHeight: 56,
