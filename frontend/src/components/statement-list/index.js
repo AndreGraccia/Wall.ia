@@ -30,6 +30,20 @@ function monthText(day, language) {
 }
 
 /**
+ * The line under the description: how the money moved. Between the person's own accounts says so; an imported entry
+ * shows the Open Finance method (Pix, TED, boleto...) and nothing when the bank did not send one, because the
+ * internal type (deposit, withdrawal) would read as a cash operation. Local entries keep their type.
+ * ponytail: imported pairs between two connected banks are matched only on the server (InsightsService.ownAccountPairs);
+ * the statement API does not flag them yet, so they show their method.
+ */
+function howItMoved(item, direction, named, type, t) {
+  if (direction === 'internal') return t('transactions.betweenAccounts');
+  if (item.paymentType) return t(`paymentMethods.${item.paymentType}`, { defaultValue: item.paymentType });
+  if (item.source === 'OPEN_FINANCE') return '';
+  return named ? type : '';
+}
+
+/**
  * A statement as a bank app shows it: entries grouped by month, one 56 px row each with the day on the left (the
  * same column as the Future list), description in the middle and the signed amount, tabular, on the right.
  * Status only appears when it is not "done", and in words, not colour. Grouping by day would put a header over
@@ -65,6 +79,7 @@ export default function StatementList({ transactions, wallets, onSelect, dayHead
           const type = t(`app.types.${item.type?.name}`, { defaultValue: t('app.types.Transfer') });
           // Imported entries carry the counterparty ("Netflix"); that says more than the generic type.
           const named = item.description && item.description !== 'Initial balance';
+          const subtitle = howItMoved(item, direction, named, type, t);
           return (
             <Box component="li" key={item.id} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
               <ButtonBase
@@ -103,7 +118,7 @@ export default function StatementList({ transactions, wallets, onSelect, dayHead
                     component="span"
                     sx={{ display: 'block' }}
                   >
-                    {named ? type : ''}
+                    {subtitle}
                   </Typography>
                 </Box>
                 <Box sx={{ textAlign: 'right', flexShrink: 0 }}>

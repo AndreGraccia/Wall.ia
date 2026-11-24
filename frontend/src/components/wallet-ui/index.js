@@ -32,7 +32,8 @@ const paths = {
   user: 'M20 21v-2a6 6 0 0 0-6-6h-4a6 6 0 0 0-6 6v2M16 6a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   logout: 'M9 4H4v16h5m5-13 5 5-5 5M8 12h11',
   eye: 'M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
-  eyeOff: 'M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c7 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.7 8.4 2 12 2 12s3 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2',
+  eyeOff:
+    'M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c7 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.7 8.4 2 12 2 12s3 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2',
   info: 'M12 11v6m0-10h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   copy: 'M9 9h12v12H9V9ZM15 9V3H3v12h6',
   swap: 'M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4',
@@ -48,6 +49,10 @@ const paths = {
   ask: 'M4 5h16v11H9l-5 4V5Zm6.5 3.5a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.7.7-.7 1.2M12 13.5h.01',
   chevron: 'm6 9 6 6 6-6',
   menu: 'M4 7h16M4 12h16M4 17h16',
+  // Month plan: the income as one circle cut into slices.
+  plan: 'M12 3v9l6.4 6.4M12 12H3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
+  // Money in and out: one arrow down, one up.
+  flow: 'M8 4v16m0 0-3-3m3 3 3-3M16 20V4m0 0-3 3m3-3 3 3',
 };
 export function WalletIcon({ name, ...props }) {
   return (

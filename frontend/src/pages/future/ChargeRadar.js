@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { Alert, AlertTitle, Box, Button, Chip, Skeleton, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
+import { Disclosure } from '../../components/detail-ui';
 import { dayLabel, errorKey, money } from '../../utils/wallet';
 
 /**
@@ -73,9 +75,14 @@ export default function ChargeRadar() {
           <Typography id="charge-radar-title" variant="h6" component="h2">
             {t('future.chargeRadar.title')}
           </Typography>
-          <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, maxWidth: 720 }}>
-            {t('future.chargeRadar.description')} {t('future.chargeRadar.disclaimer')}
+          <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, maxWidth: 640 }}>
+            {t('future.chargeRadar.description')}
           </Typography>
+          <Disclosure label={t('future.hero.why')}>
+            <Typography color="text.secondary" variant="body2" sx={{ maxWidth: 640 }}>
+              {t('future.chargeRadar.disclaimer')} {t('future.chargeRadar.emptyDescription')}
+            </Typography>
+          </Disclosure>
         </Box>
 
         {operationError && (
@@ -123,12 +130,18 @@ export default function ChargeRadar() {
         )}
 
         {!state.loading && !state.error && state.alerts.length === 0 && (
-          <Box sx={{ borderTop: '1px solid', borderColor: 'divider', py: 3 }}>
-            <Typography variant="subtitle1">{t('future.chargeRadar.emptyTitle')}</Typography>
-            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-              {t('future.chargeRadar.emptyDescription')}
-            </Typography>
-          </Box>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            flexWrap="wrap"
+            sx={{ gap: 1, minHeight: 56, py: 1, borderTop: '1px solid', borderColor: 'divider' }}
+          >
+            <Typography variant="body2">{t('future.chargeRadar.emptyTitle')}</Typography>
+            <Button component={RouterLink} to="/transactions" size="small" variant="outlined">
+              {t('future.chargeRadar.seeStatement')}
+            </Button>
+          </Stack>
         )}
 
         {state.alerts.map((alert) => {
@@ -136,10 +149,7 @@ export default function ChargeRadar() {
           const working = busyId === alert.transactionId;
           const duplicate = alert.kind === 'POSSIBLE_DUPLICATE';
           return (
-            <Box
-              key={alert.transactionId}
-              sx={{ borderTop: '1px solid', borderColor: 'divider', py: 2.5 }}
-            >
+            <Box key={alert.transactionId} sx={{ borderTop: '1px solid', borderColor: 'divider', py: 2.5 }}>
               <Stack spacing={1.5}>
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
@@ -193,12 +203,14 @@ export default function ChargeRadar() {
                 )}
 
                 {alert.relatedDate && (
-                  <Typography variant="caption" color="text.secondary">
-                    {t('future.chargeRadar.evidence', {
-                      reference: alert.relatedTransactionId,
-                      date: formatDate(alert.relatedDate),
-                    })}
-                  </Typography>
+                  <Disclosure label={t('future.chargeRadar.details')}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t('future.chargeRadar.evidence', {
+                        reference: alert.relatedTransactionId,
+                        date: formatDate(alert.relatedDate),
+                      })}
+                    </Typography>
+                  </Disclosure>
                 )}
 
                 <Stack direction="row" flexWrap="wrap" sx={{ gap: 1 }}>

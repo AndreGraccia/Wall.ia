@@ -10,7 +10,9 @@ export const compactMoney = (value, language) =>
     currency: 'BRL',
     notation: 'compact',
     maximumFractionDigits: 1,
-  }).format(Number(value) || 0).replace(/^-/, '−');
+  })
+    .format(Number(value) || 0)
+    .replace(/^-/, '−');
 export const dateTime = (value, language) => {
   const date = new Date(value);
   return value && !Number.isNaN(date.getTime())
@@ -132,6 +134,16 @@ export function errorKey(error) {
       'EMAIL_VERIFICATION_REQUIRED',
       'USERNAME_TAKEN',
       'INVALID_PASSWORD',
+      'MONTH_PLAN_EMPTY',
+      'MONTH_PLAN_TOO_MANY_SLICES',
+      'MONTH_PLAN_INVALID_PERCENT',
+      'MONTH_PLAN_INVALID_LABEL',
+      'MONTH_PLAN_SLICE_NOT_COMMITTABLE',
+      'MONTH_PLAN_DUPLICATE_SLICE',
+      'MONTH_PLAN_INCOMPLETE',
+      'MONTH_PLAN_NEEDS_INCOME',
+      'METHOD_CHOICE_LIMIT',
+      'INVALID_MONTH',
     ].includes(code)
   )
     return `app.errors.${code}`;

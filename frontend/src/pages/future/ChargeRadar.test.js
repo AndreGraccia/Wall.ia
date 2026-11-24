@@ -1,5 +1,6 @@
 import { act, Simulate } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import ChargeRadar from './ChargeRadar';
 import ThemeProvider from '../../theme';
 import HttpService from '../../services/HttpService';
@@ -55,9 +56,11 @@ afterEach(() => {
 async function renderPage() {
   await act(async () => {
     root.render(
-      <ThemeProvider>
-        <ChargeRadar />
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider>
+          <ChargeRadar />
+        </ThemeProvider>
+      </MemoryRouter>
     );
   });
 }

@@ -38,12 +38,14 @@ function groupsFor(user) {
       items: [
         { path: '/', label: 'navigation.dashboard', icon: 'home' },
         { path: '/future', label: 'navigation.future', icon: 'future' },
+        { path: '/plan', label: 'navigation.plan', icon: 'plan' },
         { path: '/ask', label: 'navigation.ask', icon: 'ask' },
       ],
     },
     {
       key: 'money',
       items: [
+        { path: '/cash-flow', label: 'navigation.cashFlow', icon: 'flow' },
         { path: '/transactions', label: 'navigation.transactions', icon: 'history' },
         { path: '/wallets', label: 'navigation.wallets', icon: 'wallet' },
         { path: '/envelopes', label: 'navigation.envelopes', icon: 'envelope' },

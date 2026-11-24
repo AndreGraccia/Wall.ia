@@ -23,6 +23,9 @@ const Wallet = lazy(() => import('./pages/wallet/Wallet'));
 const Insights = lazy(() => import('./pages/insights/Insights'));
 const OpenFinance = lazy(() => import('./pages/open-finance/OpenFinance'));
 const Future = lazy(() => import('./pages/future/Future'));
+const Plan = lazy(() => import('./pages/plan/Plan'));
+const Method = lazy(() => import('./pages/plan/Method'));
+const CashFlow = lazy(() => import('./pages/cash-flow/CashFlow'));
 const Ask = lazy(() => import('./pages/ask/Ask'));
 const Commitments = lazy(() => import('./pages/commitments/Commitments'));
 const BillingRadar = lazy(() => import('./pages/billing-radar/BillingRadar'));
@@ -55,6 +58,9 @@ export default function App() {
             <Route path="transfers" element={<Navigate to="/envelopes" replace />} />
             <Route path="transactions" element={<Transaction />} />
             <Route path="future" element={<Future />} />
+            <Route path="plan" element={<Plan />} />
+            <Route path="plan/method" element={<Method />} />
+            <Route path="cash-flow" element={<CashFlow />} />
             <Route path="ask" element={<Ask />} />
             <Route path="commitments" element={<Commitments />} />
             <Route path="billing-radar" element={<BillingRadar />} />

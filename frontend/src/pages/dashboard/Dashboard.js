@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
-import { Alert, Box, Button, Container, IconButton, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  ButtonBase,
+  Container,
+  IconButton,
+  Skeleton,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
@@ -11,9 +23,113 @@ import ProjectionChart from '../../components/projection-chart';
 import BankDataNotice from '../../components/bank-data';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
-import { dayLabel, errorKey, money } from '../../utils/wallet';
+import { dayLabel, errorKey, monthLabel, money } from '../../utils/wallet';
 import { balanceHistory, forecastReady } from '../../utils/forecast';
 import { HIDDEN_AMOUNT, useHiddenAmounts } from '../../utils/hiddenAmounts';
+
+/**
+ * The month so far, under the number of the day (proposta de André Graccia, ADR 0021): income, spending and leisure
+ * plus investment, in columns without boxes. Each one opens the screen that explains it.
+ */
+export function MonthTotals({ hidden }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const [state, setState] = useState({ loading: true, error: null, flow: null });
+  const load = useCallback(async () => {
+    setState((previous) => ({ ...previous, loading: true, error: null }));
+    try {
+      setState({ loading: false, error: null, flow: await HttpService.getWithAuth('/cash-flow') });
+    } catch (failure) {
+      setState({ loading: false, error: errorKey(failure), flow: null });
+    }
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (state.error)
+    return (
+      <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ columnGap: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          {t('dashboard.monthError')}
+        </Typography>
+        <Button size="small" onClick={load}>
+          {t('app.retry')}
+        </Button>
+      </Stack>
+    );
+  const columns = [
+    ['monthIncome', 'income', '/cash-flow?tab=income'],
+    ['monthSpending', 'spending', '/cash-flow'],
+    ['monthLeisure', 'leisureAndInvestment', '/plan'],
+  ];
+  const home = state.flow?.home;
+  return (
+    <Box component="section" aria-labelledby="dashboard-month">
+      <Typography id="dashboard-month" variant="body2" color="text.secondary" component="h2" sx={{ m: 0, mb: 1 }}>
+        {t('dashboard.monthTotals', {
+          month: state.flow ? monthLabel(state.flow.month, lang, { month: 'long' }) : '…',
+        })}
+      </Typography>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          columnGap: { xs: 2, md: 4 },
+          pt: 1.5,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        {columns.map(([label, field, to]) => (
+          <ButtonBase
+            key={field}
+            component={RouterLink}
+            to={to}
+            sx={{
+              display: 'block',
+              textAlign: 'left',
+              minWidth: 0,
+              py: 0.5,
+              borderRadius: '12px',
+              '&:hover .month-label': { color: 'text.primary', textDecoration: 'underline' },
+              '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'secondary.main', outlineOffset: 2 },
+            }}
+          >
+            <Typography
+              className="month-label"
+              variant="body2"
+              color="text.secondary"
+              component="span"
+              sx={{ display: 'block' }}
+            >
+              {t(`dashboard.${label}`)}
+            </Typography>
+            {home ? (
+              <Typography
+                component="span"
+                sx={{
+                  display: 'block',
+                  mt: 0.5,
+                  typography: { xs: 'subtitle1', md: 'h5' },
+                  fontWeight: { xs: 600, md: 600 },
+                  fontVariantNumeric: 'tabular-nums',
+                  overflowWrap: 'anywhere',
+                  color: field === 'income' && Number(home.income) > 0 && !hidden ? 'success.main' : 'text.primary',
+                }}
+              >
+                {hidden ? HIDDEN_AMOUNT : money(home[field], lang)}
+              </Typography>
+            ) : (
+              <Skeleton width="80%" height={32} />
+            )}
+          </ButtonBase>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+MonthTotals.propTypes = { hidden: PropTypes.bool };
 
 /**
  * Início (docs/brand/DESIGN.md): a short greeting with the number of the day, a compact 30-day chart, the
@@ -143,6 +259,7 @@ export default function Dashboard() {
                 </Stack>
               </Box>
             )}
+            <MonthTotals hidden={hidden} />
 
             <Box
               sx={{
