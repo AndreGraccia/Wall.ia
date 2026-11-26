@@ -13,6 +13,12 @@
 
 ### Corrigido
 - No Futuro e no Início, a fatia do plano aparecia como `PLAN_INVESTMENT` na lista de compromissos.
+- **Lazer e investimento somava o investimento planejado como se já tivesse saído.** Com o plano ativo, o total incluía a fatia de investimento sem dizer. Agora a linha de baixo separa o gasto do planejado ("R$ 637,85 gasto + R$ 731,25 planejado").
+- O alerta do Início ("o saldo pode chegar a −R$ 84,19") parecia contradizer o limite diário logo acima ("sem nenhum dia negativo"). Os dois estavam certos: o limite supõe gastar só ele, e o alerta usa o ritmo de gastos de sempre. A frase agora começa com "No seu ritmo de gastos".
+- O resultado do "ver se cabe" continuava na tela depois de ativar o plano, comparando com o saldo de antes.
+
+### Testes
+- O E2E (`journey.cjs`) passa também por Início, Plano do mês, Meu método e Entradas e saídas, em 375 e 1280 px.
 
 ## 25/11/2026: CI
 
