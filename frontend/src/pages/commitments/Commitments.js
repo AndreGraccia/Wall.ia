@@ -21,6 +21,31 @@ const capital = (text) => text.replace(/^./, (c) => c.toUpperCase());
 // The bill to pay next: the closed one waiting for its due date, else the first one that will close.
 const billToPay = (card) => card.invoices.find((invoice) => invoice.status === 'CLOSED') || card.invoices[0];
 
+/**
+ * What leaves for debts in the first month that has something due: the bill to pay of each card and the
+ * instalment of each loan whose upcoming due date (the backend's, never one already past) falls in that month.
+ * One horizon for the hero instead of three numbers that each meant a different period.
+ */
+export function monthDebts(cards, loans) {
+  const parts = [
+    ...cards
+      .map(billToPay)
+      .filter((bill) => bill?.dueDate && Number(bill.total) > 0)
+      .map((bill) => ({ kind: 'bill', amount: bill.total, date: bill.dueDate })),
+    ...loans
+      .filter((loan) => loan.upcomingDueDate)
+      .map((loan) => ({ kind: 'loan', amount: loan.installmentAmount, date: loan.upcomingDueDate })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+  if (!parts.length) return null;
+  const month = parts[0].date.slice(0, 7);
+  const inMonth = parts.filter((part) => part.date.startsWith(month));
+  return { month, total: sum(inMonth.map((part) => part.amount)), parts: inMonth };
+}
+
+/** The bank keeps an instalment's date until it sees the payment: a date behind the upcoming one is unpaid to us. */
+export const overdue = (loan) =>
+  Boolean(loan.installmentsRemaining > 0 && loan.nextDueDate && loan.upcomingDueDate !== loan.nextDueDate);
+
 /** Numbers in columns, no boxes (DESIGN.md), on a divider. */
 function Columns({ children, sx }) {
   return (
@@ -195,7 +220,7 @@ function CardSection({ card, revolving }) {
 }
 CardSection.propTypes = { card: PropTypes.object.isRequired, revolving: PropTypes.object };
 
-function LoanSection({ loan, market }) {
+function LoanSection({ loan, market, indicators }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const paidShare = (loan.installmentsPaid / (loan.installmentsTotal || 1)) * 100;
@@ -218,9 +243,9 @@ function LoanSection({ loan, market }) {
           label={t('commitments.nextPayment')}
           value={money(loan.installmentAmount, lang)}
           help={
-            loan.nextDueDate
+            loan.upcomingDueDate
               ? [
-                  dayLabel(loan.nextDueDate, lang, FULL_DATE),
+                  dayLabel(loan.upcomingDueDate, lang, FULL_DATE),
                   loan.lastDueDate &&
                     t('commitments.endsOn', {
                       date: dayLabel(loan.lastDueDate, lang, { month: 'short', year: 'numeric' }),
@@ -240,6 +265,11 @@ function LoanSection({ loan, market }) {
           />
         )}
       </Columns>
+      {overdue(loan) && (
+        <Typography variant="body2" sx={{ color: 'warning.main' }}>
+          {t('commitments.overdue', { date: dayLabel(loan.nextDueDate, lang) })}
+        </Typography>
+      )}
       <Box sx={{ maxWidth: 520 }}>
         <Meter value={paidShare} label={t('commitments.progressLabel')} />
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
@@ -284,12 +314,60 @@ function LoanSection({ loan, market }) {
               {t('commitments.costHelp')}
             </Typography>
           )}
+          {/* Selic, IPCA and CDI are context for this rate, not numbers of their own at the end of the page. */}
+          {indicators.length > 0 && (
+            <Typography variant="body2" color="text.secondary">
+              {t('commitments.indicatorsLine', {
+                items: indicators
+                  .map(
+                    (indicator) =>
+                      `${t(`commitments.indicators.${indicator.code}`, { defaultValue: indicator.code })} ${percent(
+                        indicator.value,
+                        lang
+                      )}`
+                  )
+                  .join(' · '),
+                date: dayLabel(indicators[0].referenceDate, lang),
+              })}
+            </Typography>
+          )}
         </Stack>
       </Disclosure>
     </Stack>
   );
 }
-LoanSection.propTypes = { loan: PropTypes.object.isRequired, market: PropTypes.object };
+LoanSection.propTypes = {
+  loan: PropTypes.object.isRequired,
+  market: PropTypes.object,
+  indicators: PropTypes.array.isRequired,
+};
+
+/** The hero: one month, one total, and what makes it up as metadata. */
+function MonthHero({ debts }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  return (
+    <Box>
+      <Typography variant="h6" component="p" color="text.secondary" sx={{ fontWeight: 400 }}>
+        {t('commitments.hero.lead', { month: monthLabel(debts.month, lang, { month: 'long' }) })}
+      </Typography>
+      <Typography variant="h2" component="p" sx={{ my: 0.5 }}>
+        {money(debts.total, lang)}
+        <Typography component="span" variant="h5" color="text.secondary" sx={{ ml: 1, fontWeight: 500 }}>
+          {t('commitments.hero.suffix')}
+        </Typography>
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {debts.parts
+          .map((part) =>
+            t(`commitments.hero.${part.kind}`, { amount: money(part.amount, lang), date: dayLabel(part.date, lang) })
+          )
+          .join(' · ')}
+      </Typography>
+    </Box>
+  );
+}
+MonthHero.propTypes = { debts: PropTypes.object.isRequired };
 
 /** A titled group of the page: a divider on top, the title, then its items with room between them. */
 function Group({ id, title, children }) {
@@ -305,8 +383,7 @@ function Group({ id, title, children }) {
 Group.propTypes = { id: PropTypes.string.isRequired, title: PropTypes.string.isRequired, children: PropTypes.node };
 
 export default function Commitments() {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language;
+  const { t } = useTranslation();
   const [state, setState] = useState({ loading: true, error: null, data: null });
   // Banco Central references are extra context: without them the page is still whole.
   const [market, setMarket] = useState(null);
@@ -332,7 +409,7 @@ export default function Commitments() {
   const { data } = state;
   const rate = (modality) => market?.rates?.find((quote) => quote.modality === modality) || null;
   const empty = data && !data.cards.length && !data.loans.length;
-  const bills = data ? data.cards.map(billToPay).filter(Boolean) : [];
+  const debts = data ? monthDebts(data.cards, data.loans) : null;
   return (
     <>
       <Helmet>
@@ -370,33 +447,7 @@ export default function Commitments() {
         )}
         {data && !empty && (
           <Stack spacing={{ xs: 5, md: 6 }} aria-busy={state.loading}>
-            {/* The three numbers the page answers, before the detail. */}
-            <Columns>
-              {bills.length > 0 && (
-                <StatBlock
-                  compact
-                  label={t('commitments.summary.bills')}
-                  value={money(sum(bills.map((bill) => bill.total)), lang)}
-                  help={t('commitments.summary.billsHelp', { count: bills.length })}
-                />
-              )}
-              {data.loans.length > 0 && (
-                <StatBlock
-                  compact
-                  label={t('commitments.summary.loans')}
-                  value={money(sum(data.loans.map((loan) => loan.outstandingBalance)), lang)}
-                  help={t('commitments.summary.loansHelp', { count: data.loans.length })}
-                />
-              )}
-              {data.loans.length > 0 && (
-                <StatBlock
-                  compact
-                  label={t('commitments.summary.monthly')}
-                  value={money(sum(data.loans.map((loan) => loan.installmentAmount)), lang)}
-                  help={t('commitments.summary.monthlyHelp')}
-                />
-              )}
-            </Columns>
+            {debts && <MonthHero debts={debts} />}
             {data.cards.length > 0 && (
               <Group id="cards-title" title={t('commitments.cardsTitle')}>
                 {data.cards.map((card) => (
@@ -407,7 +458,12 @@ export default function Commitments() {
             {data.loans.length > 0 && (
               <Group id="loans-title" title={t('commitments.loansTitle')}>
                 {data.loans.map((loan) => (
-                  <LoanSection key={loan.id} loan={loan} market={rate('PERSONAL_LOAN')} />
+                  <LoanSection
+                    key={loan.id}
+                    loan={loan}
+                    market={rate('PERSONAL_LOAN')}
+                    indicators={market?.indicators || []}
+                  />
                 ))}
               </Group>
             )}
@@ -417,30 +473,6 @@ export default function Commitments() {
         {data && (
           <Box sx={{ mt: { xs: 5, md: 6 } }}>
             <DebtPayoff manualDebts={data.manualDebts || []} onChange={load} />
-          </Box>
-        )}
-        {data && market?.indicators?.length > 0 && (
-          <Box
-            component="section"
-            aria-labelledby="bcb-indicators"
-            sx={{ mt: { xs: 5, md: 6 }, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}
-          >
-            <Typography id="bcb-indicators" variant="subtitle1" component="h2" sx={{ mb: 2 }}>
-              {t('commitments.indicatorsTitle')}
-            </Typography>
-            <Columns>
-              {market.indicators.map((indicator) => (
-                <StatBlock
-                  compact
-                  key={indicator.code}
-                  label={t(`commitments.indicators.${indicator.code}`, { defaultValue: indicator.code })}
-                  value={percent(indicator.value, lang)}
-                  help={t('commitments.indicatorDate', {
-                    date: dayLabel(indicator.referenceDate, lang, FULL_DATE),
-                  })}
-                />
-              ))}
-            </Columns>
           </Box>
         )}
       </Container>

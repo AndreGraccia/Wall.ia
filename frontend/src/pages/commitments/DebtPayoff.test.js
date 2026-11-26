@@ -39,6 +39,12 @@ afterEach(() => act(() => root.unmount()));
 const input = () => container.querySelector('input');
 const field = (name) => container.querySelector(`input[name="${name}"]`);
 const submit = () => container.querySelector('button[type="submit"]');
+// The Pix form is folded into one row until the person opens it.
+const openPixForm = async () => {
+  expect(field('pixLabel')).toBeNull();
+  const row = [...container.querySelectorAll('button')].find((b) => b.textContent === 'commitments.pix.addTitle');
+  await act(async () => Simulate.click(row));
+};
 
 test('it compares the two orders with paying only the instalments and lists the cheapest order', async () => {
   HttpService.getWithAuth.mockResolvedValue({
@@ -91,6 +97,7 @@ test('a Pix on credit is registered with its monthly CET and the page reloads (B
     )
   );
 
+  await openPixForm();
   await act(async () => Simulate.change(field('pixLabel'), { target: { value: 'Banco Aurora' } }));
   await act(async () => Simulate.change(field('pixBalance'), { target: { value: '1000,00' } }));
   await act(async () => Simulate.change(field('pixInstallment'), { target: { value: '100' } }));
@@ -108,6 +115,7 @@ test('a Pix on credit is registered with its monthly CET and the page reloads (B
 });
 
 test('a Pix on credit without a CET is refused before any request: the plan never guesses a rate', async () => {
+  await openPixForm();
   await act(async () => Simulate.change(field('pixLabel'), { target: { value: 'Banco Aurora' } }));
   await act(async () => Simulate.change(field('pixBalance'), { target: { value: '1000' } }));
   await act(async () => Simulate.change(field('pixInstallment'), { target: { value: '100' } }));

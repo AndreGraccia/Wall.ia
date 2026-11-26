@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
 import { CertaintyChip } from '../../components/future-ui';
 import { Disclosure, ListRow } from '../../components/detail-ui';
+import { SectionCard } from '../../components/wallet-ui';
 import { errorKey, money, parseAmount } from '../../utils/wallet';
 
 /** CET in % a month as the bank app shows it ("8,5"): up to 4 decimals, above 0 and at most 30 (same as the API). */
@@ -63,105 +64,118 @@ function PixCredit({ manualDebts, onChange, lang, t }) {
     );
   };
 
+  // Typed debts stay in sight; the four-field form folds into one row until the person needs it.
   return (
-    <Card component="section" aria-labelledby="pix-credit" sx={{ p: { xs: 2.5, md: 3 } }}>
-      <Typography id="pix-credit" variant="h6" component="h2">
-        {t('commitments.pix.title')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-        {t('commitments.pix.helpShort')}
-      </Typography>
-      <Disclosure label={t('commitments.pix.why')} sx={{ mt: 0.5 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 680 }}>
-          {t('commitments.pix.help')}
-        </Typography>
-      </Disclosure>
+    <Box>
       {manualDebts.length > 0 && (
-        <Box sx={{ mt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-          {manualDebts.map((debt) => (
-            <ListRow
-              key={debt.id}
-              title={debt.label}
-              meta={t('commitments.pix.lineMeta', {
-                installment: money(debt.installmentAmount, lang),
-                cet: Number(debt.monthlyCet).toLocaleString(lang === 'en' ? 'en-US' : 'pt-BR'),
-              })}
-              value={money(debt.outstandingBalance, lang)}
-              aside={
-                <Stack direction="row" flexWrap="wrap" justifyContent="flex-end" alignItems="center" sx={{ gap: 0.5 }}>
-                  <Chip size="small" variant="outlined" label={t('commitments.pix.typedByYou')} />
-                  <CertaintyChip certainty={debt.certainty} />
-                  <Button
-                    size="small"
-                    color="inherit"
-                    disabled={state.busy}
-                    onClick={() => run(() => HttpService.deleteWithAuth(`/future/manual-debts/${debt.id}`), false)}
-                    aria-label={`${t('commitments.pix.remove')} ${debt.label}`}
+        <Box component="section" aria-labelledby="pix-credit" sx={{ mb: 2 }}>
+          <Typography id="pix-credit" variant="h6" component="h2">
+            {t('commitments.pix.title')}
+          </Typography>
+          <Box sx={{ mt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+            {manualDebts.map((debt) => (
+              <ListRow
+                key={debt.id}
+                title={debt.label}
+                meta={t('commitments.pix.lineMeta', {
+                  installment: money(debt.installmentAmount, lang),
+                  cet: Number(debt.monthlyCet).toLocaleString(lang === 'en' ? 'en-US' : 'pt-BR'),
+                })}
+                value={money(debt.outstandingBalance, lang)}
+                aside={
+                  <Stack
+                    direction="row"
+                    flexWrap="wrap"
+                    justifyContent="flex-end"
+                    alignItems="center"
+                    sx={{ gap: 0.5 }}
                   >
-                    {t('commitments.pix.remove')}
-                  </Button>
-                </Stack>
-              }
-            />
-          ))}
+                    <Chip size="small" variant="outlined" label={t('commitments.pix.typedByYou')} />
+                    <CertaintyChip certainty={debt.certainty} />
+                    <Button
+                      size="small"
+                      color="inherit"
+                      disabled={state.busy}
+                      onClick={() => run(() => HttpService.deleteWithAuth(`/future/manual-debts/${debt.id}`), false)}
+                      aria-label={`${t('commitments.pix.remove')} ${debt.label}`}
+                    >
+                      {t('commitments.pix.remove')}
+                    </Button>
+                  </Stack>
+                }
+              />
+            ))}
+          </Box>
         </Box>
       )}
-      <Box component="form" onSubmit={add} sx={{ mt: 2 }}>
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
-            gap: 1.5,
-            alignItems: 'start',
-          }}
-        >
-          <TextField
-            size="small"
-            name="pixLabel"
-            label={t('commitments.pix.label')}
-            value={form.pixLabel}
-            onChange={change('pixLabel')}
-            inputProps={{ maxLength: 60 }}
-          />
-          <TextField
-            size="small"
-            name="pixBalance"
-            label={t('commitments.pix.balance')}
-            value={form.pixBalance}
-            onChange={change('pixBalance')}
-            inputProps={{ inputMode: 'decimal' }}
-            error={amountInvalid(form.pixBalance, balance)}
-          />
-          <TextField
-            size="small"
-            name="pixInstallment"
-            label={t('commitments.pix.installment')}
-            value={form.pixInstallment}
-            onChange={change('pixInstallment')}
-            inputProps={{ inputMode: 'decimal' }}
-            error={amountInvalid(form.pixInstallment, installment)}
-          />
-          <TextField
-            size="small"
-            name="pixCet"
-            label={t('commitments.pix.cet')}
-            value={form.pixCet}
-            onChange={change('pixCet')}
-            inputProps={{ inputMode: 'decimal' }}
-            error={cetInvalid}
-            helperText={cetInvalid ? t('commitments.pix.cetInvalid') : t('commitments.pix.cetHelp')}
-          />
+      <SectionCard collapsible title={t('commitments.pix.addTitle')}>
+        <Box sx={{ px: 3, pb: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('commitments.pix.helpShort')}
+          </Typography>
+          <Disclosure label={t('commitments.pix.why')} sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 680 }}>
+              {t('commitments.pix.help')}
+            </Typography>
+          </Disclosure>
+          <Box component="form" onSubmit={add} sx={{ mt: 2 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+                gap: 1.5,
+                alignItems: 'start',
+              }}
+            >
+              <TextField
+                size="small"
+                name="pixLabel"
+                label={t('commitments.pix.label')}
+                value={form.pixLabel}
+                onChange={change('pixLabel')}
+                inputProps={{ maxLength: 60 }}
+              />
+              <TextField
+                size="small"
+                name="pixBalance"
+                label={t('commitments.pix.balance')}
+                value={form.pixBalance}
+                onChange={change('pixBalance')}
+                inputProps={{ inputMode: 'decimal' }}
+                error={amountInvalid(form.pixBalance, balance)}
+              />
+              <TextField
+                size="small"
+                name="pixInstallment"
+                label={t('commitments.pix.installment')}
+                value={form.pixInstallment}
+                onChange={change('pixInstallment')}
+                inputProps={{ inputMode: 'decimal' }}
+                error={amountInvalid(form.pixInstallment, installment)}
+              />
+              <TextField
+                size="small"
+                name="pixCet"
+                label={t('commitments.pix.cet')}
+                value={form.pixCet}
+                onChange={change('pixCet')}
+                inputProps={{ inputMode: 'decimal' }}
+                error={cetInvalid}
+                helperText={cetInvalid ? t('commitments.pix.cetInvalid') : t('commitments.pix.cetHelp')}
+              />
+            </Box>
+            <Button type="submit" variant="outlined" disabled={!ready || state.busy} sx={{ mt: 2 }}>
+              {t('commitments.pix.add')}
+            </Button>
+          </Box>
         </Box>
-        <Button type="submit" variant="outlined" disabled={!ready || state.busy} sx={{ mt: 2 }}>
-          {t('commitments.pix.add')}
-        </Button>
-      </Box>
+      </SectionCard>
       {state.error && (
         <Alert severity="error" sx={{ mt: 2 }} role="alert">
           {t(state.error)}
         </Alert>
       )}
-    </Card>
+    </Box>
   );
 }
 
