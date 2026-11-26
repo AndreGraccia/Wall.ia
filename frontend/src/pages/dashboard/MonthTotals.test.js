@@ -55,6 +55,20 @@ test('the three totals of the month each open the screen that explains them', as
   expect(links).toEqual(['/cash-flow?tab=income', '/cash-flow', '/plan']);
 });
 
+test('a planned investment is labelled as planned, apart from what was spent on leisure', async () => {
+  await renderTotals(false);
+  expect(text()).toContain('dashboard.monthLeisureSplit');
+
+  HttpService.getWithAuth.mockResolvedValue({
+    month: '2026-11',
+    home: { income: 5000, spending: 1620, leisure: 120, investment: 0, leisureAndInvestment: 120 },
+  });
+  act(() => root.unmount());
+  root = createRoot(container);
+  await renderTotals(false);
+  expect(text()).not.toContain('dashboard.monthLeisureSplit');
+});
+
 test('"ocultar saldo" hides the three totals too', async () => {
   await renderTotals(true);
 

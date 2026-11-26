@@ -131,6 +131,15 @@ export function MonthTotals({ hidden, balance }) {
             ) : (
               <Skeleton width="80%" height={32} />
             )}
+            {/* The investment is the plan's decision, not a movement: say so, never sum it in silence. */}
+            {home && field === 'leisureAndInvestment' && Number(home.investment) > 0 && (
+              <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'block' }}>
+                {t('dashboard.monthLeisureSplit', {
+                  leisure: money(home.leisure, lang),
+                  investment: money(home.investment, lang),
+                })}
+              </Typography>
+            )}
           </ButtonBase>
         ))}
       </Box>
