@@ -68,8 +68,15 @@ public class TransactionService {
      */
     @Transactional(readOnly = true)
     public Page<TransactionResponse> findAllByUserId(Long userId, java.time.Instant from, Pageable pageable) {
-        return transactionRepository.findPageByUserId(userId, from, pageable)
-                .map(transactionResponseMapper::toTransactionResponse);
+        Page<Transaction> page = transactionRepository.findPageByUserId(userId, from, pageable);
+        // ponytail: pairs are looked for inside the page; a pair split by a page break shows as two ordinary
+        // moves. Upgrade: query the neighbouring day when the page edge cuts one.
+        java.util.Set<Transaction> ownMoves = InsightsService.ownAccountPairs(page.getContent());
+        return page.map(transaction -> {
+            TransactionResponse response = transactionResponseMapper.toTransactionResponse(transaction);
+            response.setOwnAccountMove(ownMoves.contains(transaction));
+            return response;
+        });
     }
 
     /**

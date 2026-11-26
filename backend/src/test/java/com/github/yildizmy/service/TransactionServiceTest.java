@@ -127,6 +127,43 @@ class TransactionServiceTest {
     }
 
     @Test
+    void findAllByUserId_marksBothSidesOfAMoveBetweenOwnAccounts() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        Wallet checking = new Wallet();
+        checking.setId(1L);
+        Wallet savings = new Wallet();
+        savings.setId(2L);
+        Transaction out = imported(10L, "Withdrawal", checking, "500.00");
+        Transaction in = imported(11L, "Deposit", savings, "500.00");
+        Transaction rent = imported(12L, "Withdrawal", checking, "1500.00");
+        when(transactionRepository.findPageByUserId(1L, null, pageable))
+                .thenReturn(new PageImpl<>(List.of(out, in, rent), pageable, 3));
+        when(transactionResponseMapper.toTransactionResponse(any(Transaction.class)))
+                .thenAnswer(call -> new TransactionResponse());
+
+        var result = transactionService.findAllByUserId(1L, null, pageable).getContent();
+
+        assertTrue(result.get(0).isOwnAccountMove());
+        assertTrue(result.get(1).isOwnAccountMove());
+        assertFalse(result.get(2).isOwnAccountMove(), "a payment with no matching deposit is an expense");
+    }
+
+    private static Transaction imported(long id, String typeName, Wallet wallet, String amount) {
+        var type = new com.github.yildizmy.domain.entity.Type();
+        type.setName(typeName);
+        Transaction transaction = new Transaction();
+        transaction.setId(id);
+        transaction.setAmount(new BigDecimal(amount));
+        transaction.setCreatedAt(java.time.Instant.parse("2026-11-20T15:00:00Z"));
+        transaction.setSource(com.github.yildizmy.domain.enums.TransactionSource.OPEN_FINANCE);
+        transaction.setPaymentType("PIX");
+        transaction.setFromWallet(wallet);
+        transaction.setToWallet(wallet);
+        transaction.setType(type);
+        return transaction;
+    }
+
+    @Test
     void findAll_shouldReturnPageOfTransactionResponses() {
         var pageable = Pageable.unpaged();
         var transactionPage = new PageImpl<>(List.of(testTransaction));

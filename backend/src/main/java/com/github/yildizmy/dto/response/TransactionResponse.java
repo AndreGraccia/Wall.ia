@@ -25,4 +25,6 @@ public class TransactionResponse {
     private WalletResponse fromWallet;
     private WalletResponse toWallet;
     private TypeResponse type;
+    /** One side of a move between the user's own accounts imported as two entries; neither income nor expense. */
+    private boolean ownAccountMove;
 }

@@ -66,6 +66,8 @@ export function directionFor(transaction, wallets) {
   const owned = new Set(wallets.map((wallet) => wallet.iban));
   const from = owned.has(transaction.fromWallet?.iban);
   const to = owned.has(transaction.toWallet?.iban);
+  // Open Finance imports each side of a move between own accounts as its own deposit/withdrawal; the API pairs them.
+  if (transaction.ownAccountMove) return 'internal';
   if (transaction.type?.name === 'Deposit' || transaction.type?.name === 'Initial balance')
     return to ? 'incoming' : 'adjustment';
   if (transaction.type?.name === 'Withdrawal') return from ? 'outgoing' : 'adjustment';
