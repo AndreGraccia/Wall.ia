@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Entradas e saídas (ADR 0021): totals of one month by account, payment method and category, in cash regime. */
 class MonthFlowTest {
@@ -54,6 +55,26 @@ class MonthFlowTest {
         assertEquals(new BigDecimal("80.00"), total(result.spending().byMethod(), "PIX"));
         assertEquals(new BigDecimal("40.00"), total(result.spending().byMethod(), MonthFlow.UNKNOWN_METHOD));
         assertEquals(new BigDecimal("120.00"), result.everyday());
+    }
+
+    @Test
+    void itemsCarryTheGroupKeysNewestFirstSoTheListFiltersLikeTheGroups() {
+        List<Line> lines = List.of(
+                line("2026-11-03", "80.00", Direction.OUT, "Mercado", "Conta", "Banco", "PIX"),
+                line("2026-11-12", "45.00", Direction.OUT, "Farmácia", "Conta", "Banco", null),
+                line("2026-11-05", "5000.00", Direction.IN, "Empresa X", "Conta", "Banco", "TED"));
+
+        MonthFlow.Result result = MonthFlow.of(lines, Map.of(), Set.of(), List.of());
+
+        List<MonthFlow.Item> spent = result.spending().items();
+        assertEquals(List.of("Farmácia", "Mercado"), spent.stream().map(MonthFlow.Item::counterparty).toList());
+        assertEquals(MonthFlow.UNKNOWN_METHOD, spent.get(0).method());
+        assertEquals(result.spending().byAccount().get(0).key(), spent.get(0).account());
+        assertEquals(result.spending().total(),
+                spent.stream().map(MonthFlow.Item::amount).reduce(BigDecimal.ZERO, BigDecimal::add));
+        for (MonthFlow.Item item : spent)
+            assertTrue(result.spending().byCategory().stream().anyMatch(group -> group.key().equals(item.category())));
+        assertEquals(1, result.income().items().size());
     }
 
     @Test

@@ -1112,6 +1112,18 @@ const resources = {
         UNKNOWN: 'Método não informado',
       },
       cashFlow: {
+        filter: { by: 'Filtrar a lista por {{name}}', active: 'Só {{name}}', clear: 'Limpar filtro' },
+        items: {
+          title: 'Lançamentos',
+          summary_one: '{{count}} lançamento, {{amount}}',
+          summary_other: '{{count}} lançamentos, {{amount}}',
+          noName: 'Sem descrição',
+          more: 'Mostrar mais {{count}}',
+        },
+        upcoming: {
+          title: 'Ainda vai sair em {{month}}',
+          help: 'Previsto pelo Futuro, {{amount}} no total. Não entra no valor acima, que é só o que já saiu.',
+        },
         pageTitle: 'Entradas e saídas | Wall.ia',
         heading: 'Entradas e saídas',
         month: 'Mês',
@@ -2748,6 +2760,18 @@ const resources = {
         UNKNOWN: 'Method not reported',
       },
       cashFlow: {
+        filter: { by: 'Filter the list by {{name}}', active: 'Only {{name}}', clear: 'Clear filter' },
+        items: {
+          title: 'Movements',
+          summary_one: '{{count}} movement, {{amount}}',
+          summary_other: '{{count}} movements, {{amount}}',
+          noName: 'No description',
+          more: 'Show {{count}} more',
+        },
+        upcoming: {
+          title: 'Still to leave in {{month}}',
+          help: 'Forecast by Future, {{amount}} in total. Not part of the amount above, which is only what already left.',
+        },
         pageTitle: 'Money in and out | Wall.ia',
         heading: 'Money in and out',
         month: 'Month',

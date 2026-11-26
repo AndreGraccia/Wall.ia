@@ -4,6 +4,7 @@ import com.github.yildizmy.service.future.RecurrenceDetector.Direction;
 import com.github.yildizmy.service.future.RecurrenceDetector.Movement;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -33,7 +34,19 @@ public final class MonthFlow {
     public record Group(String key, BigDecimal total, int count) {
     }
 
-    public record Side(BigDecimal total, int count, List<Group> byAccount, List<Group> byMethod, List<Group> byCategory) {
+    /**
+     * One settled movement, with the same keys the groups use, so a screen can filter the list by any group.
+     *
+     * @param method   Open Finance payment type, or {@link #UNKNOWN_METHOD}
+     * @param category same rule as {@code byCategory}
+     */
+    public record Item(long id, LocalDate date, String counterparty, BigDecimal amount, String account, String method,
+                       String category) {
+    }
+
+    /** @param items the movements of the side, newest first */
+    public record Side(BigDecimal total, int count, List<Group> byAccount, List<Group> byMethod, List<Group> byCategory,
+                       List<Item> items) {
     }
 
     /** @param everyday the spending that is neither a bill nor a debt: what the leisure slice measures */
@@ -82,8 +95,17 @@ public final class MonthFlow {
     private static Side side(List<Line> lines, Map<Line, String> categories) {
         return new Side(sum(lines), lines.size(),
                 groups(lines, line -> account(line.movement())),
-                groups(lines, line -> line.paymentType() == null ? UNKNOWN_METHOD : line.paymentType()),
-                groups(lines, categories::get));
+                groups(lines, MonthFlow::method),
+                groups(lines, categories::get),
+                lines.stream()
+                        .map(line -> new Item(line.movement().id(), line.movement().date(), line.movement().counterparty(),
+                                line.movement().amount(), account(line.movement()), method(line), categories.get(line)))
+                        .sorted(Comparator.comparing(Item::date).reversed().thenComparing(Item::id, Comparator.reverseOrder()))
+                        .toList());
+    }
+
+    private static String method(Line line) {
+        return line.paymentType() == null ? UNKNOWN_METHOD : line.paymentType();
     }
 
     private static List<Group> groups(List<Line> lines, Function<Line, String> key) {

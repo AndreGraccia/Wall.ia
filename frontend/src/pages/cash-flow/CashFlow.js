@@ -5,6 +5,8 @@ import {
   Alert,
   Box,
   Button,
+  ButtonBase,
+  Chip,
   Container,
   MenuItem,
   Skeleton,
@@ -19,8 +21,11 @@ import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
 import BankDataNotice from '../../components/bank-data';
 import { PageHeading } from '../../components/wallet-ui';
-import { Disclosure } from '../../components/detail-ui';
-import { errorKey, monthLabel, money, percent } from '../../utils/wallet';
+import { Disclosure, ListRow } from '../../components/detail-ui';
+import { EventRow } from '../../components/future-ui';
+import { dayLabel, errorKey, monthLabel, money, percent } from '../../utils/wallet';
+
+const PAGE = 30;
 
 const TABS = ['spending', 'income'];
 const GROUPS = ['byAccount', 'byMethod', 'byCategory'];
@@ -42,8 +47,11 @@ function groupLabel(group, key, t) {
   return key;
 }
 
-/** One grouping as a reading list: name and count on the left, tabular value on the right, a quiet share bar. */
-function GroupList({ group, items, total }) {
+/**
+ * One grouping as a reading list: name and count on the left, tabular value on the right, a quiet share bar. Each
+ * row filters the list of movements below (documento de evolucao 4.3 e 4.4: por conta, metodo e categoria).
+ */
+function GroupList({ group, items, total, filter, onFilter }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const id = `cash-flow-${group}`;
@@ -56,31 +64,49 @@ function GroupList({ group, items, total }) {
         {items.map((item) => {
           const share = total > 0 ? Number(item.total) / total : 0;
           return (
-            <Box component="li" key={item.key} sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Stack direction="row" alignItems="baseline" spacing={2}>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" component="p" sx={{ m: 0, overflowWrap: 'anywhere' }}>
-                    {groupLabel(group, item.key, t)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {t('cashFlow.count', { count: item.count })}
-                  </Typography>
-                </Box>
-                <Typography
-                  variant="subtitle2"
-                  component="p"
-                  sx={{ m: 0, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
-                >
-                  {money(item.total, lang)}
-                </Typography>
-              </Stack>
-              <Box
-                role="img"
-                aria-label={t('cashFlow.share', { percent: percent(share * 100, lang) })}
-                sx={{ mt: 1, height: 2, borderRadius: 999, bgcolor: 'divider', overflow: 'hidden' }}
+            <Box component="li" key={item.key} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+              <ButtonBase
+                onClick={() => onFilter(selected(filter, group, item.key) ? null : { group, key: item.key })}
+                aria-pressed={selected(filter, group, item.key)}
+                aria-label={t('cashFlow.filter.by', { name: groupLabel(group, item.key, t) })}
+                sx={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  py: 1.25,
+                  px: 1,
+                  mx: -1,
+                  borderRadius: '8px',
+                  bgcolor: selected(filter, group, item.key) ? 'action.selected' : 'transparent',
+                  '&:hover': { bgcolor: 'action.hover' },
+                  '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'secondary.main' },
+                }}
               >
-                <Box sx={{ height: '100%', width: `${share * 100}%`, bgcolor: 'text.secondary' }} />
-              </Box>
+                <Stack direction="row" alignItems="baseline" spacing={2}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle2" component="p" sx={{ m: 0, overflowWrap: 'anywhere' }}>
+                      {groupLabel(group, item.key, t)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {t('cashFlow.count', { count: item.count })}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="subtitle2"
+                    component="p"
+                    sx={{ m: 0, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+                  >
+                    {money(item.total, lang)}
+                  </Typography>
+                </Stack>
+                <Box
+                  role="img"
+                  aria-label={t('cashFlow.share', { percent: percent(share * 100, lang) })}
+                  sx={{ mt: 1, height: 2, borderRadius: 999, bgcolor: 'divider', overflow: 'hidden' }}
+                >
+                  <Box sx={{ height: '100%', width: `${share * 100}%`, bgcolor: 'text.secondary' }} />
+                </Box>
+              </ButtonBase>
             </Box>
           );
         })}
@@ -92,7 +118,115 @@ GroupList.propTypes = {
   group: PropTypes.string.isRequired,
   items: PropTypes.array.isRequired,
   total: PropTypes.number,
+  filter: PropTypes.object,
+  onFilter: PropTypes.func.isRequired,
 };
+
+const FIELD = { byAccount: 'account', byMethod: 'method', byCategory: 'category' };
+const selected = (filter, group, key) => filter?.group === group && filter?.key === key;
+
+/** The movements of the side, filtered by the group row picked above; same keys, so the totals agree. */
+export function filterItems(items, filter) {
+  return filter ? items.filter((item) => item[FIELD[filter.group]] === filter.key) : items;
+}
+
+function Movements({ items, filter, onClear }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const [shown, setShown] = useState(PAGE);
+  const list = filterItems(items, filter);
+  const sum = list.reduce((total, item) => total + Number(item.amount), 0);
+  return (
+    <Box component="section" aria-labelledby="cash-flow-items">
+      <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1, mb: 1 }}>
+        <Typography id="cash-flow-items" variant="h6" component="h2" sx={{ mr: 1 }}>
+          {t('cashFlow.items.title')}
+        </Typography>
+        {filter && (
+          <Chip
+            label={t('cashFlow.filter.active', { name: groupLabel(filter.group, filter.key, t) })}
+            onDelete={onClear}
+          />
+        )}
+      </Stack>
+      <Typography variant="body2" color="text.secondary" component="p" sx={{ m: 0, mb: 1 }} role="status">
+        {t('cashFlow.items.summary', { count: list.length, amount: money(sum, lang) })}
+      </Typography>
+      <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+        {list.slice(0, shown).map((item) => (
+          <ListRow
+            key={item.id}
+            title={item.counterparty || t('cashFlow.items.noName')}
+            meta={[
+              dayLabel(item.date, lang),
+              item.account,
+              groupLabel('byMethod', item.method, t),
+              groupLabel('byCategory', item.category, t),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            value={money(item.amount, lang)}
+          />
+        ))}
+      </Box>
+      {list.length > shown && (
+        <Button onClick={() => setShown(shown + PAGE)} sx={{ mt: 1 }}>
+          {t('cashFlow.items.more', { count: Math.min(PAGE, list.length - shown) })}
+        </Button>
+      )}
+    </Box>
+  );
+}
+Movements.propTypes = { items: PropTypes.array.isRequired, filter: PropTypes.object, onClear: PropTypes.func };
+
+/**
+ * What still leaves this month, from the same projection as Futuro (bills, card invoice, instalments). Apart from
+ * the total above, which is only what already happened (documento de evolução 4.4).
+ */
+function StillToLeave({ month }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const [events, setEvents] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    HttpService.getWithAuth('/future/overview?horizon=31')
+      .then((overview) => {
+        if (!alive) return;
+        const today = overview?.projection?.days?.[0]?.date;
+        setEvents(
+          (overview?.projection?.events || []).filter(
+            (event) =>
+              Number(event.amount) < 0 &&
+              event.date.startsWith(month) &&
+              (!today || event.date > today) &&
+              event.category !== 'DAILY_SPENDING'
+          )
+        );
+      })
+      .catch(() => alive && setEvents([]));
+    return () => {
+      alive = false;
+    };
+  }, [month]);
+  if (!events?.length) return null;
+  const sum = events.reduce((total, event) => total + Number(event.amount), 0);
+  return (
+    <Box component="section" aria-labelledby="cash-flow-upcoming">
+      <Typography id="cash-flow-upcoming" variant="h6" component="h2">
+        {t('cashFlow.upcoming.title', { month: monthLabel(month, lang, { month: 'long' }) })}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" component="p" sx={{ m: 0, mt: 0.5, mb: 1 }}>
+        {t('cashFlow.upcoming.help', { amount: money(Math.abs(sum), lang) })}
+      </Typography>
+      <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+        {events.map((event) => (
+          <EventRow key={`${event.reference}-${event.date}`} event={event} dense />
+        ))}
+      </Box>
+    </Box>
+  );
+}
+StillToLeave.propTypes = { month: PropTypes.string.isRequired };
 
 /**
  * Entradas e saídas (ADR 0021, proposta de André Graccia): what already happened in a month, spending and income
@@ -107,6 +241,8 @@ export default function CashFlow() {
   const month = months.includes(searchParams.get('month')) ? searchParams.get('month') : months[0];
   const tab = TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'spending';
   const [state, setState] = useState({ loading: true, error: null, data: null });
+  const [filter, setFilter] = useState(null);
+  useEffect(() => setFilter(null), [month, tab]);
 
   const latest = useRef(0);
   const load = useCallback(async () => {
@@ -275,10 +411,21 @@ export default function CashFlow() {
                   }}
                 >
                   {GROUPS.map((group) => (
-                    <GroupList key={group} group={group} items={side[group] || []} total={total} />
+                    <GroupList
+                      key={group}
+                      group={group}
+                      items={side[group] || []}
+                      total={total}
+                      filter={filter}
+                      onFilter={setFilter}
+                    />
                   ))}
                 </Box>
               )}
+              {side.count > 0 && side.items && (
+                <Movements items={side.items} filter={filter} onClear={() => setFilter(null)} />
+              )}
+              {tab === 'spending' && data.currentMonth && <StillToLeave month={month} />}
               {data.bankData && !data.bankData.stale && <BankDataNotice bankData={data.bankData} />}
             </Stack>
           )}
