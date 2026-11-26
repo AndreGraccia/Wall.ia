@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** "Meu método" (ADR 0021): one test per eligibility rule. No score anywhere; each suggestion says why. */
 class MethodAdvisorTest {
 
-    private static final Set<String> PERCENT = Set.of("PERCENT_503020", "PERCENT_ANDRE", "ZERO_BASED");
+    private static final Set<String> PERCENT = Set.of("PERCENT_503020", "PERCENT_BALANCED", "ZERO_BASED");
 
     private static Facts facts(String income, boolean variable, String fixed, int debts, Preference preference) {
         return new Facts(income == null ? null : new BigDecimal(income), variable, new BigDecimal(fixed), debts, preference);
@@ -73,8 +73,8 @@ class MethodAdvisorTest {
     void preferringSimplicitySuggestsThePercentPresets() {
         Advice advice = MethodAdvisor.suggest(facts("4000.00", false, "1000.00", 0, Preference.SIMPLE));
 
-        assertEquals(List.of("PERCENT_503020", "PERCENT_ANDRE"), methods(advice));
-        assertEquals("PREFERS_SIMPLE", find(advice, "PERCENT_ANDRE").reasons().get(0).code());
+        assertEquals(List.of("PERCENT_503020", "PERCENT_BALANCED"), methods(advice));
+        assertEquals("PREFERS_SIMPLE", find(advice, "PERCENT_BALANCED").reasons().get(0).code());
     }
 
     @Test

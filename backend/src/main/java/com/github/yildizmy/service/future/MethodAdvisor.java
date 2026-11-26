@@ -82,7 +82,7 @@ public final class MethodAdvisor {
         if (facts.preference() == Preference.SIMPLE && income) {
             Reason reason = new Reason("PREFERS_SIMPLE", Map.of());
             add(picked, "PERCENT_503020", reason);
-            add(picked, "PERCENT_ANDRE", reason);
+            add(picked, "PERCENT_BALANCED", reason);
         }
         if (facts.preference() == Preference.DETAILED) {
             Reason reason = new Reason("PREFERS_DETAIL", Map.of());

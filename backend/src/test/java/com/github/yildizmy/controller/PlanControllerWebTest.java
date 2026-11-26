@@ -103,7 +103,7 @@ class PlanControllerWebTest {
         mvc.perform(put("/api/v1/profile").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"preference\":\"SIMPLE\",\"mainGoal\":\"LEAVE_DEBT\"}")).andExpect(status().isOk());
         mvc.perform(put("/api/v1/profile/method").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"method\":\"PERCENT_ANDRE\"}")).andExpect(status().isOk());
+                .content("{\"method\":\"PERCENT_BALANCED\"}")).andExpect(status().isOk());
 
         verify(planService).view(7L);
         verify(planService).save(eq(7L), eq(List.of(
@@ -115,7 +115,7 @@ class PlanControllerWebTest {
         verify(planService).cashFlow(7L, YearMonth.of(2026, 10));
         verify(profileService).suggestions(7L);
         verify(profileService).update(7L, "SIMPLE", "LEAVE_DEBT");
-        verify(profileService).chooseMethod(7L, "PERCENT_ANDRE");
+        verify(profileService).chooseMethod(7L, "PERCENT_BALANCED");
     }
 
     @Test
@@ -178,7 +178,7 @@ class PlanControllerWebTest {
         mvc.perform(get("/api/v1/methods").with(user(person(7))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.methods.length()").value(9))
-                .andExpect(jsonPath("$.methods[1].id").value("PERCENT_ANDRE"))
+                .andExpect(jsonPath("$.methods[1].id").value("PERCENT_BALANCED"))
                 .andExpect(jsonPath("$.methods[1].preset.length()").value(6));
     }
 }

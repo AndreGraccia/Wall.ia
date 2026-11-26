@@ -53,8 +53,8 @@ public final class MonthPlanCalculator {
         return new Slice(kind, label, new BigDecimal(percent), false);
     }
 
-    /** André Graccia's split, as he proposed it. Nothing is committed until the person marks it. */
-    public static final List<Slice> PRESET_ANDRE = List.of(
+    /** Equilibrado 35/20/15 (proposed by André Graccia, ADR 0021). Nothing is committed until the person marks it. */
+    public static final List<Slice> PRESET_BALANCED = List.of(
             slice(Kind.FIXED, "Fixo", "35.00"),
             slice(Kind.LEISURE, "Lazer", "20.00"),
             slice(Kind.INVESTMENT, "Investimento", "15.00"),

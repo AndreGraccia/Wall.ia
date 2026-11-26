@@ -649,6 +649,7 @@ const resources = {
           CARD_SPENDING: 'Compras no cartão (estimativa)',
           SCHEDULED: 'Agendado pelo banco',
           GOAL: 'Metas',
+          PLAN: 'Fatia do plano do mês',
         },
         certainty: {
           CONFIRMED: 'Confirmado',
@@ -1163,14 +1164,23 @@ const resources = {
         presets: {
           label: 'Ponto de partida',
           PERCENT_503020: '50/30/20',
-          PERCENT_ANDRE: 'Regra do André',
+          PERCENT_BALANCED: 'Equilibrado 35/20/15',
           ZERO_BASED: 'Base zero',
           CUSTOM: 'Personalizado',
-          credit: 'proposta de André Graccia',
+          help: {
+            PERCENT_503020:
+              'Três fatias largas: 50% para necessidades, 30% para desejos e 20% para poupança e dívidas.',
+            PERCENT_BALANCED:
+              'Seis fatias: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% estudo e 12,5% reserva de emergência.',
+            ZERO_BASED:
+              'Começa pelo que suas contas fixas já levam ({{fixed}} da renda) e deixa o resto sem destino. Você distribui até não sobrar nenhum real.',
+            CUSTOM:
+              'Mantém as fatias que estão na tela para você ajustar à mão: mude percentuais, crie ou remova fatias.',
+          },
         },
         presetLabels: {
           PERCENT_503020: { FIXED: 'Necessidades', LEISURE: 'Desejos', FUTURE: 'Poupança e dívidas' },
-          PERCENT_ANDRE: {
+          PERCENT_BALANCED: {
             FIXED: 'Fixo',
             LEISURE: 'Lazer',
             INVESTMENT: 'Investimento',
@@ -1204,6 +1214,7 @@ const resources = {
         sum: {
           total: 'Soma {{percent}}',
           missing: 'faltam {{percent}} para fechar',
+          missingMoney: 'faltam {{amount}} ({{percent}}) sem destino',
           over: '{{percent}} acima de 100%',
           complete: 'fecha 100%',
         },
@@ -1327,9 +1338,9 @@ const resources = {
             limits:
               'Não funciona bem quando as contas fixas passam de 50% da renda; os percentuais são referência, não lei.',
           },
-          PERCENT_ANDRE: {
-            name: 'Regra do André',
-            how: 'Proposta de André Graccia: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento pessoal e estudo e 12,5% reserva de emergência.',
+          PERCENT_BALANCED: {
+            name: 'Equilibrado 35/20/15',
+            how: 'Seis fatias: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento pessoal e estudo e 12,5% reserva de emergência.',
             helps:
               'Quando você quer separar, além das contas e do lazer, uma parte para estudo e outra para a reserva.',
             limits: 'Seis fatias pedem renda que comporte todas; com contas fixas acima de 35% a fatia Fixo estoura.',
@@ -1480,6 +1491,64 @@ const resources = {
         answerFirst: 'Responda às perguntas do Futuro para ver quanto dá para gastar por dia.',
         answer: 'Responder perguntas',
         pageTitle: 'Visão geral | Wall.ia',
+        balance: 'Saldo hoje',
+        blockError: 'Não foi possível carregar este bloco.',
+        highlighted: '{{title}} · em destaque',
+        risk: {
+          title: 'Atenção',
+          open: 'Ver no Futuro',
+          sentence: 'Entre {{start}} e {{end}} o saldo pode chegar a {{amount}}.',
+          relief: 'Volta a subir com {{label}} em {{date}}.',
+          causes: 'O que pesa nesse período:',
+          origin: 'origem: {{origin}}',
+          more_one: 'Há mais {{count}} período negativo nos próximos 90 dias.',
+          more_other: 'Há mais {{count}} períodos negativos nos próximos 90 dias.',
+        },
+        horizons: {
+          title: 'Próximos 30, 60 e 90 dias',
+          days: 'Em {{days}} dias',
+          lowest: 'menor saldo, em {{date}}',
+          end: 'termina em {{amount}}',
+        },
+        plan: {
+          title: 'Plano do mês: planejado e realizado',
+          open: 'Abrir plano',
+          none: 'Você ainda não montou o plano do mês. Ele divide a renda em fatias e mostra quanto de cada uma já foi usado.',
+          base: 'Base: renda confirmada de {{amount}} por mês.',
+          noIncome: 'Sem renda confirmada, as fatias ficam só em percentual.',
+          draft: 'O plano ainda não está ativo.',
+          measured: 'Realizado {{used}} de {{planned}} planejados',
+          left: 'sobram {{amount}}',
+          over: 'passou {{amount}}',
+          committed: 'Separado no Futuro todo mês',
+          plannedOnly: 'Planejado; nenhum movimento registrado',
+          footnote:
+            'Planejado é a meta do mês, não dinheiro já gasto ou investido. Só Fixo e Lazer são medidos pelos lançamentos.',
+        },
+        goals: {
+          title: 'Metas e reservas',
+          open: 'Ver metas e envelopes',
+          none: 'Nenhuma meta, envelope ou reserva ainda. Uma meta mensal entra na projeção do Futuro.',
+          goal: 'Meta',
+          next: 'Meta · próximo aporte em {{date}}',
+          perMonth: '{{amount}}/mês',
+          envelope: 'Envelope separado do saldo',
+          reserve: 'Reserva do plano · {{percent}} da renda, planejado',
+        },
+        method: {
+          current: 'Seu método: {{name}}',
+          none: 'Você ainda não escolheu um método de organização.',
+          why: 'Por isso o bloco {{block}} aparece em destaque.',
+          suggested: 'Pelos seus dados, combinam: {{list}}.',
+          compare: 'Comparar métodos',
+          choose: 'Ver métodos',
+          blocks: {
+            plan: '"Plano do mês"',
+            goals: '"Metas e reservas"',
+            upcoming: '"Próximos compromissos"',
+            horizons: '"Próximos 30, 60 e 90 dias"',
+          },
+        },
       },
       wallet: {
         pageTitle: 'Carteiras | Wall.ia',
@@ -2220,6 +2289,7 @@ const resources = {
           CARD_SPENDING: 'Card purchases (estimate)',
           SCHEDULED: 'Scheduled by the bank',
           GOAL: 'Goals',
+          PLAN: 'Month plan slice',
         },
         certainty: {
           CONFIRMED: 'Confirmed',
@@ -2730,14 +2800,21 @@ const resources = {
         presets: {
           label: 'Starting point',
           PERCENT_503020: '50/30/20',
-          PERCENT_ANDRE: "André's rule",
+          PERCENT_BALANCED: 'Balanced 35/20/15',
           ZERO_BASED: 'Zero-based',
           CUSTOM: 'Custom',
-          credit: 'proposed by André Graccia',
+          help: {
+            PERCENT_503020: 'Three broad slices: 50% for needs, 30% for wants and 20% for savings and debts.',
+            PERCENT_BALANCED:
+              'Six slices: 35% fixed, 20% leisure, 15% investment, 7.5% future, 10% study and 12.5% emergency reserve.',
+            ZERO_BASED:
+              'Starts from what your fixed bills already take ({{fixed}} of income) and leaves the rest unassigned. You give it a job until no money is left.',
+            CUSTOM: 'Keeps the slices on screen for you to adjust by hand: change percentages, add or remove slices.',
+          },
         },
         presetLabels: {
           PERCENT_503020: { FIXED: 'Needs', LEISURE: 'Wants', FUTURE: 'Savings and debts' },
-          PERCENT_ANDRE: {
+          PERCENT_BALANCED: {
             FIXED: 'Fixed',
             LEISURE: 'Leisure',
             INVESTMENT: 'Investment',
@@ -2771,6 +2848,7 @@ const resources = {
         sum: {
           total: 'Total {{percent}}',
           missing: '{{percent}} left to assign',
+          missingMoney: '{{amount}} ({{percent}}) without a job',
           over: '{{percent}} above 100%',
           complete: 'adds up to 100%',
         },
@@ -2896,9 +2974,9 @@ const resources = {
             limits:
               'It does not work well when fixed bills go above 50% of income; the percentages are a reference, not a law.',
           },
-          PERCENT_ANDRE: {
-            name: "André's rule",
-            how: "André Graccia's proposal: 35% fixed, 20% leisure, 15% investment, 7.5% future, 10% personal development and study and 12.5% emergency reserve.",
+          PERCENT_BALANCED: {
+            name: 'Balanced 35/20/15',
+            how: 'Six slices: 35% fixed, 20% leisure, 15% investment, 7.5% future, 10% personal development and study and 12.5% emergency reserve.',
             helps:
               'When you want to set aside, besides bills and leisure, a share for study and another for a reserve.',
             limits:
@@ -3052,6 +3130,64 @@ const resources = {
         answerFirst: 'Answer the questions in Future to see how much you can spend per day.',
         answer: 'Answer questions',
         pageTitle: 'Overview | Wall.ia',
+        balance: 'Balance today',
+        blockError: 'Could not load this block.',
+        highlighted: '{{title}} · highlighted',
+        risk: {
+          title: 'Heads up',
+          open: 'See in Future',
+          sentence: 'Between {{start}} and {{end}} your balance may reach {{amount}}.',
+          relief: 'It goes back up with {{label}} on {{date}}.',
+          causes: 'What weighs on this period:',
+          origin: 'source: {{origin}}',
+          more_one: 'There is {{count}} more negative period in the next 90 days.',
+          more_other: 'There are {{count}} more negative periods in the next 90 days.',
+        },
+        horizons: {
+          title: 'Next 30, 60 and 90 days',
+          days: 'In {{days}} days',
+          lowest: 'lowest balance, on {{date}}',
+          end: 'ends at {{amount}}',
+        },
+        plan: {
+          title: 'Month plan: planned and actual',
+          open: 'Open plan',
+          none: 'You have not set up the month plan yet. It splits income into slices and shows how much of each is used.',
+          base: 'Base: confirmed income of {{amount}} a month.',
+          noIncome: 'Without confirmed income, slices stay as percentages only.',
+          draft: 'The plan is not active yet.',
+          measured: 'Actual {{used}} of {{planned}} planned',
+          left: '{{amount}} left',
+          over: '{{amount}} over',
+          committed: 'Set aside in Future every month',
+          plannedOnly: 'Planned; no movement recorded',
+          footnote:
+            'Planned is the goal for the month, not money already spent or invested. Only Fixed and Leisure are measured from transactions.',
+        },
+        goals: {
+          title: 'Goals and reserves',
+          open: 'See goals and envelopes',
+          none: 'No goal, envelope or reserve yet. A monthly goal goes into the Future projection.',
+          goal: 'Goal',
+          next: 'Goal · next contribution on {{date}}',
+          perMonth: '{{amount}}/month',
+          envelope: 'Envelope set aside from the balance',
+          reserve: 'Plan reserve · {{percent}} of income, planned',
+        },
+        method: {
+          current: 'Your method: {{name}}',
+          none: 'You have not chosen an organization method yet.',
+          why: 'That is why the {{block}} block is highlighted.',
+          suggested: 'Based on your data, these fit: {{list}}.',
+          compare: 'Compare methods',
+          choose: 'See methods',
+          blocks: {
+            plan: '"Month plan"',
+            goals: '"Goals and reserves"',
+            upcoming: '"Coming up"',
+            horizons: '"Next 30, 60 and 90 days"',
+          },
+        },
       },
       wallet: {
         pageTitle: 'Wallets | Wall.ia',

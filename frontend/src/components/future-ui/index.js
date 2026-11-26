@@ -95,7 +95,9 @@ export function EventRow({ event, dense = false, hideAmount = false }) {
           {label}
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap component="div">
-          {t(`future.categories.${event.category}`, { defaultValue: event.category })}
+          {t(`future.categories.${event.category?.startsWith('PLAN_') ? 'PLAN' : event.category}`, {
+            defaultValue: event.category,
+          })}
           {origin ? `, ${origin}` : ''}
         </Typography>
       </Box>

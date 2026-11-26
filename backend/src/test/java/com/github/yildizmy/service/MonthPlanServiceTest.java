@@ -115,7 +115,7 @@ class MonthPlanServiceTest {
 
     /** André's preset with investment and emergency reserve marked as commitments. */
     private static List<Slice> andre() {
-        return MonthPlanCalculator.PRESET_ANDRE.stream()
+        return MonthPlanCalculator.PRESET_BALANCED.stream()
                 .map(item -> new Slice(item.kind(), item.label(), item.percent(),
                         item.kind() == Kind.INVESTMENT || item.kind() == Kind.EMERGENCY))
                 .toList();

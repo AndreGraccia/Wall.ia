@@ -27,7 +27,7 @@ import { dayLabel, errorKey, monthLabel, money, percent } from '../../utils/wall
 
 // Fixed and Leisure are measured, never committed: their money is already in the engine (ADR 0021).
 export const committable = (kind) => kind !== 'FIXED' && kind !== 'LEISURE';
-const PRESETS = ['PERCENT_503020', 'PERCENT_ANDRE', 'ZERO_BASED', 'CUSTOM'];
+const PRESETS = ['PERCENT_503020', 'PERCENT_BALANCED', 'ZERO_BASED', 'CUSTOM'];
 const MAX_SLICES = 12;
 
 const parsePercent = (value) => {
@@ -635,7 +635,19 @@ export default function Plan() {
   else if (!complete) blocked = t('plan.blocked.incomplete');
   const missing = 10000 - total;
   let sumText = '';
-  if (missing > 0) sumText = t('plan.sum.missing', { percent: percent(missing / 100, lang) });
+  // Base zero counts in reais: every real of the income needs a job, so what is left is said as money.
+  if (missing > 0)
+    sumText =
+      preset === 'ZERO_BASED' && income
+        ? t('plan.sum.missingMoney', {
+            amount: money((Number(income) * missing) / 10000, lang),
+            percent: percent(missing / 100, lang),
+          })
+        : t('plan.sum.missing', { percent: percent(missing / 100, lang) });
+  const fixedShare =
+    Number(plan?.income?.monthly) > 0
+      ? ((Number(plan?.fixed?.recurring || 0) + Number(plan?.fixed?.loans || 0)) / Number(plan.income.monthly)) * 100
+      : 0;
   if (missing < 0) sumText = t('plan.sum.over', { percent: percent(-missing / 100, lang) });
 
   return (
@@ -758,16 +770,18 @@ export default function Plan() {
                     key={id}
                     value={id}
                     disabled={
-                      ['PERCENT_503020', 'PERCENT_ANDRE'].includes(id) && !methods.some((item) => item.id === id)
+                      ['PERCENT_503020', 'PERCENT_BALANCED'].includes(id) && !methods.some((item) => item.id === id)
                     }
                   >
                     {t(`plan.presets.${id}`)}
                   </ToggleButton>
                 ))}
               </ToggleButtonGroup>
-              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-                {t('plan.presets.PERCENT_ANDRE')}: {t('plan.presets.credit')}
-              </Typography>
+              {preset && (
+                <Typography variant="body2" color="text.secondary" component="p" sx={{ mt: 1, maxWidth: 680 }}>
+                  {t(`plan.presets.help.${preset}`, { fixed: percent(Math.round(fixedShare * 100) / 100, lang) })}
+                </Typography>
+              )}
 
               {draft.length === 0 ? (
                 <Typography color="text.secondary" sx={{ mt: 3 }}>

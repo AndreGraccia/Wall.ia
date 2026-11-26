@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public final class MethodCatalog {
 
     /** Changes whenever a text or a rule of the catalog changes, so a stored choice can be read against its version. */
-    public static final String VERSION = "2026-11-23";
+    public static final String VERSION = "2026-11-26";
 
     private MethodCatalog() {
     }
@@ -39,12 +39,12 @@ public final class MethodCatalog {
                     "Quando a pessoa quer uma regra simples para começar e as contas fixas cabem em metade da renda.",
                     "Não funciona bem quando as contas fixas passam de 50% da renda; os percentuais são uma referência, não uma lei.",
                     List.of("CONFIRMED_INCOME", "CONFIRMED_FIXED_BILLS"), PLAN, MonthPlanCalculator.PRESET_503020),
-            new Method("PERCENT_ANDRE", "Plano do André",
-                    "Proposta de André Graccia: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento "
+            new Method("PERCENT_BALANCED", "Equilibrado 35/20/15",
+                    "Seis fatias: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento "
                             + "pessoal e estudo e 12,5% reserva de emergência.",
                     "Quando a pessoa quer separar, além das contas e do lazer, uma parte para estudo e outra para a reserva.",
                     "Seis fatias pedem renda que comporte todas; com contas fixas acima de 35% a fatia Fixo estoura.",
-                    List.of("CONFIRMED_INCOME", "CONFIRMED_FIXED_BILLS"), PLAN, MonthPlanCalculator.PRESET_ANDRE),
+                    List.of("CONFIRMED_INCOME", "CONFIRMED_FIXED_BILLS"), PLAN, MonthPlanCalculator.PRESET_BALANCED),
             new Method("ZERO_BASED", "Orçamento base zero",
                     "Cada real da renda recebe um destino: as fatias do plano somam exatamente 100%.",
                     "Quando a pessoa quer controle detalhado e saber para onde vai cada parte da renda.",

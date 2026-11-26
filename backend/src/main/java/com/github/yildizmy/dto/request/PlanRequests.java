@@ -56,7 +56,7 @@ public final class PlanRequests {
     }
 
     public record MethodChoice(
-            @NotNull @Pattern(regexp = "^(PERCENT_503020|PERCENT_ANDRE|ZERO_BASED|PAY_YOURSELF_FIRST|PRIORITIES|"
+            @NotNull @Pattern(regexp = "^(PERCENT_503020|PERCENT_BALANCED|ZERO_BASED|PAY_YOURSELF_FIRST|PRIORITIES|"
                     + "INCOME_CYCLE|ENVELOPES|DEBT_AVALANCHE|DEBT_SNOWBALL)$") String method
     ) {
     }

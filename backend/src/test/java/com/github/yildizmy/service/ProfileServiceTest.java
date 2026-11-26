@@ -74,9 +74,9 @@ class ProfileServiceTest {
         service.chooseMethod(7L, "ENVELOPES");
         verify(choices, never()).save(any());
 
-        service.chooseMethod(7L, "PERCENT_ANDRE");
+        service.chooseMethod(7L, "PERCENT_BALANCED");
         verify(choices).save(org.mockito.ArgumentMatchers.argThat(saved ->
-                saved.getMethod().equals("PERCENT_ANDRE") && saved.getCatalogVersion().equals("2026-11-23")
+                saved.getMethod().equals("PERCENT_BALANCED") && saved.getCatalogVersion().equals(com.github.yildizmy.service.future.MethodCatalog.VERSION)
                         && saved.getChosenAt().equals(clock.instant())));
     }
 

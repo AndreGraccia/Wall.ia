@@ -26,12 +26,22 @@ import HttpService from '../../services/HttpService';
 import { dayLabel, errorKey, monthLabel, money } from '../../utils/wallet';
 import { balanceHistory, forecastReady } from '../../utils/forecast';
 import { HIDDEN_AMOUNT, useHiddenAmounts } from '../../utils/hiddenAmounts';
+import {
+  GoalsAndReserves,
+  HIGHLIGHT_BY_TOOL,
+  HorizonSummary,
+  MethodNote,
+  PlanVsActual,
+  RiskAlert,
+  useGet,
+} from './sections';
 
 /**
- * The month so far, under the number of the day (proposta de André Graccia, ADR 0021): income, spending and leisure
- * plus investment, in columns without boxes. Each one opens the screen that explains it.
+ * Where the money is now and the month so far, under the number of the day (proposta de André Graccia, ADR 0021;
+ * documento de evolução 4.2): consolidated balance, income, spending and leisure plus investment, in columns without
+ * boxes. Each one opens the screen that explains it.
  */
-export function MonthTotals({ hidden }) {
+export function MonthTotals({ hidden, balance }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [state, setState] = useState({ loading: true, error: null, flow: null });
@@ -59,11 +69,12 @@ export function MonthTotals({ hidden }) {
       </Stack>
     );
   const columns = [
+    ...(balance !== undefined && balance !== null ? [['balance', 'balance', '/wallets']] : []),
     ['monthIncome', 'income', '/cash-flow?tab=income'],
     ['monthSpending', 'spending', '/cash-flow'],
     ['monthLeisure', 'leisureAndInvestment', '/plan'],
   ];
-  const home = state.flow?.home;
+  const home = state.flow?.home && { ...state.flow.home, balance };
   return (
     <Box component="section" aria-labelledby="dashboard-month">
       <Typography id="dashboard-month" variant="body2" color="text.secondary" component="h2" sx={{ m: 0, mb: 1 }}>
@@ -74,8 +85,9 @@ export function MonthTotals({ hidden }) {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: `repeat(${columns.length}, minmax(0, 1fr))` },
           columnGap: { xs: 2, md: 4 },
+          rowGap: 2,
           pt: 1.5,
           borderTop: '1px solid',
           borderColor: 'divider',
@@ -115,7 +127,14 @@ export function MonthTotals({ hidden }) {
                   fontWeight: { xs: 600, md: 600 },
                   fontVariantNumeric: 'tabular-nums',
                   overflowWrap: 'anywhere',
-                  color: field === 'income' && Number(home.income) > 0 && !hidden ? 'success.main' : 'text.primary',
+                  color:
+                    hidden || Number(home[field]) === 0
+                      ? 'text.primary'
+                      : field === 'income'
+                      ? 'success.main'
+                      : field === 'balance' && Number(home.balance) < 0
+                      ? 'error.main'
+                      : 'text.primary',
                 }}
               >
                 {hidden ? HIDDEN_AMOUNT : money(home[field], lang)}
@@ -129,11 +148,13 @@ export function MonthTotals({ hidden }) {
     </Box>
   );
 }
-MonthTotals.propTypes = { hidden: PropTypes.bool };
+MonthTotals.propTypes = { hidden: PropTypes.bool, balance: PropTypes.oneOfType([PropTypes.number, PropTypes.string]) };
 
 /**
- * Início (docs/brand/DESIGN.md): a short greeting with the number of the day, a compact 30-day chart, the
- * next 5 commitments and two shortcuts. Everything else has its own screen.
+ * Início (docs/brand/DESIGN.md, documento de evolução 4.2). First fold: the number of the day, where the money is
+ * and the month so far, and the first risk explained. Below: 30/60/90 days, the 30-day chart with the next
+ * commitments, planned against actual, goals and reserves, and the active method, which decides which block
+ * comes first. Each block links to the screen that goes deeper.
  */
 export default function Dashboard() {
   const theme = useTheme();
@@ -147,7 +168,7 @@ export default function Dashboard() {
   const load = useCallback(async () => {
     setState((previous) => ({ ...previous, loading: true, error: null }));
     try {
-      setState({ loading: false, error: null, overview: await HttpService.getWithAuth('/future/overview?horizon=30') });
+      setState({ loading: false, error: null, overview: await HttpService.getWithAuth('/future/overview?horizon=90') });
     } catch (failure) {
       setState({ loading: false, error: errorKey(failure), overview: null });
     }
@@ -167,7 +188,21 @@ export default function Dashboard() {
   const noData =
     sources && !sources.confirmedRecurrences && !sources.pendingQuestions && !sources.cards && !sources.loans;
   const ready = forecastReady({ sources });
-  const upcoming = (projection?.events || []).filter((event) => Number(event.amount) < 0).slice(0, 5);
+  // One 90-day projection feeds the 30/60/90 summary; the chart and the list keep to the next 30 days.
+  const until30 = projection?.days[Math.min(30, projection.days.length - 1)]?.date;
+  const days30 = (projection?.days || []).slice(0, 31);
+  const lowest30 = days30.reduce((min, day) => (!min || Number(day.balance) < Number(min.balance) ? day : min), null);
+  const upcoming = (projection?.events || [])
+    .filter((event) => Number(event.amount) < 0 && (!until30 || event.date <= until30))
+    .slice(0, 5);
+  const plan = useGet('/plan');
+  const goals = useGet('/future/goals');
+  const envelopes = useGet('/future/envelopes');
+  const profile = useGet('/profile');
+  const catalog = useGet('/methods');
+  const suggestions = useGet(profile.data && !profile.data.method ? '/methods/suggestions' : null);
+  const chosen = (catalog.data?.methods || []).find((method) => method.id === profile.data?.method);
+  const highlight = chosen ? HIGHLIGHT_BY_TOOL[chosen.where?.tool] : null;
   const shortcuts = (
     <>
       <Button component={RouterLink} to="/ask" variant="outlined">
@@ -259,7 +294,9 @@ export default function Dashboard() {
                 </Stack>
               </Box>
             )}
-            <MonthTotals hidden={hidden} />
+            <MonthTotals hidden={hidden} balance={overview.balance} />
+            {ready && <RiskAlert windows={projection.riskWindows} hidden={hidden} />}
+            {ready && <HorizonSummary projection={projection} hidden={hidden} />}
 
             <Box
               sx={{
@@ -283,8 +320,8 @@ export default function Dashboard() {
                     height={200}
                     ariaLabel={t('future.chartLabelClear', {
                       days: 30,
-                      amount: hidden ? HIDDEN_AMOUNT : money(projection.minBalance, lang),
-                      date: dayLabel(projection.minDate, lang),
+                      amount: hidden ? HIDDEN_AMOUNT : money(lowest30?.balance, lang),
+                      date: dayLabel(lowest30?.date, lang),
                     })}
                     history={history}
                     series={[
@@ -292,10 +329,10 @@ export default function Dashboard() {
                         key: 'projection',
                         color: theme.palette.chart.projection,
                         dashed: true,
-                        days: projection.days.map((day) => ({ date: day.date, balance: Number(day.balance) })),
+                        days: days30.map((day) => ({ date: day.date, balance: Number(day.balance) })),
                       },
                     ]}
-                    lowest={{ date: projection.minDate, balance: Number(projection.minBalance) }}
+                    lowest={lowest30 && { date: lowest30.date, balance: Number(lowest30.balance) }}
                     hideValues={hidden}
                   />
                   {sources.bankData && !sources.bankData.stale && (
@@ -325,6 +362,21 @@ export default function Dashboard() {
                 )}
               </Box>
             </Box>
+            {(highlight === 'goals' ? ['goals', 'plan'] : ['plan', 'goals']).map((block) =>
+              block === 'plan' ? (
+                <PlanVsActual key="plan" plan={plan} hidden={hidden} highlighted={highlight === 'plan'} />
+              ) : (
+                <GoalsAndReserves
+                  key="goals"
+                  goals={goals}
+                  envelopes={envelopes}
+                  plan={plan}
+                  hidden={hidden}
+                  highlighted={highlight === 'goals'}
+                />
+              )
+            )}
+            <MethodNote profile={profile} catalog={catalog} suggestions={suggestions} />
           </Stack>
         )}
       </Container>

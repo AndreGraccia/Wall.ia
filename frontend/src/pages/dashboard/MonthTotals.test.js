@@ -62,3 +62,19 @@ test('"ocultar saldo" hides the three totals too', async () => {
   expect(text()).not.toContain('5.000,00');
   expect(text()).not.toContain('870,00');
 });
+
+test('with the balance, the consolidated balance comes first and opens Carteiras', async () => {
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <MonthTotals hidden={false} balance={2555.61} />
+        </ThemeProvider>
+      </MemoryRouter>
+    )
+  );
+
+  expect(text()).toContain('dashboard.balance');
+  expect(text()).toContain('2.555,61');
+  expect(container.querySelector('a').getAttribute('href')).toBe('/wallets');
+});

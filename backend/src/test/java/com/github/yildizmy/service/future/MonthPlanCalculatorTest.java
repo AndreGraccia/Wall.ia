@@ -34,7 +34,7 @@ class MonthPlanCalculatorTest {
 
     /** André's split with the four slices he wanted committed actually marked. */
     private static List<Slice> andreCommitted() {
-        return MonthPlanCalculator.PRESET_ANDRE.stream()
+        return MonthPlanCalculator.PRESET_BALANCED.stream()
                 .map(item -> new Slice(item.kind(), item.label(), item.percent(), item.kind().committable()))
                 .toList();
     }
@@ -55,11 +55,11 @@ class MonthPlanCalculatorTest {
     @Test
     void andresPresetIsTheSplitHeProposedAddsUpTo100AndCommitsNothingByItself() {
         assertEquals(List.of("35.00", "20.00", "15.00", "7.50", "10.00", "12.50"),
-                MonthPlanCalculator.PRESET_ANDRE.stream().map(item -> item.percent().toPlainString()).toList());
-        assertTrue(MonthPlanCalculator.complete(MonthPlanCalculator.PRESET_ANDRE));
+                MonthPlanCalculator.PRESET_BALANCED.stream().map(item -> item.percent().toPlainString()).toList());
+        assertTrue(MonthPlanCalculator.complete(MonthPlanCalculator.PRESET_BALANCED));
         assertTrue(MonthPlanCalculator.complete(MonthPlanCalculator.PRESET_503020));
-        assertTrue(MonthPlanCalculator.PRESET_ANDRE.stream().noneMatch(Slice::commitment));
-        assertNull(MonthPlanCalculator.validate(MonthPlanCalculator.PRESET_ANDRE));
+        assertTrue(MonthPlanCalculator.PRESET_BALANCED.stream().noneMatch(Slice::commitment));
+        assertNull(MonthPlanCalculator.validate(MonthPlanCalculator.PRESET_BALANCED));
     }
 
     @Test
@@ -141,7 +141,7 @@ class MonthPlanCalculatorTest {
     @Test
     void andresSplitOn5000IsExactlyTheExpectedSlices() {
         assertEquals(List.of(money("1750.00"), money("1000.00"), money("750.00"), money("375.00"), money("500.00"),
-                money("625.00")), MonthPlanCalculator.amounts(money("5000.00"), MonthPlanCalculator.PRESET_ANDRE));
+                money("625.00")), MonthPlanCalculator.amounts(money("5000.00"), MonthPlanCalculator.PRESET_BALANCED));
     }
 
     @Test
@@ -194,7 +194,7 @@ class MonthPlanCalculatorTest {
         LocalDate end = LocalDate.parse("2027-01-31");
 
         assertTrue(MonthPlanCalculator.events(MonthPlanCalculator.commitments(money("5000.00"),
-                MonthPlanCalculator.PRESET_ANDRE, BigDecimal.ZERO), salary, today, end).isEmpty());
+                MonthPlanCalculator.PRESET_BALANCED, BigDecimal.ZERO), salary, today, end).isEmpty());
         assertTrue(MonthPlanCalculator.events(MonthPlanCalculator.commitments(money("5000.00"),
                 List.of(slice(Kind.FIXED, "100", false), slice(Kind.EMERGENCY, "0", true)), BigDecimal.ZERO),
                 salary, today, end).isEmpty());
