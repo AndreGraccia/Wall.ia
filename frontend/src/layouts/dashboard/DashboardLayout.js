@@ -312,7 +312,12 @@ export default function DashboardLayout() {
                 </Container>
               }
             >
-              <Outlet />
+              {/* money() reads the preference while rendering, and a page does not re-render by itself when the eye
+                  toggles. ponytail: remounting the page refetches it and drops an unsaved draft; move money() to a
+                  context hook if toggling mid-edit ever matters. */}
+              <Box key={hidden ? 'hidden' : 'shown'}>
+                <Outlet />
+              </Box>
             </Suspense>
           </Box>
         </Box>

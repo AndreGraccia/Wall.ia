@@ -64,3 +64,29 @@ test('"Compromissos" stays active on the charge radar, which belongs to it', asy
   const commitments = container.querySelector('nav[aria-label="app.navigation"] a[href="/commitments"]');
   expect(commitments.getAttribute('aria-current')).toBe('page');
 });
+
+test('"ocultar saldo" redraws the page, which reads the preference while rendering', async () => {
+  let renders = 0;
+  function Page() {
+    renders += 1;
+    return <p>page</p>;
+  }
+  await act(async () =>
+    root.render(
+      <MemoryRouter initialEntries={['/cash-flow']}>
+        <ThemeProvider>
+          <Routes>
+            <Route element={<DashboardLayout />}>
+              <Route path="*" element={<Page />} />
+            </Route>
+          </Routes>
+        </ThemeProvider>
+      </MemoryRouter>
+    )
+  );
+  const before = renders;
+  const eye = container.querySelector('button[aria-pressed]');
+  await act(async () => eye.click());
+  expect(renders).toBeGreaterThan(before);
+  await act(async () => eye.click());
+});
