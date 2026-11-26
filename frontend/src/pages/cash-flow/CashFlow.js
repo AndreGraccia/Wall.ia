@@ -207,10 +207,10 @@ function Movements({ items, filter, onClear }) {
             key={item.id}
             title={item.counterparty || t('cashFlow.items.noName')}
             meta={[
+              // Same as the Extrato (ADR 0022): category and account; the payment method is a grouping above.
               dayLabel(item.date, lang),
-              item.account,
-              groupLabel('byMethod', item.method, t),
               groupLabel('byCategory', item.category, t),
+              item.account,
             ]
               .filter(Boolean)
               .join(' · ')}

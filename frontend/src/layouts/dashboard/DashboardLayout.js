@@ -153,8 +153,9 @@ export default function DashboardLayout() {
   const bottom = [
     { path: '/', label: 'navigation.dashboard', icon: 'home' },
     { path: '/future', label: 'navigation.future', icon: 'future' },
-    { path: '/plan', label: 'navigation.plan', icon: 'plan' },
-    { path: '/commitments', label: 'navigation.debts', icon: 'card', also: ['/billing-radar'] },
+    // Short labels: five columns of 78 px at 390 px cannot fit "Plano do mês" next to "Compromissos".
+    { path: '/plan', label: 'navigation.planShort', icon: 'plan' },
+    { path: '/commitments', label: 'navigation.debtsShort', icon: 'card', also: ['/billing-radar'] },
   ];
   const bottomActive = (item) => [item.path, ...(item.also || [])].some((path) => isActive(path, pathname));
   const inMore = !bottom.some(bottomActive);

@@ -108,7 +108,9 @@ async function renderPage(entry = '/cash-flow') {
 test('the spending tab opens first; switching to income shows the income side', async () => {
   await renderPage();
   expect(text()).toContain('1.620,00');
-  expect(text()).toContain('paymentMethods.PIX');
+  expect(text()).toContain('cashFlow.categories.EVERYDAY');
+  // The payment method is a grouping, not part of each row (ADR 0022).
+  expect(text()).not.toContain('paymentMethods.PIX');
   expect(text()).toContain('cashFlow.realized');
 
   const incomeTab = [...container.querySelectorAll('[role="tab"]')].find(
