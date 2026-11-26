@@ -20,6 +20,9 @@ let container;
 const text = () => container.textContent;
 const button = (label) => [...container.querySelectorAll('button')].find((item) => item.textContent === label);
 const switches = () => container.querySelectorAll('input[type="checkbox"]');
+const fields = () => container.querySelectorAll('input');
+// A saved plan opens for reading; the editor is one click away.
+const edit = () => act(async () => Simulate.click(button('plan.slices.edit')));
 
 const income = {
   monthly: 5000,
@@ -54,12 +57,24 @@ function plan(overrides = {}) {
   };
 }
 
-function answer(planBody) {
+const month = (key, net) => ({
+  month: key,
+  partial: false,
+  inflowConfirmed: 4875,
+  inflowEstimated: 0,
+  outflowConfirmed: 4000,
+  outflowEstimated: 0,
+  plan: 731.25,
+  net,
+  endBalance: 100,
+});
+
+function answer(planBody, items = []) {
   HttpService.getWithAuth.mockImplementation((url) => {
     if (url === '/plan') return Promise.resolve(planBody);
     if (url === '/methods') return Promise.resolve({ methods: [] });
     if (url === '/profile') return Promise.resolve({ method: null });
-    if (url.startsWith('/plan/projection')) return Promise.resolve({ items: [] });
+    if (url.startsWith('/plan/projection')) return Promise.resolve({ items });
     return Promise.reject(new Error(url));
   });
 }
@@ -98,6 +113,7 @@ test('a plan that does not add up to 100% cannot be turned on, and says why', as
   expect(text()).toContain('plan.blocked.incomplete');
   expect(text()).toContain('plan.sum.missing');
 
+  await edit();
   const investment = container.querySelector('input[aria-label="plan.slices.percent"][value="40"]');
   await act(async () => {
     Simulate.change(investment, { target: { value: '45' } });
@@ -115,6 +131,7 @@ test('"ver se cabe" asks the engine with the draft and saves nothing', async () 
     newMonthlyCommitment: 2000,
   });
   await renderPage();
+  await edit();
 
   await act(async () => Simulate.click(button('plan.actions.fit')));
 
@@ -139,6 +156,7 @@ test('activating the plan clears the "ver se cabe" result, which compared agains
   });
   HttpService.putWithAuth.mockResolvedValue(plan());
   await renderPage();
+  await edit();
   const investment = container.querySelector('input[aria-label="plan.slices.percent"][value="40"]');
   await act(async () => {
     Simulate.change(investment, { target: { value: '45' } });
@@ -152,9 +170,10 @@ test('activating the plan clears the "ver se cabe" result, which compared agains
   expect(text()).not.toContain('plan.fit.after');
 });
 
-test('only slices that can leave the balance get the "virar compromisso" switch', async () => {
+test('only slices that can leave the balance get the "tirar do saldo" switch', async () => {
   answer(plan());
   await renderPage();
+  await edit();
 
   // Fixed and Leisure are measured, never committed; the investment is the only one with the switch.
   expect(switches()).toHaveLength(1);
@@ -183,5 +202,51 @@ test('turning on a complete, unchanged plan only flips the activation', async ()
   expect(HttpService.putWithAuth).toHaveBeenCalledTimes(1);
   expect(HttpService.putWithAuth).toHaveBeenCalledWith('/plan/activation', { active: true });
   expect(text()).toContain('plan.saved.active');
-  expect(button('plan.actions.deactivate')).toBeDefined();
+  // Turning it off lives in the "more" menu, not in the main area.
+  expect(button('plan.actions.deactivate')).toBeUndefined();
+  await act(async () => Simulate.click(container.querySelector('button[aria-label="plan.menu.label"]')));
+  const item = [...document.querySelectorAll('[role="menuitem"]')].find(
+    (el) => el.textContent === 'plan.actions.deactivate'
+  );
+  expect(item).toBeDefined();
+});
+
+test('a saved plan opens for reading: no editable field until "Editar fatias"', async () => {
+  answer(plan({ status: 'ACTIVE', active: true, complete: true, monthlyCommitment: 2000 }));
+  await renderPage();
+
+  expect(fields()).toHaveLength(0);
+  expect(text()).toContain('Investimento');
+  expect(text()).toContain('plan.roles.committed');
+  expect(text()).toContain('plan.roles.leisure');
+  // Each segment of the bar names itself.
+  expect(container.querySelector('[role="img"][aria-label^="Fixo"]')).not.toBeNull();
+
+  await edit();
+
+  expect(fields().length).toBeGreaterThan(0);
+  expect(button('plan.slices.edit')).toBeUndefined();
+  await act(async () => Simulate.click(button('plan.actions.cancel')));
+  expect(fields()).toHaveLength(0);
+});
+
+test('a month below zero says "Falta" with the amount, above zero "Sobra"; the hero answers for this month', async () => {
+  answer(plan(), [month('2026-11', -109.6), month('2026-12', 250)]);
+  await renderPage();
+
+  const rows = [...container.querySelectorAll('section[aria-labelledby="plan-projection"] [aria-busy] > div')];
+  expect(rows[0].textContent).toContain('plan.projection.short');
+  expect(rows[0].textContent).not.toContain('plan.projection.net');
+  expect(rows[0].textContent).toMatch(/R\$\s109,60/);
+  expect(rows[0].textContent).not.toContain('−');
+  expect(rows[1].textContent).toContain('plan.projection.net');
+  expect(rows[1].textContent).not.toContain('plan.projection.short');
+  expect(container.querySelector('#plan-hero').textContent).toContain('plan.hero.short');
+});
+
+test('a positive month in the hero says what is left', async () => {
+  answer(plan(), [month('2026-11', 320)]);
+  await renderPage();
+
+  expect(container.querySelector('#plan-hero').textContent).toContain('plan.hero.left');
 });
