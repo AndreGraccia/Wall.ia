@@ -72,6 +72,19 @@ test('envelopes show what is left without a destination and warn when they excee
   expect(text()).toMatch(/envelopes\.unbacked:R\$\s200,00/);
 });
 
+test('with no envelope the page is one sentence and the form, without the three numbers', async () => {
+  HttpService.getWithAuth.mockResolvedValue({ items: [], balance: 2555, reserved: 0, unbacked: 0 });
+  await render(<Envelopes />);
+
+  expect(text()).toContain('envelopes.empty');
+  expect(container.querySelector('form')).not.toBeNull();
+  expect(text()).not.toContain('envelopes.balance');
+  expect(text()).not.toContain('envelopes.free');
+  expect(text()).not.toMatch(/R\$\s2\.555/);
+  // The explanation waits behind "Why?".
+  expect(button('envelopes.why').getAttribute('aria-expanded')).toBe('false');
+});
+
 test('a new envelope is sent in reais and an amount above the API ceiling is blocked on screen', async () => {
   HttpService.getWithAuth.mockResolvedValue({ items: [], balance: 1000, reserved: 0, unbacked: 0 });
   HttpService.postWithAuth.mockResolvedValue({});
