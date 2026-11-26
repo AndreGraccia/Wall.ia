@@ -32,6 +32,53 @@ export function limitSummary(limit) {
   return { ...base, kind: 'canSpend', amount: Number(limit?.safeDaily) || 0 };
 }
 
+/**
+ * The limit assumes everyday spending stays at the limit; the projection uses the usual pace. When that pace
+ * goes below zero before the limit's end, the hero has to say so, or "no day negative" reads as a promise.
+ * Not for `short`: there the hero already says money is missing even without spending.
+ *
+ * @returns {{pace: number, date: string} | null}
+ */
+export function paceWarning(limit, risk) {
+  if (!limit || !risk || limitSummary(limit).kind === 'short') return null;
+  if (limit.pace === null || limit.pace === undefined) return null;
+  if (risk.start >= limit.until) return null;
+  return { pace: Number(limit.pace), date: risk.start };
+}
+
+/**
+ * The sum behind the hero, so it can be redone by hand: balance now, plus what comes in, minus what already
+ * has a destination (envelopes included), from today to the day before `limit.until`. Same base as the
+ * limit (SpendingLimit): every projected event except everyday spending in the account.
+ * Null when the limit runs past the projected days (an income 31 to 45 days away on the 30-day view).
+ */
+// ponytail: folded CARD_SPENDING lands at the horizon end, after `until`; if the API ever spreads it per day, it counts here as is.
+export function limitBreakdown(overview) {
+  const limit = overview?.spendingLimit;
+  const projection = overview?.projection;
+  if (!limit || !projection?.days.length) return null;
+  const today = projection.days[0].date;
+  if (limit.until > projection.days[projection.days.length - 1].date) return null;
+  let incoming = 0;
+  let outgoing = cents(limit.reserved);
+  projection.events
+    .filter((event) => event.category !== 'DAILY_SPENDING' && event.date >= today && event.date < limit.until)
+    .forEach((event) => {
+      const amount = cents(event.amount);
+      if (amount > 0) incoming += amount;
+      else outgoing -= amount;
+    });
+  const balance = cents(overview.balance);
+  return {
+    until: limit.until,
+    days: limit.days,
+    balance: balance / 100,
+    incoming: incoming / 100,
+    committed: outgoing / 100,
+    left: (balance + incoming - outgoing) / 100,
+  };
+}
+
 const isoDay = (date) =>
   [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 

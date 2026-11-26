@@ -264,6 +264,8 @@ export default function Dashboard() {
                 compact
                 hideAmount={hidden}
                 limit={overview.spendingLimit}
+                // Only for the pace warning under the hero; without onWhy no button comes with it.
+                risk={projection.riskWindows[0]}
                 exitPlan={overview.exitPlan}
                 action={shortcuts}
               />
