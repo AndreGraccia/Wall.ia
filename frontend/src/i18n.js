@@ -281,6 +281,11 @@ const resources = {
         bankPlaceholder: 'Nenhuma instituição conectada',
         accounts: 'Contas importadas',
         lastSync: 'Última sincronização',
+        connected: {
+          until: 'Consentimento até {{date}}',
+          lastSync: 'Última sincronização {{date}}',
+          shared: 'O que compartilhamos',
+        },
         validUntil: 'Compartilhamento autorizado até {{date}}.',
         permissionsTitle: 'Dados que a Wall.ia pede',
         permissionsHelp: 'Só o que a projeção usa: contas, cartões e empréstimos. Nada de pagamento ou transferência.',
@@ -1939,6 +1944,11 @@ const resources = {
         bankPlaceholder: 'No institution connected',
         accounts: 'Imported accounts',
         lastSync: 'Last sync',
+        connected: {
+          until: 'Consent until {{date}}',
+          lastSync: 'Last sync {{date}}',
+          shared: 'What we share',
+        },
         validUntil: 'Sharing authorised until {{date}}.',
         permissionsTitle: 'Data Wall.ia asks for',
         permissionsHelp: 'Only what the projection uses: accounts, cards and loans. No payments or transfers.',
