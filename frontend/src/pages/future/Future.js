@@ -28,13 +28,21 @@ import BankDataNotice from '../../components/bank-data';
 import { DailyLimitCard, EventRow, ExitPlanList, StatBlock } from '../../components/future-ui';
 import { EmptyState, PageHeading, SectionCard, visuallyHidden } from '../../components/wallet-ui';
 import { dayLabel, errorKey, money, overdraftCostText } from '../../utils/wallet';
-import { balanceHistory, forecastReady } from '../../utils/forecast';
+import { balanceHistory, forecastReady, limitBreakdown } from '../../utils/forecast';
 import Questions from './Questions';
 import Simulator from './Simulator';
 import Goals from './Goals';
 import AlertToggle from './AlertToggle';
 import Accuracy from './Accuracy';
 import CancelGuide from './CancelGuide';
+
+// Two columns on a phone, three from md up; the third item spans the phone's second row.
+const statGrid = {
+  display: 'grid',
+  gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+  gap: { xs: 3, md: 4 },
+  '& > :nth-of-type(3)': { gridColumn: { xs: 'span 2', md: 'auto' } },
+};
 
 function WhyDialog({ risk, exitPlan, onClose }) {
   const { t, i18n } = useTranslation();
@@ -203,8 +211,9 @@ export default function Future() {
   const projection = overview?.projection;
   const today = projection?.days[0]?.date;
   const history = useMemo(
-    () => balanceHistory({ transactions, wallets, today, balance: overview?.balance }),
-    [transactions, wallets, today, overview?.balance]
+    // A week of past is context; more would squeeze the 30 days ahead, which are the answer.
+    () => balanceHistory({ transactions, wallets, today, balance: overview?.balance, days: horizon === 30 ? 7 : 14 }),
+    [transactions, wallets, today, overview?.balance, horizon]
   );
   const incomes = recurrences.filter((item) => item.direction === 'IN' && item.status === 'CONFIRMED');
   const sources = overview?.sources;
@@ -223,6 +232,8 @@ export default function Future() {
     [overview?.dailySpending, overview?.cardSpending].filter((item) => item?.status === 'PENDING').length;
   const nextIncome = projection?.events.find((event) => Number(event.amount) > 0 && event.date > today);
   const bankData = overview?.sources.bankData;
+  // The hero's sum, to redo by hand; without the hero (nothing confirmed) the 30-day view stays.
+  const sum = showCard ? limitBreakdown(overview) : null;
 
   const questions =
     overview &&
@@ -376,47 +387,75 @@ export default function Future() {
               {bankData && !bankData.stale && <BankDataNotice bankData={bankData} sx={{ mt: 1.5 }} />}
             </Box>
 
-            {/* (3) Three numbers in columns, no boxes. */}
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
-                gap: { xs: 3, md: 4 },
-                pt: 3,
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <StatBlock
-                compact
-                label={t('future.balanceNow')}
-                value={money(overview.balance, lang)}
-                tooltip={t('future.balanceNowHelp')}
-              />
-              <StatBlock
-                compact
-                label={t('future.committed')}
-                value={money(overview.committed.total, lang)}
-                tooltip={`${t('future.committedHelp', { date: dayLabel(overview.committed.until, lang) })} ${t(
-                  'future.committedSplit',
-                  {
-                    confirmed: money(overview.committed.confirmed, lang),
-                    estimated: money(overview.committed.estimated, lang),
-                  }
-                )}`}
-              />
-              {/* The conclusion of the three; on a phone it takes the whole second row. */}
-              <Box sx={{ gridColumn: { xs: 'span 2', md: 'auto' } }}>
+            {/* (3) Three numbers in columns, no boxes. With the hero, they are its sum (+, +, −) so the
+                answer can be redone by hand; without it, the 30-day view. */}
+            {sum ? (
+              <Box sx={{ pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+                <Box sx={statGrid}>
+                  <StatBlock
+                    compact
+                    label={t('future.balanceNow')}
+                    value={money(sum.balance, lang)}
+                    tooltip={t('future.balanceNowHelp')}
+                  />
+                  <StatBlock
+                    compact
+                    label={t('future.incomingBefore', { date: dayLabel(sum.until, lang) })}
+                    value={`+ ${money(sum.incoming, lang)}`}
+                    tooltip={t('future.incomingBeforeHelp', { date: dayLabel(sum.until, lang) })}
+                  />
+                  <StatBlock
+                    compact
+                    label={t('future.committedBefore')}
+                    value={`− ${money(sum.committed, lang)}`}
+                    tooltip={t('future.committedBeforeHelp', { date: dayLabel(sum.until, lang) })}
+                  />
+                </Box>
+                <Typography sx={{ mt: 2, fontWeight: 600, color: sum.left < 0 ? 'error.main' : 'text.primary' }}>
+                  {sum.left < 0
+                    ? t('future.leftShort', { amount: money(-sum.left, lang), date: dayLabel(sum.until, lang) })
+                    : t('future.leftOver', {
+                        amount: money(sum.left, lang),
+                        days: sum.days,
+                        date: dayLabel(sum.until, lang),
+                      })}
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ ...statGrid, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
                 <StatBlock
                   compact
-                  label={t('future.free')}
-                  value={money(overview.freeAfterCommitments, lang)}
-                  emphasis
-                  negative={Number(overview.freeAfterCommitments) < 0}
-                  tooltip={t(Number(overview.freeAfterCommitments) < 0 ? 'future.freeNegativeHelp' : 'future.freeHelp')}
+                  label={t('future.balanceNow')}
+                  value={money(overview.balance, lang)}
+                  tooltip={t('future.balanceNowHelp')}
                 />
+                <StatBlock
+                  compact
+                  label={t('future.committed')}
+                  value={money(overview.committed.total, lang)}
+                  tooltip={`${t('future.committedHelp', { date: dayLabel(overview.committed.until, lang) })} ${t(
+                    'future.committedSplit',
+                    {
+                      confirmed: money(overview.committed.confirmed, lang),
+                      estimated: money(overview.committed.estimated, lang),
+                    }
+                  )}`}
+                />
+                {/* The conclusion of the three; on a phone it takes the whole second row. */}
+                <Box sx={{ gridColumn: { xs: 'span 2', md: 'auto' } }}>
+                  <StatBlock
+                    compact
+                    label={t('future.free')}
+                    value={money(overview.freeAfterCommitments, lang)}
+                    emphasis
+                    negative={Number(overview.freeAfterCommitments) < 0}
+                    tooltip={t(
+                      Number(overview.freeAfterCommitments) < 0 ? 'future.freeNegativeHelp' : 'future.freeHelp'
+                    )}
+                  />
+                </Box>
               </Box>
-            </Box>
+            )}
 
             {/* (4) The negative windows. */}
             {projection.riskWindows.length > 0 && <NegativeWindows windows={projection.riskWindows} onWhy={setWhy} />}

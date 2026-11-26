@@ -15,7 +15,11 @@ jest.mock('../../context/WalletContext', () => ({ useWallets: jest.fn() }));
 jest.mock('notistack', () => ({ useSnackbar: () => ({ enqueueSnackbar: jest.fn(), closeSnackbar: jest.fn() }) }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => (options?.days ? `${key}:${options.days}` : key),
+    t: (key, options) => {
+      if (options?.amount) return `${key}:${options.amount}`;
+      if (options?.pace) return `${key}:${options.pace}:${options.date}`;
+      return options?.days ? `${key}:${options.days}` : key;
+    },
     i18n: { language: 'pt' },
   }),
 }));
@@ -207,4 +211,65 @@ test('fresh bank data only says when it is from', async () => {
 
   expect(text()).toContain('bankData.asOf');
   expect(text()).not.toContain('bankData.staleTitle');
+});
+
+// The audit case (26/11): the hero said "R$ 15,37 per day, no day negative" while the projection went below zero.
+function auditOverview({ withRisk = true } = {}) {
+  const base = overview({ balance: 2555.61 });
+  return {
+    ...base,
+    projection: {
+      ...base.projection,
+      days: [
+        { date: '2026-11-26', balance: 2555.61 },
+        { date: '2026-12-26', balance: 2564.24 },
+      ],
+      events: [
+        { date: '2026-12-01', amount: -1500, category: 'RENT', certainty: 'ESTIMATED', reference: 'r' },
+        { date: '2026-12-02', amount: -948, category: 'CARD_INVOICE', certainty: 'CONFIRMED', reference: 'c' },
+        { date: '2026-12-04', amount: 4200, category: 'SALARY', certainty: 'ESTIMATED', reference: 's' },
+      ],
+      riskWindows: withRisk
+        ? [{ start: '2026-12-02', end: '2026-12-03', lowestBalance: -84.19, lowestDate: '2026-12-03', causes: [] }]
+        : [],
+    },
+    spendingLimit: {
+      safeDaily: 15.37,
+      until: '2026-12-04',
+      untilIncome: true,
+      days: 7,
+      bindingDate: '2026-12-03',
+      pace: 27.4,
+      margin: -12.03,
+      shortfall: 0,
+      reserved: 0,
+    },
+  };
+}
+
+const cents = (value) => Math.round(Number(value.replace(/[^\d,-]/g, '').replace(',', '.')) * 100);
+
+test('the three numbers under the hero add up to the amount shown', async () => {
+  answer(() => Promise.resolve(auditOverview()));
+  await renderPage();
+
+  // StatBlock values: the compact number of each column, in reading order.
+  const values = [...container.querySelectorAll('p.MuiTypography-h4')].map((node) =>
+    node.textContent.replace(/\s/g, ' ')
+  );
+  expect(values.slice(0, 3)).toEqual(['R$ 2.555,61', '+ R$ 0,00', '− R$ 2.448,00']);
+  const [balance, incoming, committed] = values.slice(0, 3).map(cents);
+  const shown = text().match(/future\.leftOver:(R\$\s[\d.,]+)/)[1];
+  expect(balance + incoming - committed).toBe(cents(shown));
+  expect(text()).not.toContain('future.free');
+});
+
+test('with a negative window before the income, the hero says what the usual pace does; without, it does not', async () => {
+  answer(() => Promise.resolve(auditOverview()));
+  await renderPage();
+  expect(text().replace(/\s/g, ' ')).toContain('future.hero.paceWarning:R$ 27,40:02/12');
+
+  answer(() => Promise.resolve(auditOverview({ withRisk: false })));
+  await act(async () => Simulate.click(button('future.horizonShort:60')));
+  expect(text()).not.toContain('future.hero.paceWarning');
 });

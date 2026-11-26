@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { WalletIcon } from '../wallet-ui';
 import HttpService from '../../services/HttpService';
 import { dayLabel, money, overdraftCostText } from '../../utils/wallet';
-import { limitSummary } from '../../utils/forecast';
+import { limitSummary, paceWarning } from '../../utils/forecast';
 import { HIDDEN_AMOUNT } from '../../utils/hiddenAmounts';
 
 // Lead, tail and the "why" sentence of the hero, per kind of answer.
@@ -35,11 +35,11 @@ const LIMIT_KEYS = {
 // Interest in real payments, counted without the user; a failure here must never touch the flow.
 const countPix = (step) => HttpService.postWithAuth('/future/pix-interest', { step }).catch(() => {});
 
-// Certainty is always text + line style, never colour alone (DESIGN.md): confirmed = plain seal,
-// estimated = `future` seal in italics, simulated = dotted outline in italics. Anything not yet confirmed
-// leans because it can still move.
+// Certainty is always text + line style, never colour alone (DESIGN.md): estimated = `future` seal in italics,
+// simulated = dotted outline in italics. Confirmed is the normal number and gets no seal (DESIGN.md, principle 5).
 export function CertaintyChip({ certainty }) {
   const { t } = useTranslation();
+  if (certainty === 'CONFIRMED') return null;
   const estimated = certainty === 'ESTIMATED';
   const simulated = certainty === 'HYPOTHETICAL';
   return (
@@ -47,7 +47,7 @@ export function CertaintyChip({ certainty }) {
       size="small"
       label={t(`future.certainty.${certainty}`)}
       sx={{
-        fontStyle: certainty === 'CONFIRMED' ? 'normal' : 'italic',
+        fontStyle: 'italic',
         color: estimated ? 'certainty.estimated' : 'text.secondary',
         bgcolor: (theme) => {
           if (estimated) return alpha(theme.palette.certainty.estimated, 0.14);
@@ -324,6 +324,7 @@ export function DailyLimitCard({ limit, risk, exitPlan = [], onWhy, compact = fa
   const over = limit.margin !== null && limit.margin !== undefined && Number(limit.margin) < 0;
   const binding = dayLabel(limit.bindingDate, lang);
   const firstWay = (short || over) && exitPlan.length ? exitPlan[0] : null;
+  const warning = paceWarning(limit, risk);
 
   const [leadKey, tailKey, helpKey] = LIMIT_KEYS[summary.kind];
   const tail = limit.untilIncome
@@ -342,6 +343,8 @@ export function DailyLimitCard({ limit, risk, exitPlan = [], onWhy, compact = fa
         date: dayLabel(risk.lowestDate, lang),
       });
     else if (short) pace = t('future.limit.shortPace', { pace: money(limit.pace, lang) });
+    // The warning line already names the pace; here only what to cut.
+    else if (over && warning) pace = t('future.limit.paceCut', { cut: money(Math.abs(Number(limit.margin)), lang) });
     else if (over)
       pace = t('future.limit.paceOver', {
         pace: money(limit.pace, lang),
@@ -382,6 +385,15 @@ export function DailyLimitCard({ limit, risk, exitPlan = [], onWhy, compact = fa
           {tail}
         </Typography>
       </Typography>
+      {/* The limit supposes spending only the limit; this says what the usual pace does (both are true). */}
+      {warning && (
+        <Typography color="warning.main" variant={compact ? 'body2' : 'body1'} sx={{ mt: 1, maxWidth: 640 }}>
+          {t('future.hero.paceWarning', {
+            pace: hideAmount ? HIDDEN_AMOUNT : money(warning.pace, lang),
+            date: dayLabel(warning.date, lang),
+          })}
+        </Typography>
+      )}
       {!compact && (
         <Typography color="text.secondary" sx={{ mt: 2, maxWidth: 640 }}>
           {pace}

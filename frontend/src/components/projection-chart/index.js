@@ -12,6 +12,38 @@ const DASH = { dashed: '6 5', dotted: '1 5' };
 // The "today" dot: the same mark as the period of the logo (components/brand).
 const TODAY_R = 4.5;
 const NONE = [];
+// Air above and below the data, as a share of its range: the axis follows the data, not the next round number.
+const AIR = 0.15;
+// The smallest depth of the area below zero, in px: R$ 84 short on a R$ 4 mil scale must still show.
+const MIN_HOLE = 8;
+
+/**
+ * The vertical scale: zero always in range (it is the reference), 15% air beyond the data. When the lowest
+ * negative day would sit less than MIN_HOLE px under zero, the part below zero gets its own scale (lowest
+ * point at MIN_HOLE px, as much air under it) and only the ticks from zero up are labelled.
+ */
+export function verticalScale(values, top, plotHeight) {
+  const lo = Math.min(0, ...values);
+  const hi = Math.max(0, ...values);
+  const pad = (hi - lo || Math.abs(hi) || 1) * AIR;
+  const yMax = hi + pad;
+  const yMin = lo < 0 ? lo - pad : 0;
+  let below = (-yMin / (yMax - yMin)) * plotHeight;
+  let negScale = yMin < 0 ? below / -yMin : 0;
+  const stretched = lo < 0 && -lo * negScale < MIN_HOLE;
+  if (stretched) {
+    negScale = MIN_HOLE / -lo;
+    below = MIN_HOLE * 2;
+  }
+  const zero = top + plotHeight - below;
+  const posScale = (zero - top) / yMax;
+  const y = (value) => {
+    const number = Number(value);
+    return number >= 0 ? zero - number * posScale : zero - number * negScale;
+  };
+  const ticks = niceTicks(yMin, yMax).filter((tick) => tick >= (stretched ? 0 : yMin) && tick <= yMax);
+  return { y, ticks };
+}
 
 /**
  * The container width, measured before the first paint: a guessed 640 px would overflow a 375 px
@@ -72,13 +104,10 @@ export default function ProjectionChart({
 
   const geometry = useMemo(() => {
     const values = [...history, ...series.flatMap((item) => item.days)].map((day) => Number(day.balance));
-    const ticks = niceTicks(Math.min(0, ...values), Math.max(0, ...values));
-    const yMin = ticks[0];
-    const yMax = ticks[ticks.length - 1];
     const plotWidth = width - PAD.left - PAD.right;
     const plotHeight = height - PAD.top - PAD.bottom;
     const x = (index) => PAD.left + (all.length <= 1 ? 0 : (index / (all.length - 1)) * plotWidth);
-    const y = (value) => PAD.top + ((yMax - Number(value)) / (yMax - yMin || 1)) * plotHeight;
+    const { y, ticks } = verticalScale(values, PAD.top, plotHeight);
     return { ticks, x, y, plotWidth, plotHeight };
   }, [series, history, all.length, width, height]);
 

@@ -1,6 +1,6 @@
 import { act, Simulate } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
-import ProjectionChart from '.';
+import ProjectionChart, { verticalScale } from '.';
 import ThemeProvider from '../../theme';
 
 jest.mock('../../context/WalletContext', () => ({ useWallets: jest.fn() }));
@@ -57,4 +57,29 @@ test('keyboard reaches the chart and walks the days, announcing each one', () =>
   expect(status()).toMatch(/R\$\s?100,00/);
   act(() => Simulate.keyDown(chart, { key: 'Escape' }));
   expect(status()).toBe('');
+});
+
+test('the scale follows the data: R$ 84 short on a R$ 4 mil line is not drawn on a −R$ 2 mil axis', () => {
+  // plot from y=0 to y=200; the audit case: lowest −84,19, highest 3.357,16.
+  const { y, ticks } = verticalScale([2555.61, -84.19, 3357.16], 0, 200);
+  expect(ticks[0]).toBe(0);
+  expect(ticks.some((tick) => tick < 0)).toBe(false);
+  // The hole under zero is at least 8 px deep.
+  expect(y(-84.19) - y(0)).toBeGreaterThanOrEqual(8);
+  // About 15% of air above the highest day, not the next round thousand.
+  expect(y(3357.16)).toBeGreaterThan(10);
+  expect(y(3357.16)).toBeLessThan(40);
+});
+
+test('a deep negative stays on one linear scale, with labelled ticks below zero', () => {
+  const { y, ticks } = verticalScale([1000, -1000], 0, 200);
+  expect(ticks.some((tick) => tick < 0)).toBe(true);
+  expect(y(0) - y(1000)).toBeCloseTo(y(-1000) - y(0), 5);
+});
+
+test('the chart is an image whose name carries the lowest balance and its date', () => {
+  width = 600;
+  render();
+  const chart = container.querySelector('svg[role="img"]');
+  expect(chart.getAttribute('aria-label')).toContain('saldo projetado');
 });

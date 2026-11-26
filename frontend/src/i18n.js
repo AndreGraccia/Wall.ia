@@ -362,10 +362,11 @@ const resources = {
       },
       future: {
         hero: {
-          canSpendLead: 'Você pode gastar',
+          canSpendLead: 'Gaste até',
           perDay: 'por dia',
-          canSpendTail: 'até {{date}}, sem nenhum dia negativo.',
-          canSpendTailDays: 'nos próximos {{days}} dias, sem nenhum dia negativo.',
+          canSpendTail: 'até {{date}} e nenhum dia fica negativo.',
+          canSpendTailDays: 'nos próximos {{days}} dias e nenhum dia fica negativo.',
+          paceWarning: 'No ritmo atual ({{pace}} por dia), o saldo fica negativo em {{date}}.',
           shortLead: 'Faltam',
           shortEnvelopesLead: 'Sem mexer nos envelopes, faltam',
           shortTail: 'até {{date}}, mesmo sem gastar nada.',
@@ -460,7 +461,7 @@ const resources = {
           confirm: 'Simular agendamento',
         },
         accuracy: {
-          title: 'Quanto a Wall.ia acertou',
+          title: 'Precisão da previsão',
           waiting:
             'A Wall.ia guarda cada previsão desde {{since}}. A primeira comparação com o saldo real sai em {{first}}.',
           error: 'Erro médio',
@@ -496,6 +497,13 @@ const resources = {
           'O que já tem destino nos próximos 30 dias passa do saldo. Veja abaixo quando falta e o que fazer.',
         balanceNow: 'Saldo agora',
         balanceNowHelp: 'Soma das suas carteiras e contas conectadas.',
+        incomingBefore: 'Entra antes de {{date}}',
+        incomingBeforeHelp: 'Entradas previstas de hoje até a véspera de {{date}}.',
+        committedBefore: 'Já tem destino',
+        committedBeforeHelp:
+          'Contas, faturas, parcelas e metas de hoje até a véspera de {{date}}, mais o que está nos envelopes. O dia a dia fica de fora: é ele que o limite responde.',
+        leftOver: 'Sobram {{amount}} para os {{days}} dias até {{date}}.',
+        leftShort: 'Faltam {{amount}} até {{date}}.',
         committed: 'Já tem destino',
         committedHelp: 'Saídas previstas até {{date}}.',
         committedSplit: '{{confirmed}} confirmados · {{estimated}} estimados',
@@ -576,6 +584,7 @@ const resources = {
           canSpend: 'Você pode gastar até {{amount}} por dia',
           canSpendHelp: 'Sem nenhum dia abaixo de zero. O dia mais apertado é {{binding}}.',
           paceOk: 'Seu ritmo no dia a dia é {{pace}} por dia. Sobram {{margin}} por dia.',
+          paceCut: 'Para não ficar negativo, gaste {{cut}} a menos por dia.',
           paceOver:
             'Seu ritmo no dia a dia é {{pace}} por dia. Para não ficar negativo, gaste {{cut}} a menos por dia.',
           paceUnknown: 'Confirme seus gastos do dia a dia nas perguntas para comparar com o seu ritmo.',
@@ -2025,10 +2034,11 @@ const resources = {
       },
       future: {
         hero: {
-          canSpendLead: 'You can spend',
+          canSpendLead: 'Spend up to',
           perDay: 'a day',
-          canSpendTail: 'until {{date}}, with no day below zero.',
-          canSpendTailDays: 'over the next {{days}} days, with no day below zero.',
+          canSpendTail: 'until {{date}} and no day goes below zero.',
+          canSpendTailDays: 'over the next {{days}} days and no day goes below zero.',
+          paceWarning: 'At your current pace ({{pace}} a day), the balance goes below zero on {{date}}.',
           shortLead: 'You are short',
           shortEnvelopesLead: 'Keeping your envelopes, you are short',
           shortTail: 'until {{date}}, even spending nothing.',
@@ -2123,7 +2133,7 @@ const resources = {
           confirm: 'Simulate scheduling',
         },
         accuracy: {
-          title: 'How right Wall.ia was',
+          title: 'Forecast accuracy',
           waiting:
             'Wall.ia keeps the forecast at every sync since {{since}}. The first comparison with the real balance comes from {{first}}.',
           error: 'Average miss',
@@ -2160,6 +2170,13 @@ const resources = {
           'What already has a destination in the next 30 days is more than the balance. See below when it runs short and what to do.',
         balanceNow: 'Balance now',
         balanceNowHelp: 'Sum of your wallets and connected accounts.',
+        incomingBefore: 'Comes in before {{date}}',
+        incomingBeforeHelp: 'Expected income from today to the day before {{date}}.',
+        committedBefore: 'Already has a destination',
+        committedBeforeHelp:
+          'Bills, invoices, instalments and goals from today to the day before {{date}}, plus what is in the envelopes. Everyday spending is left out: that is what the limit answers.',
+        leftOver: '{{amount}} left for the {{days}} days until {{date}}.',
+        leftShort: '{{amount}} missing until {{date}}.',
         committed: 'Already has a destination',
         committedHelp: 'Expected outflows until {{date}}.',
         committedSplit: '{{confirmed}} confirmed · {{estimated}} estimated',
@@ -2241,6 +2258,7 @@ const resources = {
           canSpend: 'You can spend up to {{amount}} a day',
           canSpendHelp: 'With no day below zero. The tightest day is {{binding}}.',
           paceOk: 'Your everyday pace is {{pace}} a day. That leaves {{margin}} a day.',
+          paceCut: 'To stay above zero, spend {{cut}} less a day.',
           paceOver: 'Your everyday pace is {{pace}} a day. To stay above zero, spend {{cut}} less a day.',
           paceUnknown: 'Confirm your everyday spending in the questions to compare it with your pace.',
           short: '{{amount}} short even without spending anything',
