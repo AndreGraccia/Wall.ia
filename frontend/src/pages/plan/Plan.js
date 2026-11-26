@@ -5,13 +5,15 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Container,
   FormControlLabel,
   IconButton,
   InputAdornment,
+  Menu,
+  MenuItem,
   Skeleton,
   Stack,
+  SvgIcon,
   Switch,
   TextField,
   ToggleButton,
@@ -78,30 +80,37 @@ function sliceColor(slice) {
   return slice.commitment ? 'secondary.main' : 'grey.600';
 }
 
-/** The income as one line cut into slices: the plan at a glance. Unassigned stays an empty dashed segment. */
+/**
+ * The income as one line cut into slices: the plan at a glance. Each segment names itself ("Fixo 35%"); the coloured
+ * dots on the rows below are the visual legend. Unassigned stays an empty dashed segment.
+ */
 function SplitBar({ slices }) {
   const { t, i18n } = useTranslation();
+  const lang = i18n.language;
   const total = hundredths(slices);
   const free = Math.max(0, 10000 - total);
   const scale = Math.max(total, 10000);
-  const parts = slices
-    .map(
-      (slice) =>
-        `${slice.label || t(`plan.kinds.${slice.kind}`)} ${percent(parsePercent(slice.percent), i18n.language)}`
-    )
-    .join(', ');
   return (
     <Box
-      role="img"
-      aria-label={t('plan.slices.barLabel', { parts })}
+      role="group"
+      aria-label={t('plan.slices.barLabel')}
       sx={{ display: 'flex', gap: '2px', height: 12, borderRadius: 999, overflow: 'hidden' }}
     >
       {slices.map((slice) => {
         const width = (Math.round(parsePercent(slice.percent) * 100) / scale) * 100;
-        return width > 0 ? <Box key={slice.id} sx={{ width: `${width}%`, bgcolor: sliceColor(slice) }} /> : null;
+        return width > 0 ? (
+          <Box
+            key={slice.id}
+            role="img"
+            aria-label={`${slice.label || t(`plan.kinds.${slice.kind}`)} ${percent(parsePercent(slice.percent), lang)}`}
+            sx={{ width: `${width}%`, bgcolor: sliceColor(slice) }}
+          />
+        ) : null;
       })}
       {free > 0 && (
         <Box
+          role="img"
+          aria-label={`${t('plan.slices.free')} ${percent(free / 100, lang)}`}
           sx={{
             flex: 1,
             border: '1px dashed',
@@ -244,6 +253,57 @@ SliceRow.propTypes = {
   onRemove: PropTypes.func.isRequired,
 };
 
+/** Reading mode: one 56 px line per saved slice. Fixed and Leisure show how much is used; the rest say what happens. */
+function SliceLine({ slice, amount, used }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const measured = amount !== null && used !== null;
+  let meta = t(committable(slice.kind) && slice.commitment ? 'plan.roles.committed' : 'plan.roles.reserved');
+  if (measured && slice.kind === 'FIXED')
+    meta = <Meter used={used} goal={amount} labelKey="plan.roles.fixed" overKey="plan.roles.fixedOver" />;
+  if (measured && slice.kind === 'LEISURE')
+    meta = <Meter used={used} goal={amount} labelKey="plan.roles.leisure" overKey="plan.roles.leisureOver" />;
+  return (
+    <ListRow
+      title={
+        <>
+          <Box
+            component="span"
+            aria-hidden
+            sx={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              mr: 1.5,
+              borderRadius: 999,
+              verticalAlign: 'middle',
+              bgcolor: sliceColor(slice),
+            }}
+          />
+          {slice.label || t(`plan.kinds.${slice.kind}`)}
+        </>
+      }
+      meta={meta}
+      value={amount === null ? '—' : money(amount, lang)}
+      aside={
+        <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+          {percent(parsePercent(slice.percent), lang)}
+        </Typography>
+      }
+    />
+  );
+}
+SliceLine.propTypes = { slice: PropTypes.object.isRequired, amount: PropTypes.number, used: PropTypes.number };
+
+/** Three dots for the "more actions" button; drawn here because the icon set has no filled glyphs. */
+const MoreIcon = (props) => (
+  <SvgIcon viewBox="0 0 24 24" {...props}>
+    <circle cx="5" cy="12" r="1.75" />
+    <circle cx="12" cy="12" r="1.75" />
+    <circle cx="19" cy="12" r="1.75" />
+  </SvgIcon>
+);
+
 /** "Ver se cabe": the 90 days without and with the slices, from the engine. Nothing is saved. */
 function FitResult({ result }) {
   const { t, i18n } = useTranslation();
@@ -320,28 +380,16 @@ function FitResult({ result }) {
 }
 FitResult.propTypes = { result: PropTypes.object.isRequired };
 
+/** What a month leaves: "Sobra R$ X" or, below zero, "Falta R$ X" in `negative` (never "Sobra −R$ X"). */
+export function monthResult(net) {
+  const value = Number(net);
+  return { short: value < 0, amount: Math.abs(value) };
+}
+
 /** Month by month: what comes in and goes out, confirmed and estimated apart, the plan and what is left. */
-function MonthlyProjection({ reloadKey }) {
+function MonthlyProjection({ months, onMonths, state, onRetry }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
-  const [months, setMonths] = useState(3);
-  const [state, setState] = useState({ loading: true, error: null, data: null });
-  const latest = useRef(0);
-  const load = useCallback(async () => {
-    latest.current += 1;
-    const mine = latest.current;
-    setState((previous) => ({ ...previous, loading: true, error: null }));
-    try {
-      const data = await HttpService.getWithAuth(`/plan/projection?months=${months}`);
-      if (mine === latest.current) setState({ loading: false, error: null, data });
-    } catch (failure) {
-      if (mine === latest.current) setState((previous) => ({ ...previous, loading: false, error: errorKey(failure) }));
-    }
-  }, [months]);
-  useEffect(() => {
-    load();
-  }, [load, reloadKey]);
-
   const { data } = state;
   const signed = (value) => `${Number(value) < 0 ? '−' : ''}${money(Math.abs(Number(value)), lang)}`;
   return (
@@ -354,7 +402,7 @@ function MonthlyProjection({ reloadKey }) {
           exclusive
           size="small"
           value={months}
-          onChange={(_, value) => value && setMonths(value)}
+          onChange={(_, value) => value && onMonths(value)}
           aria-label={t('plan.projection.label')}
         >
           {[3, 6, 12].map((count) => (
@@ -368,7 +416,7 @@ function MonthlyProjection({ reloadKey }) {
         <Alert
           severity="error"
           action={
-            <Button color="inherit" onClick={load}>
+            <Button color="inherit" onClick={onRetry}>
               {t('app.retry')}
             </Button>
           }
@@ -392,6 +440,7 @@ function MonthlyProjection({ reloadKey }) {
             const name = monthLabel(item.month, lang).replace(/^./, (letter) => letter.toLocaleUpperCase());
             const inflow = Number(item.inflowConfirmed) + Number(item.inflowEstimated);
             const outflow = Number(item.outflowConfirmed) + Number(item.outflowEstimated);
+            const result = monthResult(item.net);
             const details = [
               [`${t('plan.projection.in')}, ${t('plan.projection.confirmed').toLowerCase()}`, item.inflowConfirmed],
               [`${t('plan.projection.in')}, ${t('plan.projection.estimated').toLowerCase()}`, item.inflowEstimated],
@@ -419,11 +468,11 @@ function MonthlyProjection({ reloadKey }) {
                 })}${
                   Number(item.plan) > 0 ? `, ${t('plan.projection.plan').toLowerCase()} ${money(item.plan, lang)}` : ''
                 }`}
-                value={signed(item.net)}
-                valueColor={Number(item.net) < 0 ? 'error.main' : 'text.primary'}
+                value={money(result.amount, lang)}
+                valueColor={result.short ? 'error.main' : 'text.primary'}
                 aside={
-                  <Typography variant="caption" color="text.secondary">
-                    {t('plan.projection.net')}
+                  <Typography variant="caption" sx={{ color: result.short ? 'error.main' : 'text.secondary' }}>
+                    {t(result.short ? 'plan.projection.short' : 'plan.projection.net')}
                   </Typography>
                 }
                 detailLabel={t('plan.projection.detail', { month: name })}
@@ -466,11 +515,39 @@ function MonthlyProjection({ reloadKey }) {
     </Box>
   );
 }
-MonthlyProjection.propTypes = { reloadKey: PropTypes.number };
+MonthlyProjection.propTypes = {
+  months: PropTypes.number.isRequired,
+  onMonths: PropTypes.func.isRequired,
+  state: PropTypes.object.isRequired,
+  onRetry: PropTypes.func.isRequired,
+};
+
+/** The answer first: this month's result, the same number as the first line of "Próximos meses". */
+function Hero({ item, loading }) {
+  const { t, i18n } = useTranslation();
+  if (!item) return loading ? <Skeleton width="min(360px, 80%)" height={64} /> : null;
+  const result = monthResult(item.net);
+  return (
+    <Typography id="plan-hero" component="h2" sx={{ m: 0 }}>
+      <Typography component="span" variant="body1" color="text.secondary" sx={{ display: 'block' }}>
+        {t('plan.hero.lead')}
+      </Typography>{' '}
+      <Typography
+        component="span"
+        variant="h2"
+        sx={{ display: 'block', my: 0.5, color: result.short ? 'error.main' : 'text.primary' }}
+      >
+        {t(result.short ? 'plan.hero.short' : 'plan.hero.left', { amount: money(result.amount, i18n.language) })}
+      </Typography>
+    </Typography>
+  );
+}
+Hero.propTypes = { item: PropTypes.object, loading: PropTypes.bool };
 
 /**
- * Plano do mês (ADR 0021, proposta de André Graccia): the confirmed income split into slices. Saving or turning the
- * plan on commits nothing; only slices marked "virar compromisso" leave the balance, on income day.
+ * Plano do mês (ADR 0021): the confirmed income split into slices. Saving or turning the plan on commits nothing;
+ * only slices marked "tirar do saldo no dia da renda" leave the balance, on income day. A saved plan opens for
+ * reading; "Editar fatias" opens the editor.
  */
 export default function Plan() {
   const { t, i18n } = useTranslation();
@@ -479,11 +556,41 @@ export default function Plan() {
   const [state, setState] = useState({ loading: true, error: null, plan: null, methods: [], profile: null });
   const [draft, setDraft] = useState([]);
   const [preset, setPreset] = useState(null);
+  const [editing, setEditing] = useState(false);
   const [fit, setFit] = useState(null);
   const [busy, setBusy] = useState(null);
   const [notice, setNotice] = useState(null);
   const [failure, setFailure] = useState(null);
   const [projectionKey, setProjectionKey] = useState(0);
+  const [months, setMonths] = useState(3);
+  const [projection, setProjection] = useState({ loading: true, error: null, data: null });
+  const [menu, setMenu] = useState(null);
+  const latest = useRef(0);
+  const slicesRef = useRef(null);
+  const moveFocus = useRef(false);
+
+  const loadProjection = useCallback(async () => {
+    latest.current += 1;
+    const mine = latest.current;
+    setProjection((previous) => ({ ...previous, loading: true, error: null }));
+    try {
+      const data = await HttpService.getWithAuth(`/plan/projection?months=${months}`);
+      if (mine === latest.current) setProjection({ loading: false, error: null, data });
+    } catch (error) {
+      if (mine === latest.current)
+        setProjection((previous) => ({ ...previous, loading: false, error: errorKey(error) }));
+    }
+  }, [months]);
+  useEffect(() => {
+    loadProjection();
+  }, [loadProjection, projectionKey]);
+
+  // Switching between reading and editing replaces the focused button: hand the focus to the new mode.
+  useEffect(() => {
+    if (!moveFocus.current) return;
+    moveFocus.current = false;
+    slicesRef.current?.querySelector(editing ? 'input, [aria-pressed]' : 'button[data-edit]')?.focus();
+  }, [editing]);
 
   const applyPreset = useCallback(
     (id, plan, methods) => {
@@ -541,10 +648,15 @@ export default function Plan() {
     });
     setDraft(slices);
     setPreset(presetOf(slices, methods));
-    // "Usar no plano" from Meu método arrives as ?preset=: it fills the draft, nothing is saved.
+    let edit = !plan.value.saved || slices.length === 0;
+    // "Usar no plano" from Meu método arrives as ?preset=: it fills the draft in the editor, nothing is saved.
     const asked = searchParams.get('preset');
-    if (asked && PRESETS.includes(asked) && !plan.value.active) applyPreset(asked, plan.value, methods);
+    if (asked && PRESETS.includes(asked) && !plan.value.active) {
+      applyPreset(asked, plan.value, methods);
+      edit = true;
+    }
     if (asked) setSearchParams({}, { replace: true });
+    setEditing(edit);
     // Runs once per visit; the preset in the URL is read only then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -561,6 +673,7 @@ export default function Plan() {
   const fixedUsed = plan?.fixed ? Number(plan.fixed.recurring || 0) + Number(plan.fixed.loans || 0) : null;
   const leisureSaved = plan?.slices?.find((slice) => slice.kind === 'LEISURE');
   const leisureUsed = leisureSaved?.used != null ? Number(leisureSaved.used) : null;
+  const usedFor = (slice) => (slice.kind === 'FIXED' ? fixedUsed : slice.kind === 'LEISURE' ? leisureUsed : null);
   const methodName = profile?.method
     ? t(`method.catalog.${profile.method}.name`, {
         defaultValue: methods.find((item) => item.id === profile.method)?.name || profile.method,
@@ -595,6 +708,19 @@ export default function Plan() {
     setPreset('CUSTOM');
     setDraft((previous) => [...previous, draftSlice({ kind: 'CUSTOM', label: t('plan.kinds.CUSTOM'), percent: 0 })]);
   };
+  const openEditor = () => {
+    setNotice(null);
+    setFailure(null);
+    moveFocus.current = true;
+    setEditing(true);
+  };
+  const closeEditor = () => {
+    setFit(null);
+    setDraft(savedSlices);
+    setPreset(presetOf(savedSlices, methods));
+    moveFocus.current = true;
+    setEditing(false);
+  };
 
   const run = async (kind, action) => {
     setBusy(kind);
@@ -615,6 +741,8 @@ export default function Plan() {
     setFit(null);
     setNotice(message);
     setProjectionKey((key) => key + 1);
+    // Saved: back to reading what was saved.
+    setEditing(!next.saved || !next.slices?.length);
   };
   const save = () =>
     run('save', async () => {
@@ -652,6 +780,35 @@ export default function Plan() {
       : 0;
   if (missing < 0) sumText = t('plan.sum.over', { percent: percent(-missing / 100, lang) });
 
+  let statusLine = t('plan.meta.inactive', { status: t(`plan.status.${plan?.status}`) });
+  if (plan?.active)
+    statusLine =
+      Number(plan.monthlyCommitment) > 0
+        ? t('plan.meta.activeCommitment', { amount: money(plan.monthlyCommitment, lang) })
+        : t('plan.meta.active');
+  if (methodName) statusLine += ` · ${t('plan.method.current', { name: methodName })}`;
+
+  const sum = (
+    <Typography
+      variant="body2"
+      role="status"
+      sx={{ mt: 1, fontVariantNumeric: 'tabular-nums', color: complete ? 'text.secondary' : 'warning.main' }}
+    >
+      {t('plan.sum.total', { percent: percent(total / 100, lang) })}
+      {sumText && `, ${sumText}`}
+    </Typography>
+  );
+  const activateButton = (
+    <Button variant="contained" onClick={() => activate(true)} disabled={Boolean(blocked) || Boolean(busy)}>
+      {busy === 'activate' ? t('plan.actions.saving') : t('plan.actions.activate')}
+    </Button>
+  );
+  const blockedText = !plan?.active && blocked && (
+    <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
+      {blocked}
+    </Typography>
+  );
+
   return (
     <>
       <Helmet>
@@ -662,11 +819,43 @@ export default function Plan() {
           title={t('plan.heading')}
           action={
             plan && (
-              <Chip
-                label={t(`plan.status.${plan.active ? 'ACTIVE' : plan.status}`)}
-                variant={plan.active ? 'filled' : 'outlined'}
-                sx={plan.active ? { bgcolor: 'secondary.lighter', color: 'secondary.main' } : undefined}
-              />
+              <>
+                <IconButton
+                  id="plan-more"
+                  aria-label={t('plan.menu.label')}
+                  aria-haspopup="menu"
+                  aria-controls={menu ? 'plan-menu' : undefined}
+                  aria-expanded={Boolean(menu)}
+                  onClick={(event) => setMenu(event.currentTarget)}
+                  sx={{ width: 44, height: 44, color: 'text.secondary' }}
+                >
+                  <MoreIcon sx={{ fontSize: 20 }} />
+                </IconButton>
+                <Menu
+                  id="plan-menu"
+                  anchorEl={menu}
+                  open={Boolean(menu)}
+                  onClose={() => setMenu(null)}
+                  MenuListProps={{ 'aria-labelledby': 'plan-more' }}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                  <MenuItem component={RouterLink} to="/plan/method">
+                    {t('plan.method.change')}
+                  </MenuItem>
+                  {plan.active && (
+                    <MenuItem
+                      disabled={Boolean(busy)}
+                      onClick={() => {
+                        setMenu(null);
+                        activate(false);
+                      }}
+                    >
+                      {t('plan.actions.deactivate')}
+                    </MenuItem>
+                  )}
+                </Menu>
+              </>
             )
           }
         />
@@ -698,227 +887,210 @@ export default function Plan() {
 
         {plan && (
           <Stack spacing={{ xs: 4, md: 5 }}>
-            <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1, mt: { md: -2 } }}>
-              <Typography variant="body2" color="text.secondary">
-                {methodName ? t('plan.method.current', { name: methodName }) : t('plan.method.none')}
-              </Typography>
-              <Button component={RouterLink} to="/plan/method" size="small">
-                {t('plan.method.change')}
-              </Button>
-            </Stack>
-
-            {/* (1) The base: the confirmed income, or what to do without it. */}
-            {income === null ? (
-              <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: 'warning.main' }}>
-                <Typography sx={{ maxWidth: 560 }}>{t('plan.noIncome')}</Typography>
-                <Button component={RouterLink} to="/future" variant="contained" sx={{ mt: 2 }}>
-                  {t('plan.noIncomeAction')}
-                </Button>
-              </Box>
-            ) : (
-              <Box component="section" aria-labelledby="plan-income">
-                <Typography id="plan-income" component="h2" sx={{ m: 0 }}>
-                  <Typography component="span" variant="body1" color="text.secondary" sx={{ display: 'block' }}>
-                    {t('plan.income.lead')}
+            {/* (1) The answer: what this month leaves; the income and the plan's state as metadata. */}
+            <Box component="section" aria-labelledby="plan-hero">
+              <Hero item={projection.data?.items?.[0]} loading={projection.loading} />
+              {income === null ? (
+                <Box sx={{ pl: 2, mt: 2, borderLeft: '2px solid', borderColor: 'warning.main' }}>
+                  <Typography sx={{ maxWidth: 560 }}>{t('plan.noIncome')}</Typography>
+                  <Button component={RouterLink} to="/future" variant="contained" sx={{ mt: 2 }}>
+                    {t('plan.noIncomeAction')}
+                  </Button>
+                </Box>
+              ) : (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {t('plan.meta.income', {
+                      amount: money(income, lang),
+                      date: dayLabel(plan.income.nextDate, lang),
+                    })}
                   </Typography>
-                  <Typography component="span" variant="h2" sx={{ display: 'block', my: 0.5 }}>
-                    {money(income, lang)}
-                    <Typography component="span" variant="h5" color="text.secondary" sx={{ ml: 1, fontWeight: 500 }}>
-                      {t('plan.income.perMonth')}
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {statusLine}
+                  </Typography>
+                  <Disclosure label={t('plan.income.why')}>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('plan.income.whyText')}
                     </Typography>
-                  </Typography>
-                </Typography>
-                <Typography color="text.secondary">
-                  {plan.active && Number(plan.monthlyCommitment) > 0
-                    ? t('plan.activeLine', { amount: money(plan.monthlyCommitment, lang) })
-                    : t('plan.income.next', { date: dayLabel(plan.income.nextDate, lang) })}
-                </Typography>
-                <Disclosure label={t('plan.income.why')} sx={{ mt: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('plan.income.whyText')}
-                  </Typography>
-                  <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
-                    {plan.income.sources.map((source) => (
-                      <Typography component="li" variant="body2" color="text.secondary" key={source.key}>
-                        {t('plan.income.source', { name: source.counterparty, day: source.typicalDay })}:{' '}
-                        {money(source.amount, lang)}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Disclosure>
-              </Box>
-            )}
+                    <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
+                      {plan.income.sources.map((source) => (
+                        <Typography component="li" variant="body2" color="text.secondary" key={source.key}>
+                          {t('plan.income.source', { name: source.counterparty, day: source.typicalDay })}:{' '}
+                          {money(source.amount, lang)}
+                        </Typography>
+                      ))}
+                    </Box>
+                  </Disclosure>
+                </>
+              )}
+            </Box>
             {plan.warnings?.includes('ACTIVE_WITHOUT_INCOME') && (
               <Alert severity="warning">{t('plan.activeWithoutIncome')}</Alert>
             )}
 
-            {/* (2) The split: starting point, the line, the slices. */}
-            <Box component="section" aria-labelledby="plan-slices">
-              <Typography id="plan-slices" variant="h6" component="h2">
-                {t('plan.slices.title')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
-                {t('plan.presets.label')}
-              </Typography>
-              <ToggleButtonGroup
-                exclusive
-                value={preset}
-                onChange={(_, value) => value && applyPreset(value, plan, methods)}
-                aria-label={t('plan.presets.label')}
-                sx={{ flexWrap: 'wrap', borderRadius: { xs: '20px', sm: 999 } }}
-              >
-                {PRESETS.map((id) => (
-                  <ToggleButton
-                    key={id}
-                    value={id}
-                    disabled={
-                      ['PERCENT_503020', 'PERCENT_BALANCED'].includes(id) && !methods.some((item) => item.id === id)
-                    }
-                  >
-                    {t(`plan.presets.${id}`)}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-              {preset && (
-                <Typography variant="body2" color="text.secondary" component="p" sx={{ mt: 1, maxWidth: 680 }}>
-                  {t(`plan.presets.help.${preset}`, { fixed: percent(Math.round(fixedShare * 100) / 100, lang) })}
-                </Typography>
-              )}
+            {/* (2) The months ahead, with the plan. */}
+            <MonthlyProjection months={months} onMonths={setMonths} state={projection} onRetry={loadProjection} />
 
-              {draft.length === 0 ? (
-                <Typography color="text.secondary" sx={{ mt: 3 }}>
-                  {t('plan.empty')}
+            {/* (3) The split: read it, or edit it. */}
+            <Box component="section" aria-labelledby="plan-slices" ref={slicesRef}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ gap: 2 }}>
+                <Typography id="plan-slices" variant="h6" component="h2">
+                  {t('plan.slices.title')}
                 </Typography>
-              ) : (
-                <>
-                  <Box sx={{ mt: 3, maxWidth: 880 }}>
-                    <SplitBar slices={draft} />
-                    <Typography
-                      variant="body2"
-                      role="status"
-                      sx={{
-                        mt: 1,
-                        fontVariantNumeric: 'tabular-nums',
-                        color: complete ? 'text.secondary' : 'warning.main',
-                      }}
-                    >
-                      {t('plan.sum.total', { percent: percent(total / 100, lang) })}
-                      {sumText && `, ${sumText}`}
-                    </Typography>
-                  </Box>
-                  <Box
-                    component="ul"
-                    sx={{
-                      m: 0,
-                      mt: 2,
-                      p: 0,
-                      maxWidth: 880,
-                      listStyle: 'none',
-                      borderTop: '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    {draft.map((slice, index) => (
-                      <SliceRow
-                        key={slice.id}
-                        slice={slice}
-                        position={index}
-                        amount={amountFor(slice, index)}
-                        used={slice.kind === 'FIXED' ? fixedUsed : slice.kind === 'LEISURE' ? leisureUsed : null}
-                        onChange={(patch) => change(slice.id, patch)}
-                        onRemove={() => remove(slice.id)}
-                      />
-                    ))}
-                  </Box>
-                </>
-              )}
-              <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1, mt: 1.5 }}>
-                {draft.length < MAX_SLICES && (
-                  <Button onClick={add} startIcon={<WalletIcon name="plus" sx={{ fontSize: 18 }} />}>
-                    {t('plan.slices.add')}
+                {!editing && (
+                  <Button variant="outlined" data-edit onClick={openEditor}>
+                    {t('plan.slices.edit')}
                   </Button>
                 )}
-                <Disclosure label={t('plan.slices.why')}>
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
-                    {t('plan.slices.whyText')}
-                  </Typography>
-                </Disclosure>
               </Stack>
-            </Box>
 
-            {/* (3) Decide: see if it fits (saves nothing), then turn it on. */}
-            {draft.length > 0 && (
-              <Box component="section" aria-label={t('plan.actions.activate')}>
-                <Stack direction="row" flexWrap="wrap" sx={{ gap: 1 }}>
-                  {plan.active ? (
-                    <>
-                      {dirty && (
-                        <Button variant="contained" onClick={save} disabled={!complete || Boolean(busy)}>
-                          {busy === 'save' ? t('plan.actions.saving') : t('plan.actions.saveChanges')}
-                        </Button>
-                      )}
-                      <Button variant="outlined" onClick={seeIfFits} disabled={income === null || Boolean(busy)}>
-                        {busy === 'fit' ? t('plan.actions.fitting') : t('plan.actions.fit')}
-                      </Button>
-                      <Button onClick={() => activate(false)} disabled={Boolean(busy)}>
-                        {t('plan.actions.deactivate')}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="contained"
-                        onClick={() => activate(true)}
-                        disabled={Boolean(blocked) || Boolean(busy)}
-                      >
-                        {busy === 'activate' ? t('plan.actions.saving') : t('plan.actions.activate')}
-                      </Button>
-                      <Button variant="outlined" onClick={seeIfFits} disabled={income === null || Boolean(busy)}>
-                        {busy === 'fit' ? t('plan.actions.fitting') : t('plan.actions.fit')}
-                      </Button>
-                      {dirty && (
-                        <Button onClick={save} disabled={Boolean(busy)}>
-                          {busy === 'save' ? t('plan.actions.saving') : t('plan.actions.save')}
-                        </Button>
-                      )}
-                    </>
-                  )}
-                  {dirty && plan.saved && (
-                    <Button
-                      onClick={() => {
-                        setFit(null);
-                        setDraft(savedSlices);
-                        setPreset(presetOf(savedSlices, methods));
-                      }}
-                      disabled={Boolean(busy)}
-                      sx={{ color: 'text.secondary' }}
-                    >
-                      {t('plan.actions.undo')}
-                    </Button>
-                  )}
-                </Stack>
-                {!plan.active && blocked && (
-                  <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-                    {blocked}
-                  </Typography>
-                )}
-                <Box aria-live="polite" sx={{ mt: notice || failure || fit ? 2 : 0 }}>
-                  {failure && <Alert severity="error">{t(failure)}</Alert>}
-                  {notice && <Alert severity="success">{notice}</Alert>}
-                  {fit && (
-                    <Box sx={{ mt: notice || failure ? 2 : 0 }}>
-                      <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
-                        {t('plan.fit.title')}
-                      </Typography>
-                      <FitResult result={fit} />
+              {!editing && (
+                <>
+                  <Box sx={{ mt: 2, maxWidth: 880 }}>
+                    <SplitBar slices={savedSlices} />
+                    {!complete && sum}
+                  </Box>
+                  <Box sx={{ mt: 2, maxWidth: 880, borderTop: '1px solid', borderColor: 'divider' }}>
+                    {savedSlices.map((slice, index) => (
+                      <SliceLine key={slice.id} slice={slice} amount={amountFor(slice, index)} used={usedFor(slice)} />
+                    ))}
+                  </Box>
+                  {!plan.active && (
+                    <Box sx={{ mt: 2 }}>
+                      {activateButton}
+                      {blockedText}
                     </Box>
                   )}
-                </Box>
-              </Box>
-            )}
+                </>
+              )}
 
-            {/* (4) The months ahead, with or without the plan. */}
-            <MonthlyProjection reloadKey={projectionKey} />
+              {editing && (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
+                    {t('plan.presets.label')}
+                  </Typography>
+                  <ToggleButtonGroup
+                    exclusive
+                    value={preset}
+                    onChange={(_, value) => value && applyPreset(value, plan, methods)}
+                    aria-label={t('plan.presets.label')}
+                    sx={{ flexWrap: 'wrap', borderRadius: { xs: '20px', sm: 999 } }}
+                  >
+                    {PRESETS.map((id) => (
+                      <ToggleButton
+                        key={id}
+                        value={id}
+                        disabled={
+                          ['PERCENT_503020', 'PERCENT_BALANCED'].includes(id) && !methods.some((item) => item.id === id)
+                        }
+                      >
+                        {t(`plan.presets.${id}`)}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                  {preset && (
+                    <Typography variant="body2" color="text.secondary" component="p" sx={{ mt: 1, maxWidth: 680 }}>
+                      {t(`plan.presets.help.${preset}`, { fixed: percent(Math.round(fixedShare * 100) / 100, lang) })}
+                    </Typography>
+                  )}
+
+                  {draft.length === 0 ? (
+                    <Typography color="text.secondary" sx={{ mt: 3 }}>
+                      {t('plan.empty')}
+                    </Typography>
+                  ) : (
+                    <>
+                      <Box sx={{ mt: 3, maxWidth: 880 }}>
+                        <SplitBar slices={draft} />
+                        {sum}
+                      </Box>
+                      <Box
+                        component="ul"
+                        sx={{
+                          m: 0,
+                          mt: 2,
+                          p: 0,
+                          maxWidth: 880,
+                          listStyle: 'none',
+                          borderTop: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        {draft.map((slice, index) => (
+                          <SliceRow
+                            key={slice.id}
+                            slice={slice}
+                            position={index}
+                            amount={amountFor(slice, index)}
+                            used={usedFor(slice)}
+                            onChange={(patch) => change(slice.id, patch)}
+                            onRemove={() => remove(slice.id)}
+                          />
+                        ))}
+                      </Box>
+                    </>
+                  )}
+                  <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1, mt: 1.5 }}>
+                    {draft.length < MAX_SLICES && (
+                      <Button onClick={add} startIcon={<WalletIcon name="plus" sx={{ fontSize: 18 }} />}>
+                        {t('plan.slices.add')}
+                      </Button>
+                    )}
+                    <Disclosure label={t('plan.slices.why')}>
+                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
+                        {t('plan.slices.whyText')}
+                      </Typography>
+                    </Disclosure>
+                  </Stack>
+
+                  {/* Decide: see if it fits (saves nothing), then save or turn it on. */}
+                  {(draft.length > 0 || plan.saved) && (
+                    <Box sx={{ mt: { xs: 4, md: 5 } }}>
+                      <Stack direction="row" flexWrap="wrap" sx={{ gap: 1 }}>
+                        {plan.active
+                          ? dirty && (
+                              <Button variant="contained" onClick={save} disabled={!complete || Boolean(busy)}>
+                                {busy === 'save' ? t('plan.actions.saving') : t('plan.actions.saveChanges')}
+                              </Button>
+                            )
+                          : draft.length > 0 && activateButton}
+                        {draft.length > 0 && (
+                          <Button variant="outlined" onClick={seeIfFits} disabled={income === null || Boolean(busy)}>
+                            {busy === 'fit' ? t('plan.actions.fitting') : t('plan.actions.fit')}
+                          </Button>
+                        )}
+                        {!plan.active && dirty && (
+                          <Button onClick={save} disabled={Boolean(busy)}>
+                            {busy === 'save' ? t('plan.actions.saving') : t('plan.actions.save')}
+                          </Button>
+                        )}
+                        {plan.saved && savedSlices.length > 0 && (
+                          <Button onClick={closeEditor} disabled={Boolean(busy)} sx={{ color: 'text.secondary' }}>
+                            {t('plan.actions.cancel')}
+                          </Button>
+                        )}
+                      </Stack>
+                      {blockedText}
+                      <Box aria-live="polite" sx={{ mt: fit ? 2 : 0 }}>
+                        {fit && (
+                          <>
+                            <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
+                              {t('plan.fit.title')}
+                            </Typography>
+                            <FitResult result={fit} />
+                          </>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                </>
+              )}
+
+              <Box aria-live="polite" sx={{ mt: notice || failure ? 2 : 0 }}>
+                {failure && <Alert severity="error">{t(failure)}</Alert>}
+                {notice && <Alert severity="success">{notice}</Alert>}
+              </Box>
+            </Box>
           </Stack>
         )}
       </Container>
