@@ -378,7 +378,12 @@ export default function OpenFinance() {
               <ListRow
                 key={wallet.id}
                 title={wallet.name}
-                meta={wallet.institutionName}
+                // "Banco Aurora • 8392" already names the bank.
+                meta={
+                  wallet.institutionName && wallet.name.startsWith(wallet.institutionName)
+                    ? undefined
+                    : wallet.institutionName
+                }
                 value={money(wallet.balance, lang)}
               />
             ))}
