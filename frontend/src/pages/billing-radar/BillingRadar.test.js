@@ -121,6 +121,39 @@ test('renders the price-change alert with transaction evidence', async () => {
   expect(pageText()).toContain('billingRadar.impactDifference');
 });
 
+test('a charge expected before today is not called "next"', async () => {
+  HttpService.getWithAuth.mockResolvedValue({
+    dataThrough: '2026-11-26',
+    bankData: null,
+    recurringCount: 1,
+    priceIncreaseCount: 0,
+    possibleDuplicateCount: 0,
+    projectedMonthlyTotal: 612.48,
+    items: [
+      {
+        key: 'out:parcela',
+        counterparty: 'Parcela empréstimo pessoal',
+        recurring: true,
+        priceIncrease: false,
+        possibleDuplicate: false,
+        confidence: 'HIGH',
+        latestAmount: 612.48,
+        lastChargeDate: '2026-10-25',
+        nextExpectedDate: '2026-11-24',
+        occurrences: 3,
+        evidence: [],
+      },
+    ],
+  });
+  await renderPage();
+
+  expect(pageText()).toContain('billingRadar.expectedNotSeen');
+  expect(pageText()).not.toContain('billingRadar.nextChargeShort');
+  // The counters are one line of metadata under the total, not three big numbers.
+  expect(pageText()).toContain('billingRadar.summary.recurringMeta:1');
+  expect(pageText()).not.toContain('billingRadar.summary.increasesMeta');
+});
+
 test('explains that more history is needed and offers Open Finance', async () => {
   HttpService.getWithAuth.mockResolvedValue({
     bankData: null,

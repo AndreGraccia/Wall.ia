@@ -36,4 +36,12 @@ public record LoanPlan(
         }
         return dates;
     }
+
+    /**
+     * The first instalment due on or after {@code today}. The bank keeps reporting a due date until it sees the
+     * payment, so {@link #nextDueDate()} can be in the past; this is the one still ahead (null when none is left).
+     */
+    public LocalDate upcomingDueDate(LocalDate today) {
+        return dueDates().stream().filter(date -> !date.isBefore(today)).findFirst().orElse(null);
+    }
 }

@@ -23,7 +23,8 @@ import { enqueueSnackbar } from 'notistack';
 import { IconTile, PageHeading, PageSkeleton, WalletIcon, visuallyHidden } from '../../components/wallet-ui';
 import { useWallets } from '../../context/WalletContext';
 import HttpService from '../../services/HttpService';
-import { dateTime, errorKey } from '../../utils/wallet';
+import { Disclosure, ListRow } from '../../components/detail-ui';
+import { dateTime, errorKey, localeFor, money } from '../../utils/wallet';
 import ConsentDialog, { PermissionGroups } from './ConsentDialog';
 import consentTerms from '../../consentTerms.json';
 
@@ -31,6 +32,8 @@ const DURATIONS = [3, 6, 12];
 // Open Finance Brasil: a consent not authorised within 60 minutes is rejected with CONSENT_EXPIRED.
 const AUTHORISE_WINDOW_MS = 60 * 60 * 1000;
 const STATUS_COLOR = { AUTHORISED: 'success', AWAITING_AUTHORISATION: 'warning' };
+const shortDate = (value, language, options) =>
+  value ? new Intl.DateTimeFormat(localeFor(language), options).format(new Date(value)) : '—';
 
 /**
  * One step of the consent journey. Where the person is shows three ways, never by colour alone: a check when
@@ -106,7 +109,7 @@ Step.propTypes = {
 export default function OpenFinance() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
-  const { refresh } = useWallets();
+  const { refresh, wallets = [] } = useWallets();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -292,60 +295,143 @@ export default function OpenFinance() {
     {
       key: 'sync',
       done: false,
-      body: state === 'AUTHORISED' && (
-        <>
-          <Stack direction="row" spacing={4}>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                {t('openFinance.accounts')}
-              </Typography>
-              <Typography variant="h5" component="p" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                {status.accountCount}
-              </Typography>
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('openFinance.lastSync')}
-              </Typography>
-              <Typography variant="subtitle1" component="p" sx={{ mt: 0.5 }}>
-                {dateTime(status.lastSyncedAt, lang)}
-              </Typography>
-            </Box>
-          </Stack>
-          <Box sx={{ mt: 2 }}>
-            <LoadingButton loading={busy} variant="contained" onClick={sync} startIcon={<WalletIcon name="sync" />}>
-              {t('openFinance.sync')}
-            </LoadingButton>
-          </Box>
-        </>
-      ),
+      body: null,
     },
     {
       key: 'revoke',
       done: false,
-      // What revoking costs is on screen before the button, not only in the confirmation.
+      // While connecting, what revoking costs is already on screen; once connected the button lives in that view.
       body: (
-        <>
-          <Typography
-            variant="body2"
-            sx={{
-              pl: 1.5,
-              borderLeft: '2px solid',
-              borderColor: state === 'AUTHORISED' ? 'warning.main' : 'divider',
-              color: state === 'AUTHORISED' ? 'text.primary' : 'text.secondary',
-            }}
-          >
-            {t('openFinance.steps.revokeWarning')}
-          </Typography>
-          {state === 'AUTHORISED' && (
-            <Button variant="outlined" color="error" disabled={busy} onClick={() => setRevokeOpen(true)} sx={{ mt: 2 }}>
-              {t('openFinance.revoke.open')}
-            </Button>
-          )}
-        </>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ pl: 1.5, borderLeft: '2px solid', borderColor: 'divider' }}
+        >
+          {t('openFinance.steps.revokeWarning')}
+        </Typography>
       ),
     },
   ];
+
+  // What is shared and the credential promise: a side column while connecting, a disclosure once connected.
+  const sharedDetails = (
+    <>
+      <PermissionGroups permissions={status?.permissions || []} />
+      <Stack direction="row" spacing={1.5} sx={{ pt: 3, mt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+        <WalletIcon name="shield" aria-hidden sx={{ fontSize: 20, color: 'text.secondary', mt: 0.25 }} />
+        <Box>
+          <Typography variant="subtitle2" component="p">
+            {t('openFinance.credentialTitle')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {t('openFinance.credentialHelp')}
+          </Typography>
+        </Box>
+      </Stack>
+      <Box sx={{ mt: 2 }}>
+        <Button
+          href="https://openfinancebrasil.atlassian.net/wiki/spaces/OF/pages/17369300/Dados+do+Cliente+-+DC"
+          target="_blank"
+          rel="noreferrer"
+          color="inherit"
+          size="small"
+        >
+          {t('openFinance.officialDocs')}
+        </Button>
+      </Box>
+    </>
+  );
+  const permissionsAside = (
+    <Box component="aside" aria-labelledby="of-permissions">
+      <Typography id="of-permissions" variant="h6" component="h2">
+        {t('openFinance.permissionsTitle')}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
+        {t('openFinance.permissionsHelp')}
+      </Typography>
+      {sharedDetails}
+    </Box>
+  );
+  const accounts = wallets.filter((wallet) => wallet.source === 'OPEN_FINANCE');
+
+  // Connected: what matters now is the accounts, when they were last brought in and how to bring them again.
+  // The consent journey is behind; revoking is still on the page, last and secondary.
+  const connectedView = status && state === 'AUTHORISED' && (
+    <Stack component="section" aria-labelledby="of-institution" aria-busy={loading} spacing={4} sx={{ maxWidth: 760 }}>
+      <Box>
+        <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ columnGap: 2, rowGap: 1 }}>
+          <Typography id="of-institution" variant="h5" component="h2" sx={{ overflowWrap: 'anywhere' }}>
+            {status.institutionName}
+          </Typography>
+          <Chip size="small" color="success" label={t('openFinance.status.AUTHORISED')} />
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          {t('openFinance.connected.until', {
+            date: shortDate(status.expiresAt, lang, { day: '2-digit', month: '2-digit', year: 'numeric' }),
+          })}
+        </Typography>
+      </Box>
+      <Box>
+        {accounts.length > 0 && (
+          <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+            {accounts.map((wallet) => (
+              <ListRow
+                key={wallet.id}
+                title={wallet.name}
+                // "Banco Aurora • 8392" already names the bank.
+                meta={
+                  wallet.institutionName && wallet.name.startsWith(wallet.institutionName)
+                    ? undefined
+                    : wallet.institutionName
+                }
+                value={money(wallet.balance, lang)}
+              />
+            ))}
+          </Box>
+        )}
+        <Stack
+          direction="row"
+          alignItems="center"
+          flexWrap="wrap"
+          sx={{
+            gap: 2,
+            mt: 2,
+            pt: accounts.length ? 2 : 0,
+            borderTop: accounts.length ? '1px solid' : 0,
+            borderColor: 'divider',
+          }}
+        >
+          <LoadingButton loading={busy} variant="contained" onClick={sync} startIcon={<WalletIcon name="sync" />}>
+            {t('openFinance.sync')}
+          </LoadingButton>
+          <Typography variant="body2" color="text.secondary">
+            {t('openFinance.connected.lastSync', {
+              date: shortDate(status.lastSyncedAt, lang, {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            })}
+          </Typography>
+        </Stack>
+      </Box>
+      <Disclosure label={t('openFinance.connected.shared')}>
+        <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: 'divider' }}>{sharedDetails}</Box>
+      </Disclosure>
+      <Box sx={{ pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 560 }}>
+          {t('openFinance.steps.revokeWarning')}
+        </Typography>
+        <Button variant="outlined" color="error" disabled={busy} onClick={() => setRevokeOpen(true)} sx={{ mt: 2 }}>
+          {t('openFinance.revoke.open')}
+        </Button>
+      </Box>
+      <Typography variant="caption" color="text.secondary" component="p">
+        {t(status.simulated ? 'openFinance.notice.contract' : 'openFinance.notice.participant')}
+      </Typography>
+    </Stack>
+  );
 
   return (
     <>
@@ -370,107 +456,77 @@ export default function OpenFinance() {
             {t(error)}
           </Alert>
         )}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 7fr) minmax(0, 4fr)' },
-            gap: { xs: 5, md: 8 },
-            alignItems: 'start',
-          }}
-        >
-          <Box>
-            {/* No status yet: nothing is known about the connection, so the page claims nothing. */}
-            {!status && loading && <PageSkeleton rows={4} />}
-            {status && (
-              <Stack component="section" aria-labelledby="of-institution" aria-busy={loading} spacing={3}>
-                <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ columnGap: 2, rowGap: 1.5 }}>
-                  <IconTile name="bank" size={44} />
-                  <Box sx={{ flex: '1 1 180px', minWidth: 0 }}>
-                    <Typography id="of-institution" variant="h5" component="h2" sx={{ overflowWrap: 'anywhere' }}>
-                      {status.institutionName || t('openFinance.bankPlaceholder')}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" component="p">
-                      {status.simulated ? t('openFinance.contractSandbox') : t('openFinance.participantSandbox')}
-                    </Typography>
+        {connectedView || (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 7fr) minmax(0, 4fr)' },
+              gap: { xs: 5, md: 8 },
+              alignItems: 'start',
+            }}
+          >
+            <Box>
+              {/* No status yet: nothing is known about the connection, so the page claims nothing. */}
+              {!status && loading && <PageSkeleton rows={4} />}
+              {status && (
+                <Stack component="section" aria-labelledby="of-institution" aria-busy={loading} spacing={3}>
+                  <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ columnGap: 2, rowGap: 1.5 }}>
+                    <IconTile name="bank" size={44} />
+                    <Box sx={{ flex: '1 1 180px', minWidth: 0 }}>
+                      <Typography id="of-institution" variant="h5" component="h2" sx={{ overflowWrap: 'anywhere' }}>
+                        {status.institutionName || t('openFinance.bankPlaceholder')}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" component="p">
+                        {status.simulated ? t('openFinance.contractSandbox') : t('openFinance.participantSandbox')}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      color={STATUS_COLOR[state] || 'default'}
+                      label={t(`openFinance.status.${state}`)}
+                      sx={{ flexShrink: 0 }}
+                    />
+                  </Stack>
+
+                  {state === 'REJECTED' && (
+                    <Alert severity="info">
+                      {t(
+                        {
+                          CUSTOMER_MANUALLY_REVOKED: 'openFinance.rejected.CUSTOMER_MANUALLY_REVOKED',
+                          CUSTOMER_MANUALLY_REJECTED: 'openFinance.rejected.CUSTOMER_MANUALLY_REJECTED',
+                          CONSENT_EXPIRED: 'openFinance.rejected.CONSENT_EXPIRED',
+                          CONSENT_MAX_DATE_REACHED: 'openFinance.rejected.CONSENT_MAX_DATE_REACHED',
+                        }[status.rejectionReason] || 'openFinance.rejected.unknown'
+                      )}
+                    </Alert>
+                  )}
+
+                  <Box component="ol" aria-label={t('openFinance.steps.label')} sx={{ m: 0, p: 0, listStyle: 'none' }}>
+                    {steps.map((step, index) => (
+                      <Step
+                        key={step.key}
+                        id={`of-step-${step.key}`}
+                        number={index + 1}
+                        title={t(`openFinance.steps.${step.key}`)}
+                        hint={t(`openFinance.steps.${step.key}Hint`)}
+                        done={step.done}
+                        // Connected, sync and revoke are both available: the two last steps are "now" together.
+                        now={index === current || (current === 2 && step.key === 'revoke')}
+                        last={index === steps.length - 1}
+                      >
+                        {step.body || null}
+                      </Step>
+                    ))}
                   </Box>
-                  <Chip
-                    color={STATUS_COLOR[state] || 'default'}
-                    label={t(`openFinance.status.${state}`)}
-                    sx={{ flexShrink: 0 }}
-                  />
+                  <Typography variant="caption" color="text.secondary" component="p">
+                    {t(status.simulated ? 'openFinance.notice.contract' : 'openFinance.notice.participant')}
+                  </Typography>
                 </Stack>
+              )}
+            </Box>
 
-                {state === 'REJECTED' && (
-                  <Alert severity="info">
-                    {t(
-                      {
-                        CUSTOMER_MANUALLY_REVOKED: 'openFinance.rejected.CUSTOMER_MANUALLY_REVOKED',
-                        CUSTOMER_MANUALLY_REJECTED: 'openFinance.rejected.CUSTOMER_MANUALLY_REJECTED',
-                        CONSENT_EXPIRED: 'openFinance.rejected.CONSENT_EXPIRED',
-                        CONSENT_MAX_DATE_REACHED: 'openFinance.rejected.CONSENT_MAX_DATE_REACHED',
-                      }[status.rejectionReason] || 'openFinance.rejected.unknown'
-                    )}
-                  </Alert>
-                )}
-
-                <Box component="ol" aria-label={t('openFinance.steps.label')} sx={{ m: 0, p: 0, listStyle: 'none' }}>
-                  {steps.map((step, index) => (
-                    <Step
-                      key={step.key}
-                      id={`of-step-${step.key}`}
-                      number={index + 1}
-                      title={t(`openFinance.steps.${step.key}`)}
-                      hint={t(`openFinance.steps.${step.key}Hint`)}
-                      done={step.done}
-                      // Connected, sync and revoke are both available: the two last steps are "now" together.
-                      now={index === current || (current === 2 && step.key === 'revoke')}
-                      last={index === steps.length - 1}
-                    >
-                      {step.body || null}
-                    </Step>
-                  ))}
-                </Box>
-                <Typography variant="caption" color="text.secondary" component="p">
-                  {t(status.simulated ? 'openFinance.notice.contract' : 'openFinance.notice.participant')}
-                </Typography>
-              </Stack>
-            )}
+            {permissionsAside}
           </Box>
-
-          <Stack component="aside" spacing={3} aria-labelledby="of-permissions">
-            <Box>
-              <Typography id="of-permissions" variant="h6" component="h2">
-                {t('openFinance.permissionsTitle')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
-                {t('openFinance.permissionsHelp')}
-              </Typography>
-              <PermissionGroups permissions={status?.permissions || []} />
-            </Box>
-            <Stack direction="row" spacing={1.5} sx={{ pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-              <WalletIcon name="shield" aria-hidden sx={{ fontSize: 20, color: 'text.secondary', mt: 0.25 }} />
-              <Box>
-                <Typography variant="subtitle2" component="p">
-                  {t('openFinance.credentialTitle')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {t('openFinance.credentialHelp')}
-                </Typography>
-              </Box>
-            </Stack>
-            <Box>
-              <Button
-                href="https://openfinancebrasil.atlassian.net/wiki/spaces/OF/pages/17369300/Dados+do+Cliente+-+DC"
-                target="_blank"
-                rel="noreferrer"
-                color="inherit"
-                size="small"
-              >
-                {t('openFinance.officialDocs')}
-              </Button>
-            </Box>
-          </Stack>
-        </Box>
+        )}
       </Container>
 
       <ConsentDialog

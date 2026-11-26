@@ -7,6 +7,7 @@ import { useSnackbar } from 'notistack';
 import HttpService from '../../services/HttpService';
 import { StatBlock } from '../../components/future-ui';
 import { PageHeading, PageSkeleton, WalletIcon } from '../../components/wallet-ui';
+import { Disclosure } from '../../components/detail-ui';
 import { errorKey, money, parseAmount, subtractMoney } from '../../utils/wallet';
 
 const EMPTY = { name: '', amount: '' };
@@ -98,6 +99,8 @@ export default function Envelopes() {
 
   const { data } = state;
   const free = data ? subtractMoney(data.balance, data.reserved) : 0;
+  // No envelope yet: three numbers that only repeat the balance say nothing; the invitation and the form do.
+  const empty = data && !data.items.length;
 
   return (
     <>
@@ -105,7 +108,7 @@ export default function Envelopes() {
         <title>{t('envelopes.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <PageHeading title={t('envelopes.heading')} description={t('envelopes.description')} />
+        <PageHeading title={t('envelopes.heading')} description={empty ? undefined : t('envelopes.description')} />
 
         {state.loading && !data && <PageSkeleton rows={3} />}
         {state.error && (
@@ -124,36 +127,38 @@ export default function Envelopes() {
         {data && (
           <Stack spacing={{ xs: 4, md: 5 }} aria-busy={state.loading}>
             {/* Three numbers in columns, no boxes; what is left outside the envelopes is the conclusion. */}
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
-                gap: { xs: 3, md: 4 },
-              }}
-            >
-              <StatBlock
-                compact
-                label={t('envelopes.balance')}
-                value={money(data.balance, lang)}
-                tooltip={t('envelopes.balanceHelp')}
-              />
-              <StatBlock
-                compact
-                label={t('envelopes.reserved')}
-                value={money(data.reserved, lang)}
-                tooltip={t('envelopes.reservedHelp')}
-              />
-              <Box sx={{ gridColumn: { xs: 'span 2', md: 'auto' } }}>
+            {!empty && (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+                  gap: { xs: 3, md: 4 },
+                }}
+              >
                 <StatBlock
                   compact
-                  emphasis
-                  label={t('envelopes.free')}
-                  value={money(free, lang)}
-                  tooltip={t('envelopes.freeHelp')}
-                  negative={free < 0}
+                  label={t('envelopes.balance')}
+                  value={money(data.balance, lang)}
+                  tooltip={t('envelopes.balanceHelp')}
                 />
+                <StatBlock
+                  compact
+                  label={t('envelopes.reserved')}
+                  value={money(data.reserved, lang)}
+                  tooltip={t('envelopes.reservedHelp')}
+                />
+                <Box sx={{ gridColumn: { xs: 'span 2', md: 'auto' } }}>
+                  <StatBlock
+                    compact
+                    emphasis
+                    label={t('envelopes.free')}
+                    value={money(free, lang)}
+                    tooltip={t('envelopes.freeHelp')}
+                    negative={free < 0}
+                  />
+                </Box>
               </Box>
-            </Box>
+            )}
 
             {Number(data.unbacked) > 0 && (
               <Alert
@@ -169,54 +174,57 @@ export default function Envelopes() {
             )}
 
             <Box component="section" aria-labelledby="envelopes-list">
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, gap: 2 }}>
-                <Typography id="envelopes-list" variant="h6" component="h2">
-                  {t('envelopes.listTitle')}
-                </Typography>
-                {!Number(data.unbacked) && (
-                  <Button component={RouterLink} to="/future" sx={{ mr: -1 }}>
-                    {t('envelopes.seeLimit')}
-                  </Button>
-                )}
-              </Stack>
-              <Box
-                component="ul"
-                sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}
-              >
-                {data.items.map((envelope) => (
-                  <Stack
-                    component="li"
-                    key={envelope.id}
-                    direction="row"
-                    alignItems="center"
-                    spacing={2}
-                    sx={{ minHeight: 56, borderBottom: '1px solid', borderColor: 'divider' }}
-                  >
-                    <Typography variant="subtitle2" noWrap sx={{ flex: 1, minWidth: 0 }}>
-                      {envelope.name}
-                    </Typography>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                      {money(envelope.amount, lang)}
-                    </Typography>
-                    <Tooltip title={t('envelopes.remove')}>
-                      <span>
-                        <IconButton
-                          aria-label={t('envelopes.removeLabel', { name: envelope.name })}
-                          disabled={busy}
-                          onClick={() => remove(envelope)}
-                          sx={{ mr: -1, color: 'text.secondary' }}
-                        >
-                          <WalletIcon name="trash" sx={{ fontSize: 20 }} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Stack>
-                ))}
-              </Box>
-              {!data.items.length && (
-                <Typography color="text.secondary" sx={{ py: 2 }}>
+              {empty ? (
+                <Typography id="envelopes-list" component="h2" sx={{ maxWidth: 640 }}>
                   {t('envelopes.empty')}
                 </Typography>
+              ) : (
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, gap: 2 }}>
+                  <Typography id="envelopes-list" variant="h6" component="h2">
+                    {t('envelopes.listTitle')}
+                  </Typography>
+                  {!Number(data.unbacked) && (
+                    <Button component={RouterLink} to="/future" sx={{ mr: -1 }}>
+                      {t('envelopes.seeLimit')}
+                    </Button>
+                  )}
+                </Stack>
+              )}
+              {!empty && (
+                <Box
+                  component="ul"
+                  sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}
+                >
+                  {data.items.map((envelope) => (
+                    <Stack
+                      component="li"
+                      key={envelope.id}
+                      direction="row"
+                      alignItems="center"
+                      spacing={2}
+                      sx={{ minHeight: 56, borderBottom: '1px solid', borderColor: 'divider' }}
+                    >
+                      <Typography variant="subtitle2" noWrap sx={{ flex: 1, minWidth: 0 }}>
+                        {envelope.name}
+                      </Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                        {money(envelope.amount, lang)}
+                      </Typography>
+                      <Tooltip title={t('envelopes.remove')}>
+                        <span>
+                          <IconButton
+                            aria-label={t('envelopes.removeLabel', { name: envelope.name })}
+                            disabled={busy}
+                            onClick={() => remove(envelope)}
+                            sx={{ mr: -1, color: 'text.secondary' }}
+                          >
+                            <WalletIcon name="trash" sx={{ fontSize: 20 }} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Stack>
+                  ))}
+                </Box>
               )}
               {/* Adding is the next row of the list: a form is the one interactive group with a panel. */}
               <Card
@@ -257,9 +265,17 @@ export default function Envelopes() {
                   {t('envelopes.add')}
                 </Button>
               </Card>
-              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5, maxWidth: 640 }}>
-                {t('envelopes.help')}
-              </Typography>
+              {empty ? (
+                <Disclosure label={t('envelopes.why')} sx={{ mt: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
+                    {t('envelopes.description')} {t('envelopes.help')}
+                  </Typography>
+                </Disclosure>
+              ) : (
+                <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5, maxWidth: 640 }}>
+                  {t('envelopes.help')}
+                </Typography>
+              )}
             </Box>
           </Stack>
         )}

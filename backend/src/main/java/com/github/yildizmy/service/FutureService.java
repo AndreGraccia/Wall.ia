@@ -353,6 +353,7 @@ public class FutureService {
                             loan.getInstallmentsPaid(),
                             plan.remainingInstallments(),
                             loan.getNextDueDate(),
+                            plan.upcomingDueDate(today),
                             dues.isEmpty() ? null : dues.get(dues.size() - 1),
                             loan.getAnnualRate(),
                             loan.getLastSyncedAt(),

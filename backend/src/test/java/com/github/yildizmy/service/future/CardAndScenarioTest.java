@@ -12,6 +12,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CardAndScenarioTest {
@@ -70,6 +71,24 @@ class CardAndScenarioTest {
                 24, 22, LocalDate.of(2026, 1, 31), null);
 
         assertEquals(List.of(LocalDate.of(2026, 1, 31), LocalDate.of(2026, 2, 28)), loan.dueDates());
+    }
+
+    @Test
+    void upcomingDueDateSkipsAnInstalmentAlreadyDue() {
+        // The bank still reports 25/11 on 26/11: the payment was not seen yet, the next one is 25/12.
+        var loan = new LoanPlan(1, "Empréstimo pessoal", "Banco", new BigDecimal("5000"), new BigDecimal("612.48"),
+                24, 9, LocalDate.of(2026, 11, 25), 25);
+
+        assertEquals(LocalDate.of(2026, 12, 25), loan.upcomingDueDate(LocalDate.of(2026, 11, 26)));
+        assertEquals(LocalDate.of(2026, 11, 25), loan.upcomingDueDate(LocalDate.of(2026, 11, 25)));
+    }
+
+    @Test
+    void paidOffLoanHasNoUpcomingDueDate() {
+        var loan = new LoanPlan(1, "Empréstimo pessoal", "Banco", new BigDecimal("0"), new BigDecimal("612.48"),
+                24, 24, LocalDate.of(2026, 11, 25), 25);
+
+        assertNull(loan.upcomingDueDate(LocalDate.of(2026, 11, 26)));
     }
 
     @Test
