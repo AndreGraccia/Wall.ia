@@ -20,6 +20,11 @@
 ### Testes
 - O E2E (`journey.cjs`) passa também por Início, Plano do mês, Meu método e Entradas e saídas, em 375 e 1280 px.
 
+### Segurança e qualidade
+- GitHub Actions fixadas pelo commit da versão, não pela tag, e `min-release-age=7` no npm do frontend: o npm 11 só instala versões publicadas há uma semana (KAN-34).
+- SpotBugs: `FieldCipher` não pode mais ser estendida, e a ordenação de dias em `RecurrenceDetector` deixou de reembrulhar números. Os 9 avisos de `
+` em formato ficam: são corpo de e-mail e texto para o Gemini, onde `%n` misturaria fins de linha no Windows (KAN-33).
+
 ## 25/11/2026: CI
 
 - CI e E2E rodavam duas vezes por commit de PR; agora uma, com o run anterior cancelado. Frontend do CI no Node 22.
