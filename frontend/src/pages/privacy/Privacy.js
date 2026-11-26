@@ -120,9 +120,10 @@ export default function Privacy() {
       <Helmet>
         <title>{t('privacy.pageTitle')}</title>
       </Helmet>
-      <Container maxWidth="md">
+      {/* Same container as every page, left-aligned; the reading measure stays at md. */}
+      <Container maxWidth="lg">
         <PageHeading title={t('privacy.heading')} description={t('privacy.description')} />
-        <Stack spacing={{ xs: 5, md: 6 }}>
+        <Stack spacing={{ xs: 5, md: 6 }} sx={{ maxWidth: (theme) => theme.breakpoints.values.md }}>
           <Section id="privacy-stored" title={t('privacy.storedTitle')}>
             <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}>
               {STORED.map((item) => (
