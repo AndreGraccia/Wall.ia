@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -7,23 +7,76 @@ import {
   Container,
   Link,
   MenuItem,
+  Skeleton,
   Stack,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
 import { Helmet } from 'react-helmet-async';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, PageHeading, PageSkeleton, SectionCard, visuallyHidden } from '../../components/wallet-ui';
+import { Link as RouterLink } from 'react-router-dom';
+import { PageHeading, SectionCard, visuallyHidden } from '../../components/wallet-ui';
 import { StatBlock } from '../../components/future-ui';
 import HttpService from '../../services/HttpService';
 import BankDataNotice from '../../components/bank-data';
 import { dateTime, errorKey, monthLabel, money, projectRegularDeposits } from '../../utils/wallet';
 
 const PERIODS = [1, 3, 6, 12];
+// ponytail: reports already seen in this session, by period and language. The API allows a few AI reports an hour
+// per person; going back to a period, or to this page, must not spend one. Lost on reload, which is fine.
+const reports = new Map();
+
+/** The report's shape while it loads: headline, four numbers in columns, the months as rows. */
+function ReportSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <Stack spacing={{ xs: 5, md: 6 }} role="status" aria-busy="true" aria-label={t('common.loading')}>
+      <Box>
+        <Skeleton width="min(560px, 90%)" height={40} />
+        <Skeleton width="min(680px, 95%)" />
+        <Skeleton width="min(480px, 70%)" />
+      </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+          gap: { xs: 3, md: 4 },
+          pt: 3,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        {[0, 1, 2, 3].map((index) => (
+          <Box key={index}>
+            <Skeleton width="60%" />
+            <Skeleton width="80%" height={32} />
+          </Box>
+        ))}
+      </Box>
+      <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+        {[0, 1, 2].map((index) => (
+          <Stack
+            key={index}
+            direction="row"
+            alignItems="center"
+            spacing={2}
+            sx={{ minHeight: 56, borderBottom: '1px solid', borderColor: 'divider' }}
+          >
+            <Skeleton width={48} />
+            <Box sx={{ flex: 1 }}>
+              <Skeleton height={10} width="70%" />
+              <Skeleton height={10} width="55%" />
+            </Box>
+            <Skeleton width={96} />
+          </Stack>
+        ))}
+      </Box>
+    </Stack>
+  );
+}
 
 function CitationLinks({ ids, references }) {
   if (!ids?.length) return null;
@@ -58,8 +111,10 @@ export default function Insights() {
   const { t, i18n } = useTranslation();
   const [months, setMonths] = useState(3);
   const [report, setReport] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const language = i18n.resolvedLanguage?.startsWith('en') ? 'en' : 'pt-BR';
   const [monthlyContribution, setMonthlyContribution] = useState('');
   const [years, setYears] = useState(5);
   const [annualRate, setAnnualRate] = useState('8');
@@ -74,23 +129,34 @@ export default function Insights() {
     [annualRate, monthlyContribution, years]
   );
 
-  const generate = async (period = months) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await HttpService.postWithAuth('/insights/reports', {
-        months: period,
-        language: i18n.resolvedLanguage?.startsWith('en') ? 'en' : 'pt-BR',
-      });
+  // The report is the page: it is generated on arrival and again for each period, no button in between.
+  useEffect(() => {
+    const key = `${months}|${language}`;
+    const show = (response) => {
       setReport(response);
       const monthlyAverage = Number(response.metrics.outflow) / Math.max(response.periodMonths, 1);
       setMonthlyContribution((monthlyAverage * 0.1).toFixed(2));
-    } catch (failure) {
-      setError(errorKey(failure));
-    } finally {
+    };
+    setError(null);
+    if (reports.has(key)) {
+      show(reports.get(key));
       setBusy(false);
+      return undefined;
     }
-  };
+    let current = true;
+    setBusy(true);
+    HttpService.postWithAuth('/insights/reports', { months, language })
+      .then((response) => {
+        reports.set(key, response);
+        if (current) show(response);
+      })
+      .catch((failure) => current && setError(errorKey(failure)))
+      .finally(() => current && setBusy(false));
+    // A quicker click on another period wins: the older answer must not land on top of it.
+    return () => {
+      current = false;
+    };
+  }, [months, language, attempt]);
 
   // "2026-09" is a calendar month: built as a local date so UTC-3 does not turn it into August. "Set/26" fits a phone.
   const formatMonth = (value) =>
@@ -99,11 +165,6 @@ export default function Insights() {
       .replace(/^./, (letter) => letter.toLocaleUpperCase())}/${value.slice(2, 4)}`;
 
   const lang = i18n.language;
-  const generateButton = (variant) => (
-    <LoadingButton loading={busy} onClick={() => generate()} variant={variant}>
-      {report ? t('insights.refresh') : t('insights.generate')}
-    </LoadingButton>
-  );
 
   return (
     <>
@@ -118,10 +179,7 @@ export default function Insights() {
               exclusive
               value={months}
               onChange={(_, value) => {
-                if (!value) return;
-                setMonths(value);
-                // With a report on screen, a new period is a new report: the pill answers at once.
-                if (report) generate(value);
+                if (value) setMonths(value);
               }}
               aria-label={t('insights.period')}
             >
@@ -139,7 +197,7 @@ export default function Insights() {
             severity="error"
             sx={{ mb: 3 }}
             action={
-              <Button color="inherit" onClick={() => generate()} disabled={busy}>
+              <Button color="inherit" onClick={() => setAttempt((value) => value + 1)} disabled={busy}>
                 {t('app.retry')}
               </Button>
             }
@@ -148,18 +206,19 @@ export default function Insights() {
           </Alert>
         )}
 
-        {!report && busy && <PageSkeleton rows={4} />}
+        {!report && busy && <ReportSkeleton />}
 
-        {!report && !busy && !error && (
-          <EmptyState
-            icon="insights"
-            title={t('insights.emptyTitle')}
-            description={t('insights.aggregateOnly')}
-            action={generateButton('contained')}
-          />
+        {/* Nothing moved in the period: one sentence and the way out, no report built on zeros. */}
+        {report && !busy && report.metrics.transactionCount === 0 && (
+          <Box sx={{ py: 6, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography sx={{ maxWidth: 520 }}>{t('insights.emptyNoData')}</Typography>
+            <Button component={RouterLink} to="/open-finance" variant="contained" sx={{ mt: 2 }}>
+              {t('openFinance.connectShort')}
+            </Button>
+          </Box>
         )}
 
-        {report && (
+        {report && report.metrics.transactionCount > 0 && (
           <Stack
             spacing={{ xs: 5, md: 6 }}
             aria-busy={busy}
@@ -175,13 +234,11 @@ export default function Insights() {
               <Typography color="text.secondary" sx={{ mt: 1.5, maxWidth: 680 }}>
                 {report.summary}
               </Typography>
-              <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 2, mt: 3 }}>
-                {generateButton('outlined')}
-                <Typography variant="caption" color="text.secondary">
-                  {t(`insights.provider.${report.provider}`)},{' '}
-                  {t('insights.generatedAt', { date: dateTime(report.generatedAt, lang) }).toLocaleLowerCase()}
-                </Typography>
-              </Stack>
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+                {t(`insights.provider.${report.provider}`)},{' '}
+                {t('insights.generatedAt', { date: dateTime(report.generatedAt, lang) }).toLocaleLowerCase()}.{' '}
+                {t('insights.aggregateOnly')}
+              </Typography>
             </Box>
 
             {/* (2) Four numbers in columns, no boxes. */}

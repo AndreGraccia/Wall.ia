@@ -210,6 +210,7 @@ const resources = {
         refresh: 'Atualizar relatório',
         aggregateOnly: 'Só os totais do período entram na análise, nunca a lista de movimentações.',
         emptyTitle: 'Veja para onde foi o dinheiro',
+        emptyNoData: 'Nenhuma movimentação neste período. Conecte um banco para ver para onde foi o dinheiro.',
         emptyDescription:
           'Escolha um período para receber uma análise objetiva do fluxo de caixa, próximos passos e leituras com referências verificáveis.',
         generatedAt: 'Gerado em {{date}}',
@@ -1866,6 +1867,7 @@ const resources = {
         refresh: 'Refresh report',
         aggregateOnly: 'Only the period totals go into the analysis, never the list of transactions.',
         emptyTitle: 'See where the money went',
+        emptyNoData: 'No transactions in this period. Connect a bank to see where the money went.',
         emptyDescription:
           'Choose a period for a concise cash-flow analysis, practical next steps and reading with verifiable references.',
         generatedAt: 'Generated {{date}}',
