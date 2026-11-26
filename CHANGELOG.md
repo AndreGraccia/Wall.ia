@@ -1,14 +1,42 @@
 # Changelog
 
+## 26/11/2026: Início completo, lançamentos em Entradas e saídas e ocultar saldo em todo o app
+
+### Novo
+- **Início.** Além do número do dia e dos totais do mês: saldo de hoje; o primeiro período em que o saldo pode ficar negativo, com as saídas que causam isso, a certeza e a origem de cada uma; o menor saldo e o saldo final em 30, 60 e 90 dias; o plano do mês com planejado e realizado por fatia; metas, envelopes e a reserva do plano; e o seu método, que decide qual bloco vem primeiro e diz por quê. Planejado nunca aparece como dinheiro já gasto ou investido.
+- **Entradas e saídas.** A lista de lançamentos do mês, com data, conta, forma de pagamento e categoria. Clicar numa conta, forma ou categoria filtra a lista. Na aba de saídas do mês atual, "Ainda vai sair" mostra contas, fatura e parcelas previstas até o fim do mês, separadas do que já saiu.
+- **Plano do mês.** Cada ponto de partida explica o que faz. No base zero, o que falta distribuir aparece em reais.
+
+### Mudou
+- **Ocultar saldo vale para todas as telas.** O olho saiu do Início e foi para o topo, ao lado da conta.
+- **O método 35/20/15 com reserva se chama "Equilibrado 35/20/15".** Os métodos se chamam pelo que fazem, como o 50/30/20. Quem já tinha escolhido continua com ele (migração V37).
+
+### Corrigido
+- No Futuro e no Início, a fatia do plano aparecia como `PLAN_INVESTMENT` na lista de compromissos.
+
+## 25/11/2026: CI
+
+- CI e E2E rodavam duas vezes por commit de PR; agora uma, com o run anterior cancelado. Frontend do CI no Node 22.
+
+## 24/11/2026: telas do Plano do mês, Meu método e Entradas e saídas
+
+### Novo
+- As telas do contrato de 23/11: Plano do mês com "ver se cabe", Meu método com sugestões e motivo, Entradas e saídas e os três totais no Início.
+- Ocultar saldo de volta no Início, lembrado no navegador.
+
+### Corrigido
+- **Radar de cobranças contava o pagamento da fatura e a transferência para a reserva como assinaturas.** No usuário de teste, o total mensal caiu de R$ 4.427,18 para R$ 3.179,18. A mesma correção vale para o Futuro.
+- Valor negativo quebrava a linha entre o sinal e o "R$" no celular; agora usa o sinal de menos tipográfico.
+
 ## 23/11/2026: Plano do mês, entradas e saídas e "Meu método" (proposta de André Graccia)
 
-Ideia de André Graccia, integrante do grupo, e documento de evolução do grupo. Decisões em [ADR 0021](docs/adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md). Migrações V35 e V36. Só backend: as telas vêm depois.
+Ideia de André Graccia, integrante do grupo, e documento de evolução do grupo. Decisões em [ADR 0021](docs/adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md). Migrações V35 e V36. Telas em 24/11.
 
 ### Novo
 - **Plano do mês.** A renda mensal confirmada dividida em até 12 fatias com nome próprio. A divisão do André (35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento pessoal e estudo, 12,5% reserva de emergência) é um dos presets. O Fixo mostra quanto das contas fixas confirmadas cabe na fatia; o Lazer mostra o gasto do dia a dia do mês contra o teto. Uma fatia só sai do saldo quando você marca "virar compromisso" e liga o plano: aí ela sai no dia em que o salário entra, e o limite diário já desconta. Antes de ligar, "ver se cabe" mostra os próximos 90 dias com e sem o plano, sem gravar nada. Um rascunho que não soma 100% fica salvo como incompleto e não liga.
 - **Entradas e saídas.** Ganhos e gastos de um mês (o atual ou um dos 12 anteriores) por conta, por forma de pagamento e por categoria, com os três totais do Início: ganhos, gastos e lazer + investimento. Transferência entre suas próprias contas não conta.
 - **Projeção mensal.** Entradas, saídas, plano e sobra de cada mês, para 3, 6 ou 12 meses, separando o que é confirmado do que é estimado.
-- **Meu método.** Nove métodos de organizar o dinheiro (50/30/20, plano do André, base zero, pague-se primeiro, prioridades, limite até a próxima entrada, envelopes, quitação avalanche e bola de neve), cada um com como funciona, quando ajuda, limitações e onde roda no Wall.ia. O Wall.ia sugere dois ou três com o motivo e os números usados, sem nota e sem impor nenhum.
+- **Meu método.** Nove métodos de organizar o dinheiro (50/30/20, equilibrado 35/20/15, base zero, pague-se primeiro, prioridades, limite até a próxima entrada, envelopes, quitação avalanche e bola de neve), cada um com como funciona, quando ajuda, limitações e onde roda no Wall.ia. O Wall.ia sugere dois ou três com o motivo e os números usados, sem nota e sem impor nenhum.
 - **Perfil.** Preferência (simples ou detalhado) e objetivo principal, se você quiser dizer, e o histórico dos métodos escolhidos. Entra na exportação e sai na exclusão da conta.
 
 ### Fora desta versão

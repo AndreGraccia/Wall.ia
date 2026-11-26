@@ -1,10 +1,12 @@
 # ADR 0021: Plano do mês, entradas e saídas, projeção mensal e "Meu método" (proposta de André Graccia)
 
-Status: aceito e implementado no backend na branch `feat/plano-do-mes-andre`. 23/11/2026. As telas ficam para depois; falta CI no GitHub e validação na homologação.
+Status: aceito e implementado. Backend em 23/11/2026; telas em 24/11 (Plano do mês, Meu método, Entradas e saídas, totais do Início); Início completo, lançamentos em Entradas e saídas e nome neutro do método em 26/11. CI e E2E verdes no PR #3. Falta a validação com pessoas reais (seção 9 do documento de evolução).
 
 ## Crédito
 
-A ideia de origem é de **André Graccia**, integrante do grupo: [`docs/produto/ajustes-wallia-andre-graccia.txt`](../produto/ajustes-wallia-andre-graccia.txt). Ele propôs um Início com ganhos, gastos e "lazer e investimento" do mês; abas de gastos e ganhos com a conta e o método de cada um; a projeção de ganhos, gastos, lazer e investimento no curto e no longo prazo; e a divisão da renda em 35% fixo, 20% lazer, 15% investimento, 7,5% futuro e 10% desenvolvimento pessoal e estudo. A divisão dele virou o preset `PERCENT_ANDRE`, com 12,5% de reserva de emergência para fechar 100%, e dá nome ao plano no catálogo.
+A ideia de origem é de **André Graccia**, integrante do grupo: [`docs/produto/ajustes-wallia-andre-graccia.txt`](../produto/ajustes-wallia-andre-graccia.txt). Ele propôs um Início com ganhos, gastos e "lazer e investimento" do mês; abas de gastos e ganhos com a conta e o método de cada um; a projeção de ganhos, gastos, lazer e investimento no curto e no longo prazo; e a divisão da renda em 35% fixo, 20% lazer, 15% investimento, 7,5% futuro e 10% desenvolvimento pessoal e estudo. A divisão dele virou o preset **Equilibrado 35/20/15** (id `PERCENT_BALANCED`), com 12,5% de reserva de emergência para fechar 100%.
+
+**Onde o crédito aparece (decisão de 26/11/2026):** neste ADR, no CHANGELOG, no PR e no material acadêmico da A3. **Não** na interface: o método se chama pelo que faz, como o 50/30/20, e nenhuma tela cita autor. Entre 23 e 26/11 o preset se chamou `PERCENT_ANDRE` ("Regra do André" na tela); a migração V37 converte as escolhas gravadas com o id antigo.
 
 O catálogo de métodos, a sugestão por regras e o perfil declarado vêm do **documento de evolução do grupo**, validado pelo coordenador antes de entrar.
 
@@ -58,7 +60,7 @@ Catálogo estático em `service/future/MethodCatalog` (versão `2026-11-23`), n�
 | Id | Onde roda |
 | --- | --- |
 | `PERCENT_503020` (50/30/20) | Plano do mês, preset de 3 fatias |
-| `PERCENT_ANDRE` (35/20/15/7,5/10/12,5) | Plano do mês, preset de 6 fatias |
+| `PERCENT_BALANCED` (35/20/15/7,5/10/12,5) | Plano do mês, preset de 6 fatias |
 | `ZERO_BASED` (base zero) | Plano do mês com soma de 100% |
 | `PAY_YOURSELF_FIRST` | Metas (`/future/goals`) |
 | `PRIORITIES` | Plano do mês, na ordem das fatias |
@@ -171,23 +173,25 @@ Outro valor de `months`: 400 `INVALID_HORIZON`.
   "income":   { "total": 5000.00, "count": 1,
                 "byAccount": [{ "key": "Banco Aurora · Conta", "total": 5000.00, "count": 1 }],
                 "byMethod": [{ "key": "TED", "total": 5000.00, "count": 1 }],
-                "byCategory": [{ "key": "SALARY", "total": 5000.00, "count": 1 }] },
-  "spending": { "total": 1620.00, "count": 2, "byAccount": [], "byMethod": [], "byCategory": [] },
+                "byCategory": [{ "key": "SALARY", "total": 5000.00, "count": 1 }],
+                "items": [{ "id": 41, "date": "2026-11-05", "counterparty": "Empresa X", "amount": 5000.00,
+                            "account": "Banco Aurora · Conta", "method": "TED", "category": "SALARY" }] },
+  "spending": { "total": 1620.00, "count": 2, "byAccount": [], "byMethod": [], "byCategory": [], "items": [] },
   "home": { "income": 5000.00, "spending": 1620.00, "leisure": 120.00, "investment": 750.00,
             "investmentOrigin": "Plano do mês", "leisureAndInvestment": 870.00 },
   "bankData": null }
 ```
 
-Categorias: as confirmadas (`SALARY`, `OTHER_INCOME`, `RENT`, `SUBSCRIPTION`, `BILL`, `OTHER`), `CARD_INVOICE`, `LOAN`, `UNCONFIRMED_RECURRENCE`, `EVERYDAY`, `UNCLASSIFIED`. Grupos do maior para o menor. `bankData` segue o [ADR 0020](0020-dado-atrasado-pix-no-credito-e-fatura.md).
+`items` (desde 26/11): os lançamentos do lado, do mais novo para o mais antigo, com as mesmas chaves de `byAccount`, `byMethod` e `byCategory`, para a tela filtrar a lista por qualquer grupo sem o total divergir. Categorias: as confirmadas (`SALARY`, `OTHER_INCOME`, `RENT`, `SUBSCRIPTION`, `BILL`, `OTHER`), `CARD_INVOICE`, `LOAN`, `UNCONFIRMED_RECURRENCE`, `EVERYDAY`, `UNCLASSIFIED`. Grupos do maior para o menor. `bankData` segue o [ADR 0020](0020-dado-atrasado-pix-no-credito-e-fatura.md).
 
 ### `GET /api/v1/methods`
 
-`{"version": "2026-11-23", "methods": [{"id", "name", "howItWorks", "helpsWhen", "limitations", "dataNeeded": [...], "where": {"tool", "route"}, "preset": [{"kind", "label", "percent", "commitment"}]}]}`. Textos em pt-BR; a tela pode traduzir pelo `id`. `dataNeeded`: `CONFIRMED_INCOME`, `CONFIRMED_FIXED_BILLS`, `BALANCE`, `GOALS`, `LOANS_WITH_RATE`.
+`{"version": "2026-11-26", "methods": [{"id", "name", "howItWorks", "helpsWhen", "limitations", "dataNeeded": [...], "where": {"tool", "route"}, "preset": [{"kind", "label", "percent", "commitment"}]}]}`. Textos em pt-BR; a tela pode traduzir pelo `id`. `dataNeeded`: `CONFIRMED_INCOME`, `CONFIRMED_FIXED_BILLS`, `BALANCE`, `GOALS`, `LOANS_WITH_RATE`.
 
 ### `GET /api/v1/methods/suggestions`
 
 ```json
-{ "catalogVersion": "2026-11-23", "needsConfirmedIncome": false, "preference": "SIMPLE",
+{ "catalogVersion": "2026-11-26", "needsConfirmedIncome": false, "preference": "SIMPLE",
   "suggestions": [
     { "method": "PRIORITIES", "reasons": [{ "code": "FIXED_ABOVE_HALF_OF_INCOME",
         "params": { "fixedSharePercent": 60.0, "fixedMonthly": 2400.00, "monthlyIncome": 4000.00 } }] } ],
@@ -208,7 +212,18 @@ Categorias: as confirmadas (`SALARY`, `OTHER_INCOME`, `RENT`, `SUBSCRIPTION`, `B
 - **Assistente com modelo de linguagem preparando ações** (montar o plano, sugerir fatias por texto). Fase futura: exige o mesmo cuidado do ADR 0001 (o modelo prepara, Java calcula, a pessoa confirma) e um registro do que foi proposto.
 - **Meta com valor-alvo e data-alvo** (contribuição mensal necessária com "ver se cabe"). Próxima fatia natural; não entrou nesta rodada.
 - **Gasto do cartão no Lazer.** Em caixa, a compra está na fatura. A visão por competência continua para depois ([ADR 0011](0011-regime-de-caixa-nas-telas.md)).
-- **Telas.** Outro trabalho de telas está em andamento; estas vêm depois, a partir do contrato acima.
+- **Catálogo: fundos para despesas previsíveis (sinking funds) e orçamento flexível.** O primeiro já é o que as metas fazem (valor mensal separado para um gasto futuro); entrar no catálogo como método à parte duplicaria a meta. O segundo é uma rotina de revisão, não uma divisão da renda; o "ver se cabe" e a revisão do plano cobrem o caso.
+- **Comparar dois métodos lado a lado.** O `POST /plan/fit` já simula qualquer divisão sem gravar, e Meu método mostra o motivo de cada sugestão. Uma tela de comparação dupla é útil, mas é trabalho de interface sem regra nova; fica para depois da validação com usuários.
+- **Perfil ampliado (ciclo de recebimento declarado, familiaridade financeira).** O ciclo já é derivado das rendas confirmadas (dia típico, renda variável). Familiaridade mudaria só o tom do texto, e pedir esse dado sem uso concreto vai contra a minimização da LGPD.
+- **Classificar estorno e corrigir categoria pela tela.** As categorias vêm das recorrências confirmadas e das regras do motor, nunca de palpite. Corrigir uma categoria à mão exige um modelo de categoria por transação que não existe hoje; estorno entra como entrada não classificada (`UNCLASSIFIED`), sem virar renda recorrente.
+- **Objetivo de lazer como entidade própria.** É a meta com valor-alvo e data acima: mesma fatia, mesmo motivo.
+- **Filtro de período no Início.** O Início mostra o mês corrente e 30/60/90 dias; o mês anterior fica em Entradas e saídas, que já filtra por mês.
+
+## Início e privacidade (26/11/2026)
+
+A seção 4.2 do documento de evolução entrou no Início, sem endpoint novo (lê `/future/overview?horizon=90`, `/cash-flow`, `/plan`, `/future/goals`, `/future/envelopes`, `/profile` e `/methods`). Ordem: o número do dia; saldo consolidado com os totais do mês; a primeira janela negativa com as causas, a certeza e a origem de cada uma; 30/60/90 dias; o gráfico de 30 dias com os próximos compromissos; planejado x realizado por fatia; metas, envelopes e reserva; e o método ativo, que decide se "Plano do mês" ou "Metas e reservas" vem primeiro e diz por quê. Planejado nunca aparece como gasto ou investido: só Fixo e Lazer têm realizado medido; uma fatia marcada aparece como "separado no Futuro"; as outras, como "planejado, nenhum movimento registrado". Cada bloco carrega e falha sozinho.
+
+O "ocultar saldo" deixou de ser só do Início: o olho foi para o topo do layout e `money()` lê a preferência, então todas as telas escondem os valores juntas.
 
 ## Consequências
 

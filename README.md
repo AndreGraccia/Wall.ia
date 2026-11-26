@@ -69,10 +69,13 @@ Os números, as fontes e as projeções de negócio (três cenários de 36 meses
 - **Quitar mais rápido:** compara só pagar as parcelas com maior juro primeiro e menor saldo primeiro, sem oferecer crédito ([ADR 0013](docs/adr/0013-planejador-de-quitacao.md)).
 - **Pix no crédito:** o Open Finance não informa, então a pessoa digita saldo, parcela e CET ao mês. Entra na ordem de quitação marcado como "informado por você" e estimado, nunca na projeção do saldo ([ADR 0020](docs/adr/0020-dado-atrasado-pix-no-credito-e-fatura.md)).
 
-**Plano do mês e Meu método** (proposta de André Graccia; só API por enquanto, telas a seguir)
+**Início, Plano do mês e Meu método**
+
+- Início: o número do dia, saldo de hoje, ganhos e gastos do mês, o próximo período negativo explicado, 30/60/90 dias, planejado x realizado, metas e reservas e o método escolhido.
 
 - Plano do mês: a renda confirmada dividida em fatias editáveis; só as que a pessoa marca saem do saldo, no dia do salário, e o limite diário já desconta. "Ver se cabe" antes de ligar.
-- Entradas e saídas do mês por conta, forma de pagamento e categoria; projeção mensal de 3, 6 e 12 meses.
+- Entradas e saídas do mês por conta, forma de pagamento e categoria, com a lista de lançamentos filtrável e o que ainda vai sair; projeção mensal de 3, 6 e 12 meses.
+- Ocultar saldo em todas as telas, pelo olho no topo.
 - Catálogo de métodos de organização com sugestões por regra explícita, sem impor nenhum ([ADR 0021](docs/adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md)).
 
 **Base da carteira**
