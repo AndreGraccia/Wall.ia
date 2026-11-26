@@ -4,9 +4,13 @@ name: E2E
 # Dockerfiles as production. Separate from CI so a slow or flaky browser run never hides a unit test result.
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

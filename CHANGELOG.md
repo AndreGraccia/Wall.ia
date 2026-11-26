@@ -28,7 +28,18 @@ Bug Hunt e SonarQube na V2, com os mesmos métodos usados no e-wallet.
 - `FieldCipher` (S3077): o `volatile` publica um record imutável com `Map.copyOf`. `EmailVerificationService.maskEmail` (S2259): o nulo retorna antes do `substring`.
 - Seis hotspots revisados como seguros: CSRF numa API stateless com JWT; SQL com nome de tabela de constante; regex sobre entrada limitada a 300 caracteres ou sobre configuração; aleatório só no atraso entre tentativas.
 
-## 19/11/2026: identidade visual "Farol"
+## 20/11/2026: identidade visual "Grafite" (substitui a Farol)
+
+A Farol foi recusada na revisão visual com o app rodando: cores, layout e hierarquia, tipografia e acabamento. A direção nova está em [`docs/brand/DESIGN.md`](docs/brand/DESIGN.md).
+
+### Mudou
+- **Cor:** quase preto em camadas (`#08090C`, `#0F1116`, `#161920`), ação branca e cor só com significado: projetado/estimado `#8FA3FF`, positivo `#4FD1A1`, negativo `#FF7B7B`, atenção `#F2B85B`. Contraste conferido por `npm run test:contrast` (47 pares).
+- **Tipografia:** uma família, Geist, com algarismos tabulares; saem Bricolage, Inter e JetBrains Mono.
+- **Hierarquia:** cada tela abre com uma frase-resposta e um número; o gráfico do saldo é o protagonista do Futuro; explicações longas vão para "Por quê?". Listas em linhas com divisória no lugar de cartões.
+- **Shell:** menu agrupado (Visão, Dinheiro, Dívidas, Mais) e barra inferior no celular; login sem ilustração de personagem.
+- **Marca:** logotipo "Wall.ia" com o ponto da cor de projeção; favicon e `og.png` refeitos.
+
+## 19/11/2026: identidade visual "Farol" (aposentada em 20/11, ver Grafite)
 
 ### Mudou
 - **Nova identidade.** Sai o preto com verde-limão (ink/volt/horizon); entra o mar à noite com a luz do farol. Fundo azul-esverdeado `#0A1519`, ação em `#FFD25E`, estimado em `#A3B5FF`, positivo `#5ED6A2`, negativo `#FF8590`. Conceito, regras e aplicações em [docs/brand/wallia-brand.md](docs/brand/wallia-brand.md), que o `palette.js` já citava e não existia.
@@ -40,7 +51,7 @@ Bug Hunt e SonarQube na V2, com os mesmos métodos usados no e-wallet.
 
 ### Novo
 - `npm run test:contrast`: lê os hex do `palette.js` e confere 53 pares de texto, borda, foco e linha de gráfico (WCAG 2.2). Falha com código 1 se um par cair; provado trocando `muted` por um tom escuro (4 falhas).
-- Peças de LinkedIn editáveis em `docs/brand/comunicacao/` (2 posts 1200×1200 e capa 1584×396), com texto do produto e números só do README. `frontend/scripts/build-icons.py` agora gera ícones, OG e peças com Chrome/Edge headless.
+- Peças de LinkedIn editáveis em `docs/brand/comunicacao/` (removidas em 20/11 com a Farol) (2 posts 1200×1200 e capa 1584×396), com texto do produto e números só do README. `frontend/scripts/build-icons.py` agora gera ícones, OG e peças com Chrome/Edge headless.
 
 ### Limites
 - O produto continua só no tema escuro; não existia tema claro.

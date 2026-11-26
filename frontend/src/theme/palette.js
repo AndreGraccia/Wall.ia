@@ -59,11 +59,9 @@ const palette = {
   error: tone(primitives.negative, '#FFA8A8', '#E65C5C'),
   grey: GREY,
 
-  // Brand-only tokens (logo, chart marks). `fog` is the Farol name of `future`, kept for screens not yet
-  // migrated (Insights, Open Finance); new code uses `future`.
+  // Brand-only tokens (logo, chart marks).
   brand: {
     future: primitives.future,
-    fog: primitives.future,
     line: primitives.line,
     lineStrong: primitives.lineStrong,
     surface3: primitives.surface3,
