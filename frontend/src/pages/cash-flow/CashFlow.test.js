@@ -118,20 +118,43 @@ test('the spending tab opens first; switching to income shows the income side', 
 
   expect(incomeTab.getAttribute('aria-selected')).toBe('true');
   expect(text()).toContain('5.000,00');
-  expect(text()).toContain('paymentMethods.TED');
+  expect(text()).toContain('cashFlow.categories.SALARY');
   expect(text()).not.toContain('paymentMethods.PIX');
 });
 
-test('picking another month asks for that month', async () => {
+const button = (label) => container.querySelector(`button[aria-label="${label}"]`);
+
+test('the month stepper walks back and forth, and stops at both ends of the 13 months', async () => {
   const months = lastMonths();
   await renderPage();
   expect(HttpService.getWithAuth).toHaveBeenCalledWith(`/cash-flow?month=${months[0]}`);
+  // This month is the newest: nothing ahead.
+  expect(button('cashFlow.nextMonth').disabled).toBe(true);
 
-  await act(async () => Simulate.mouseDown(container.querySelector('[aria-haspopup="listbox"]'), { button: 0 }));
-  const option = document.body.querySelector(`li[data-value="${months[2]}"]`);
-  await act(async () => Simulate.click(option));
-
+  await act(async () => Simulate.click(button('cashFlow.previousMonth')));
+  await act(async () => Simulate.click(button('cashFlow.previousMonth')));
   expect(HttpService.getWithAuth).toHaveBeenCalledWith(`/cash-flow?month=${months[2]}`);
+  await act(async () => Simulate.click(button('cashFlow.nextMonth')));
+  expect(HttpService.getWithAuth).toHaveBeenLastCalledWith(`/cash-flow?month=${months[1]}`);
+
+  act(() => root.unmount());
+  root = createRoot(container);
+  await renderPage(`/cash-flow?month=${months[12]}`);
+  expect(button('cashFlow.previousMonth').disabled).toBe(true);
+});
+
+test('one grouping at a time, by category first; the segmented control switches it', async () => {
+  await renderPage();
+  const groupRows = () => [...container.querySelectorAll('[aria-label="cashFlow.filter.by"]')];
+  expect(groupRows()).toHaveLength(1);
+  expect(groupRows()[0].textContent).toContain('cashFlow.categories.EVERYDAY');
+
+  const method = [...container.querySelectorAll('button')].find(
+    (item) => item.textContent === 'cashFlow.groupOptions.byMethod'
+  );
+  await act(async () => Simulate.click(method));
+  expect(groupRows()).toHaveLength(2);
+  expect(groupRows()[0].textContent).toContain('paymentMethods.PIX');
 });
 
 test('a month from the link opens directly, and only 13 months are offered', async () => {
@@ -156,12 +179,12 @@ test('a failed load says so and offers to try again', async () => {
 });
 
 test('a group row filters the list of movements, and clearing brings all back', async () => {
-  await renderPage();
+  await renderPage('/cash-flow?group=byMethod');
   expect(text()).toContain('Mercado Sol');
   expect(text()).toContain('Escola X');
 
   const boleto = container.querySelector('[aria-label="cashFlow.filter.by"]:not([aria-pressed="true"])');
-  const rows = [...container.querySelectorAll('[aria-pressed]')];
+  const rows = [...container.querySelectorAll('[aria-label="cashFlow.filter.by"]')];
   const pick = rows.find((row) => row.textContent.includes('paymentMethods.BOLETO'));
   expect(boleto).not.toBeNull();
   await act(async () => Simulate.click(pick));

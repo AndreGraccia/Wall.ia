@@ -19,6 +19,9 @@ beforeEach(() => {
 });
 afterEach(() => act(() => root.unmount()));
 
+beforeEach(() => document.body.appendChild(container));
+afterEach(() => container.remove());
+
 const render = (bankData) =>
   act(() =>
     root.render(
@@ -49,7 +52,19 @@ test('late data warns with the institution, the last sync and the limit, and lin
   expect(container.querySelector('a[href="/open-finance"]')).not.toBeNull();
 });
 
+test('late data is one line with the date and a refresh link; the reason waits behind "Por quê?"', () => {
+  render({ institution: 'Banco Boreal', asOf: '2026-11-24T10:30:00Z', stale: true, staleAfterHours: 36 });
+  expect(container.textContent).toContain('bankData.staleShort');
+  const why = container.querySelector('button[aria-expanded]');
+  expect(why.textContent).toBe('bankData.why');
+  expect(why.getAttribute('aria-expanded')).toBe('false');
+  expect(document.getElementById(why.getAttribute('aria-controls')).textContent).toContain('bankData.stale:');
+  act(() => why.click());
+  expect(why.getAttribute('aria-expanded')).toBe('true');
+});
+
 test('an account that never synced says so instead of showing a date', () => {
   render({ institution: 'Banco Boreal', asOf: null, stale: true, staleAfterHours: 36 });
-  expect(container.textContent).toContain('bankData.neverSynced');
+  expect(container.textContent).toContain('bankData.neverSyncedShort');
+  expect(container.textContent).toMatch(/bankData.neverSynced$/);
 });

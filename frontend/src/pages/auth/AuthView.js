@@ -214,6 +214,8 @@ export default function AuthView({ signup = false }) {
                         label={t(`auth.${group}.${field}`)}
                         name={field}
                         required
+                        // Every field is required, so the asterisk is noise; the input keeps required/aria-required.
+                        InputLabelProps={{ required: false }}
                         fullWidth
                         value={values[field]}
                         onChange={(event) => setValues({ ...values, [field]: event.target.value })}

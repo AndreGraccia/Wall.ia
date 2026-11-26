@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
-import { Box, ButtonBase, Typography } from '@mui/material';
+import { Box, ButtonBase, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { directionFor, localeFor, money } from '../../utils/wallet';
+import { directionFor, localeFor, money, totalsFor } from '../../utils/wallet';
 
 // Local calendar day and month of a timestamp, so a 23:30 entry in Brazil does not land on the next UTC day.
 const parts = (value) => {
@@ -30,132 +30,200 @@ function monthText(day, language) {
 }
 
 /**
- * The line under the description: how the money moved. Between the person's own accounts says so; an imported entry
- * shows the Open Finance method (Pix, TED, boleto...) and nothing when the bank did not send one, because the
- * internal type (deposit, withdrawal) would read as a cash operation. Local entries keep their type.
- * ponytail: imported pairs between two connected banks are matched only on the server (InsightsService.ownAccountPairs);
- * the statement API does not flag them yet, so they show their method.
+ * Joins the two imported sides of a move between the person's own accounts (the API flags both with `ownAccountMove`)
+ * into one entry: same local day, same amount, one withdrawal and one deposit. A side whose partner is not in the
+ * list (filtered by account, or not synced yet) stays alone, and neutral too. Returns `{ item, pair }` in order.
  */
-function howItMoved(item, direction, named, type, t) {
-  if (direction === 'internal') return t('transactions.betweenAccounts');
-  if (item.paymentType) return t(`paymentMethods.${item.paymentType}`, { defaultValue: item.paymentType });
-  if (item.source === 'OPEN_FINANCE') return '';
-  return named ? type : '';
+export function foldOwnMoves(transactions) {
+  const used = new Set();
+  const out = [];
+  transactions.forEach((item, index) => {
+    if (used.has(item.id)) return;
+    let pair = null;
+    if (item.ownAccountMove) {
+      const day = parts(item.createdAt);
+      pair =
+        transactions.find(
+          (other, at) =>
+            at > index &&
+            other.ownAccountMove &&
+            !used.has(other.id) &&
+            other.type?.name !== item.type?.name &&
+            Number(other.amount) === Number(item.amount) &&
+            same(parts(other.createdAt), day)
+        ) || null;
+      if (pair) used.add(pair.id);
+    }
+    out.push({ item, pair });
+  });
+  return out;
 }
 
+/** Net of a month in reais: in minus out, by the same rule as every total (own-account moves count as neither). */
+export function monthNet(items, wallets) {
+  const { incoming, outgoing } = totalsFor(items, wallets);
+  return (incoming - outgoing) / 100;
+}
+
+const names = (from, to) => `${from?.name || '—'} → ${to?.name || '—'}`;
+
 /**
- * A statement as a bank app shows it: entries grouped by month, one 56 px row each with the day on the left (the
- * same column as the Future list), description in the middle and the signed amount, tabular, on the right.
+ * The line under the description: category · account (auditoria 26/11). The statement API has no category yet, so it
+ * is the account the money touched; a move between the person's own accounts names both. The payment method (Pix,
+ * boleto...) lives in the detail.
+ */
+function accountLine(item, pair, direction, t) {
+  if (pair) {
+    const out = item.type?.name === 'Withdrawal' ? item : pair;
+    return names(out.fromWallet, (out === item ? pair : item).toWallet);
+  }
+  if (direction === 'internal' && !item.ownAccountMove) return names(item.fromWallet, item.toWallet);
+  const account = direction === 'incoming' ? item.toWallet?.name : item.fromWallet?.name || item.toWallet?.name;
+  return [direction === 'internal' && t('transactions.betweenAccounts'), item.category, account]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+const signed = (value, language) => (value > 0 ? `+ ${money(value, language)}` : money(value, language));
+
+/**
+ * A statement as a bank app shows it: entries grouped by month (the month's net at the right of its heading), one
+ * 56 px row each with the day on the left (the same column as the Future list), description in the middle and the
+ * signed amount, tabular, on the right. A move between own accounts is one neutral row: no sign, no green.
  * Status only appears when it is not "done", and in words, not colour. Grouping by day would put a header over
  * almost every row in a real account, where most days have one entry.
+ * `limit` caps the rows shown; the month net still counts the whole list, so a paged month does not lie.
  * `dayHeading` keeps the outline right: h2 under the page title, h3 inside a titled section.
  */
-export default function StatementList({ transactions, wallets, onSelect, dayHeading = 'h2' }) {
+export default function StatementList({ transactions, wallets, onSelect, dayHeading = 'h2', limit = Infinity }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const months = [];
-  transactions.forEach((item) => {
-    const day = parts(item.createdAt);
+  let rows = 0;
+  foldOwnMoves(transactions).forEach((entry) => {
+    const day = parts(entry.item.createdAt);
     const key = day ? `${day[0]}-${day[1]}` : '';
-    if (months.at(-1)?.key !== key) months.push({ key, day, items: [] });
-    months.at(-1).items.push({ item, day });
+    if (months.at(-1)?.key !== key) months.push({ key, day, entries: [], all: [] });
+    const month = months.at(-1);
+    month.all.push(entry.item, ...(entry.pair ? [entry.pair] : []));
+    if (rows < limit) {
+      month.entries.push({ ...entry, day });
+      rows += 1;
+    }
   });
 
-  return months.map((month) => (
-    <Box component="section" key={month.key || 'unknown'} sx={{ '& + &': { mt: 4 } }}>
-      <Typography
-        component={dayHeading}
-        variant="body2"
-        color="text.secondary"
-        sx={{ fontWeight: 500, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}
-      >
-        {monthText(month.day, lang)}
-      </Typography>
-      <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
-        {month.items.map(({ item, day }) => {
-          const direction = directionFor(item, wallets);
-          const success = item.status === 'SUCCESS';
-          const sign = success && direction === 'incoming' ? '+ ' : success && direction === 'outgoing' ? '− ' : '';
-          const type = t(`app.types.${item.type?.name}`, { defaultValue: t('app.types.Transfer') });
-          // Imported entries carry the counterparty ("Netflix"); that says more than the generic type.
-          const named = item.description && item.description !== 'Initial balance';
-          const subtitle = howItMoved(item, direction, named, type, t);
-          return (
-            <Box component="li" key={item.id} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-              <ButtonBase
-                onClick={() => onSelect(item)}
-                sx={{
-                  width: '100%',
-                  minHeight: 56,
-                  py: 1,
-                  px: 1.5,
-                  mx: -1.5,
-                  boxSizing: 'content-box',
-                  gap: 2,
-                  justifyContent: 'space-between',
-                  textAlign: 'left',
-                  borderRadius: '12px',
-                  '&:hover': { bgcolor: 'background.neutral' },
-                  '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'secondary.main', outlineOffset: -2 },
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  component="span"
-                  sx={{ width: 48, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
-                >
-                  {dayText(day, lang, t)}
-                </Typography>
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography variant="subtitle2" noWrap component="span" sx={{ display: 'block' }}>
-                    {named ? item.description : type}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    noWrap
-                    component="span"
-                    sx={{ display: 'block' }}
-                  >
-                    {subtitle}
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                  <Typography
-                    variant="subtitle2"
-                    component="span"
+  return months
+    .filter((month) => month.entries.length)
+    .map((month) => {
+      const net = signed(monthNet(month.all, wallets), lang);
+      return (
+        <Box component="section" key={month.key || 'unknown'} sx={{ '& + &': { mt: 4 } }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="baseline"
+            sx={{ gap: 2, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}
+          >
+            <Typography component={dayHeading} variant="body2" color="text.secondary" sx={{ m: 0, fontWeight: 500 }}>
+              {monthText(month.day, lang)}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              aria-label={t('transactions.monthTotal', { amount: net })}
+              sx={{ fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {net}
+            </Typography>
+          </Stack>
+          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
+            {month.entries.map(({ item, pair, day }) => {
+              const direction = pair ? 'internal' : directionFor(item, wallets);
+              const success = item.status === 'SUCCESS';
+              const sign = success && direction === 'incoming' ? '+ ' : success && direction === 'outgoing' ? '− ' : '';
+              const type = t(`app.types.${item.type?.name}`, { defaultValue: t('app.types.Transfer') });
+              // Imported entries carry the counterparty ("Netflix"); that says more than the generic type.
+              const named = item.description && item.description !== 'Initial balance';
+              const title = pair ? t('transactions.ownMove') : named ? item.description : type;
+              return (
+                <Box component="li" key={item.id} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                  <ButtonBase
+                    onClick={() => onSelect(item)}
                     sx={{
-                      display: 'block',
-                      fontWeight: 600,
-                      fontVariantNumeric: 'tabular-nums',
-                      color: sign === '+ ' ? 'success.main' : 'text.primary',
+                      width: '100%',
+                      // content-box (so the hover can bleed past the column): 44 + 2 × 6 padding = a 56 px row.
+                      minHeight: 44,
+                      py: 0.75,
+                      px: 1.5,
+                      mx: -1.5,
+                      boxSizing: 'content-box',
+                      gap: 2,
+                      justifyContent: 'space-between',
+                      textAlign: 'left',
+                      borderRadius: '12px',
+                      '&:hover': { bgcolor: 'background.neutral' },
+                      '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'secondary.main', outlineOffset: -2 },
                     }}
                   >
-                    {sign}
-                    {money(item.amount, lang)}
-                  </Typography>
-                  {!success && (
                     <Typography
-                      variant="caption"
+                      variant="body2"
+                      color="text.secondary"
                       component="span"
-                      sx={{ display: 'block', color: item.status === 'ERROR' ? 'error.main' : 'warning.main' }}
+                      sx={{ width: 48, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
                     >
-                      {t(`transactions.status.${item.status}`, { defaultValue: item.status })}
+                      {dayText(day, lang, t)}
                     </Typography>
-                  )}
+                    <Box component="span" sx={{ display: 'block', minWidth: 0, flex: 1 }}>
+                      <Typography variant="subtitle2" noWrap component="span" sx={{ display: 'block' }}>
+                        {title}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                        component="span"
+                        sx={{ display: 'block' }}
+                      >
+                        {accountLine(item, pair, direction, t)}
+                      </Typography>
+                    </Box>
+                    <Box component="span" sx={{ display: 'block', textAlign: 'right', flexShrink: 0 }}>
+                      <Typography
+                        variant="subtitle2"
+                        component="span"
+                        sx={{
+                          display: 'block',
+                          fontWeight: 600,
+                          fontVariantNumeric: 'tabular-nums',
+                          color: sign === '+ ' ? 'success.main' : 'text.primary',
+                        }}
+                      >
+                        {sign}
+                        {money(item.amount, lang)}
+                      </Typography>
+                      {!success && (
+                        <Typography
+                          variant="caption"
+                          component="span"
+                          sx={{ display: 'block', color: item.status === 'ERROR' ? 'error.main' : 'warning.main' }}
+                        >
+                          {t(`transactions.status.${item.status}`, { defaultValue: item.status })}
+                        </Typography>
+                      )}
+                    </Box>
+                  </ButtonBase>
                 </Box>
-              </ButtonBase>
-            </Box>
-          );
-        })}
-      </Box>
-    </Box>
-  ));
+              );
+            })}
+          </Box>
+        </Box>
+      );
+    });
 }
 StatementList.propTypes = {
   transactions: PropTypes.array.isRequired,
   wallets: PropTypes.array.isRequired,
   onSelect: PropTypes.func.isRequired,
   dayHeading: PropTypes.oneOf(['h2', 'h3']),
+  limit: PropTypes.number,
 };

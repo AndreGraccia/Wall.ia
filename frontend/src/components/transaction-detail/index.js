@@ -38,7 +38,10 @@ export default function TransactionDetail({ transaction, onClose }) {
           {money(transaction.amount, i18n.language)}
         </Typography>
         <Typography color="text.secondary" sx={{ mb: 3 }}>
-          {t(`app.types.${transaction.type?.name}`, { defaultValue: t('app.types.Transfer') })}
+          {/* How it moved: the Open Finance method (Pix, boleto...) when the bank sent one; the list row leaves it here. */}
+          {transaction.paymentType
+            ? t(`paymentMethods.${transaction.paymentType}`, { defaultValue: transaction.paymentType })
+            : t(`app.types.${transaction.type?.name}`, { defaultValue: t('app.types.Transfer') })}
         </Typography>
         <Stack divider={<Divider />} spacing={1.5}>
           {rows.map(([label, value]) => (

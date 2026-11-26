@@ -81,12 +81,19 @@ test('an unknown question explains what can be asked and claims no source', asyn
   expect(text()).not.toContain('ask.source');
 });
 
-test('an empty question is never sent', async () => {
+test('an empty question is never sent: the button stays enabled and points at the field instead', async () => {
   await renderPage();
 
-  expect(button('ask.send').disabled).toBe(true);
+  expect(button('ask.send').disabled).toBe(false);
   await act(async () => Simulate.submit(container.querySelector('form')));
   expect(HttpService.postWithAuth).not.toHaveBeenCalled();
+  const input = container.querySelector('input');
+  expect(document.activeElement).toBe(input);
+  expect(input.getAttribute('aria-invalid')).toBe('true');
+  expect(text()).toContain('ask.emptyQuestion');
+
+  await act(async () => Simulate.change(input, { target: { value: 'quanto gastei?' } }));
+  expect(text()).not.toContain('ask.emptyQuestion');
 });
 
 const daily = (spendingLimit) => ({ intent: 'DAILY_LIMIT', installments: 1, spendingLimit });

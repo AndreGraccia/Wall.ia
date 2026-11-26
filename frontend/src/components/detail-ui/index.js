@@ -1,7 +1,8 @@
 import { useId, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, ButtonBase, Collapse, IconButton, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Collapse, Stack, Typography } from '@mui/material';
 import { WalletIcon } from '../wallet-ui';
+import { COARSE, TOUCH_TARGET } from '../../theme/touch';
 
 /**
  * "Where did this come from?" behind one tertiary button (DESIGN.md: explanation goes to a disclosure).
@@ -19,6 +20,7 @@ export function Disclosure({ label, defaultOpen = false, children, sx }) {
         aria-controls={id}
         sx={{
           minHeight: 40,
+          [COARSE]: { minHeight: TOUCH_TARGET },
           gap: 0.5,
           px: 0.5,
           ml: -0.5,
@@ -61,8 +63,10 @@ Disclosure.propTypes = {
 /**
  * One line of a reading list (DESIGN.md "Listas"): 56 px, divider below, what and when on the left, the tabular
  * value on the right with an optional seal under it. `children` hang under the line, full width, always shown.
- * `detail` hangs there too, folded behind a chevron at the end of the line (`detailLabel` names that button);
- * it stays mounted while folded, like Disclosure.
+ * `detail` hangs there too, folded: then the whole line opens it. The button is a layer under the text, named by the
+ * title, so the title keeps its heading, and a control in `aside` (Method's "Escolher") stays its own button instead
+ * of a button inside a button. The chevron only shows the state. The detail stays mounted while folded, like
+ * Disclosure. `detailLabel`, when given, names the button ("Ver evidências de Netflix"); otherwise the title does.
  */
 export function ListRow({
   title,
@@ -77,11 +81,46 @@ export function ListRow({
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
+  const titleId = `${id}-title`;
   return (
     <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ minHeight: 56, py: 1 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        sx={{
+          gap: 2,
+          minHeight: 56,
+          py: 1,
+          position: 'relative',
+          // Text lets the click through to the button below; a control in `aside` keeps its own.
+          ...(detail && { '& > :not(.list-row-toggle)': { position: 'relative', pointerEvents: 'none' } }),
+        }}
+      >
+        {detail && (
+          <ButtonBase
+            className="list-row-toggle"
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            aria-controls={id}
+            aria-label={detailLabel}
+            aria-labelledby={detailLabel ? undefined : titleId}
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              mx: -1,
+              borderRadius: '12px',
+              '&:hover': { bgcolor: 'background.neutral' },
+              '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'secondary.main', outlineOffset: -2 },
+            }}
+          />
+        )}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="subtitle2" component={titleComponent} sx={{ m: 0, overflowWrap: 'anywhere' }}>
+          <Typography
+            id={titleId}
+            variant="subtitle2"
+            component={titleComponent}
+            sx={{ m: 0, overflowWrap: 'anywhere' }}
+          >
             {title}
           </Typography>
           {meta && (
@@ -101,27 +140,22 @@ export function ListRow({
                 {value}
               </Typography>
             )}
-            {aside}
+            {aside && <Box sx={{ pointerEvents: 'auto' }}>{aside}</Box>}
           </Stack>
         )}
         {detail && (
-          <IconButton
-            onClick={() => setOpen(!open)}
-            aria-expanded={open}
-            aria-controls={id}
-            aria-label={detailLabel}
-            sx={{ flexShrink: 0, width: 40, height: 40, mr: -1, color: 'text.secondary' }}
-          >
-            <WalletIcon
-              name="chevron"
-              sx={{
-                fontSize: 20,
-                transition: 'transform 150ms',
-                transform: open ? 'rotate(180deg)' : 'none',
-                '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-              }}
-            />
-          </IconButton>
+          <WalletIcon
+            name="chevron"
+            aria-hidden
+            sx={{
+              flexShrink: 0,
+              fontSize: 20,
+              color: 'text.secondary',
+              transition: 'transform 150ms',
+              transform: open ? 'rotate(180deg)' : 'none',
+              '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+            }}
+          />
         )}
       </Stack>
       {children && <Box sx={{ pb: 2 }}>{children}</Box>}

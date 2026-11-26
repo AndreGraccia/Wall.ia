@@ -211,12 +211,19 @@ export default function Ask() {
   const [turns, setTurns] = useState([]);
   const [pending, setPending] = useState(null);
   const [error, setError] = useState(null);
+  // Sending an empty question is not blocked (a disabled button does not say why): it points at the field instead.
+  const [blank, setBlank] = useState(false);
   const input = useRef(null);
   const busy = pending !== null;
 
   const ask = async (text) => {
     const trimmed = text.trim();
-    if (!trimmed || busy) return;
+    if (busy) return;
+    if (!trimmed) {
+      setBlank(true);
+      input.current?.focus();
+      return;
+    }
     setPending(trimmed);
     setError(null);
     try {
@@ -236,81 +243,88 @@ export default function Ask() {
       <Helmet>
         <title>{t('ask.pageTitle')}</title>
       </Helmet>
-      <Container maxWidth="md">
+      {/* Same container as every page, left-aligned; the reading measure stays at md. */}
+      <Container maxWidth="lg">
         <PageHeading title={t('ask.heading')} />
-
-        <Stack
-          component="form"
-          direction={{ xs: 'column', sm: 'row' }}
-          sx={{ gap: 1.5 }}
-          onSubmit={(event) => {
-            event.preventDefault();
-            ask(question);
-          }}
-        >
-          <TextField
-            inputRef={input}
-            fullWidth
-            label={t('ask.label')}
-            placeholder={t('ask.placeholder')}
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            inputProps={{ maxLength: 300 }}
-            autoComplete="off"
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={busy || !question.trim()}
-            sx={{ flexShrink: 0, px: 3, alignSelf: { xs: 'flex-start', sm: 'center' } }}
+        <Box sx={{ maxWidth: (theme) => theme.breakpoints.values.md }}>
+          <Stack
+            component="form"
+            direction={{ xs: 'column', sm: 'row' }}
+            sx={{ gap: 1.5 }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              ask(question);
+            }}
           >
-            {busy ? t('ask.thinking') : t('ask.send')}
-          </Button>
-        </Stack>
-        <Stack direction="row" flexWrap="wrap" aria-label={t('ask.suggestions')} role="group" sx={{ gap: 1, mt: 2 }}>
-          {SUGGESTIONS.map((key) => (
-            <Chip
-              key={key}
-              variant="outlined"
-              label={t(`ask.${key}`)}
-              onClick={() => ask(t(`ask.${key}`))}
-              disabled={busy}
-              sx={{ height: 32, '&:hover': { bgcolor: 'background.neutral' } }}
+            <TextField
+              inputRef={input}
+              fullWidth
+              label={t('ask.label')}
+              placeholder={t('ask.placeholder')}
+              value={question}
+              onChange={(event) => {
+                setQuestion(event.target.value);
+                setBlank(false);
+              }}
+              error={blank}
+              helperText={blank ? t('ask.emptyQuestion') : undefined}
+              inputProps={{ maxLength: 300 }}
+              autoComplete="off"
             />
-          ))}
-        </Stack>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={busy}
+              sx={{ flexShrink: 0, px: 3, alignSelf: 'flex-start', mt: { sm: 0.5 } }}
+            >
+              {busy ? t('ask.thinking') : t('ask.send')}
+            </Button>
+          </Stack>
+          <Stack direction="row" flexWrap="wrap" aria-label={t('ask.suggestions')} role="group" sx={{ gap: 1, mt: 2 }}>
+            {SUGGESTIONS.map((key) => (
+              <Chip
+                key={key}
+                variant="outlined"
+                label={t(`ask.${key}`)}
+                onClick={() => ask(t(`ask.${key}`))}
+                disabled={busy}
+                sx={{ height: 40, '&:hover': { bgcolor: 'background.neutral' } }}
+              />
+            ))}
+          </Stack>
 
-        {error && (
-          <Alert
-            severity="error"
-            role="alert"
-            sx={{ mt: 3 }}
-            action={
-              <Button color="inherit" onClick={() => ask(error.question)}>
-                {t('app.retry')}
-              </Button>
-            }
-          >
-            {t(error.key)}
-          </Alert>
-        )}
+          {error && (
+            <Alert
+              severity="error"
+              role="alert"
+              sx={{ mt: 3 }}
+              action={
+                <Button color="inherit" onClick={() => ask(error.question)}>
+                  {t('app.retry')}
+                </Button>
+              }
+            >
+              {t(error.key)}
+            </Alert>
+          )}
 
-        <Box aria-live="polite" sx={{ mt: { xs: 2, md: 3 } }}>
-          {busy && <AnswerSkeleton question={pending} />}
-          {!turns.length && !busy && (
-            <Typography color="text.secondary" sx={{ py: 4 }}>
-              {t('ask.empty')}
-            </Typography>
-          )}
-          {turns.map((turn, index) => (
-            <Turn key={turn.id} turn={turn} latest={index === 0 && !busy} />
-          ))}
-          {turns.length > 0 && (
-            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
-              {t('ask.description')}
-            </Typography>
-          )}
+          <Box aria-live="polite" sx={{ mt: { xs: 2, md: 3 } }}>
+            {busy && <AnswerSkeleton question={pending} />}
+            {!turns.length && !busy && (
+              <Typography color="text.secondary" sx={{ py: 4 }}>
+                {t('ask.empty')}
+              </Typography>
+            )}
+            {turns.map((turn, index) => (
+              <Turn key={turn.id} turn={turn} latest={index === 0 && !busy} />
+            ))}
+            {turns.length > 0 && (
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+                {t('ask.description')}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </Container>
     </>

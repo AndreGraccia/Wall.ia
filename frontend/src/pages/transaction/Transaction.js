@@ -99,7 +99,7 @@ export default function Transaction() {
 
               {visible.length ? (
                 <>
-                  <StatementList transactions={visible.slice(0, shown)} wallets={scope} onSelect={setDetail} />
+                  <StatementList transactions={visible} limit={shown} wallets={scope} onSelect={setDetail} />
                   <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 2, gap: 2 }}>
                     <Typography variant="body2" color="text.secondary" role="status">
                       {t('transactions.showing', { shown: Math.min(shown, visible.length), total: visible.length })}
