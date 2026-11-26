@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
 import { Alert, AlertTitle, Box, Button, Chip, Skeleton, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
@@ -68,6 +67,22 @@ export default function ChargeRadar() {
 
   const formatDate = (value) => (value ? dayLabel(value, i18n.language) : t('future.chargeRadar.noDate'));
 
+  // Nothing to review is one quiet line, not a section with a title, an explanation and a button.
+  if (!state.loading && !state.error && state.alerts.length === 0) {
+    return (
+      <Box component="section" aria-label={t('future.chargeRadar.title')}>
+        {lastDecision && (
+          <Alert severity="success" onClose={() => setLastDecision(null)} sx={{ mb: 2 }}>
+            {t(`future.chargeRadar.decisionSaved.${lastDecision}`)}
+          </Alert>
+        )}
+        <Typography variant="body2" color="text.secondary">
+          {t('future.chargeRadar.emptyTitle')}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box component="section" aria-labelledby="charge-radar-title">
       <Stack spacing={2}>
@@ -127,21 +142,6 @@ export default function ChargeRadar() {
           >
             {t('future.chargeRadar.loadError')} {t(state.error)}
           </Alert>
-        )}
-
-        {!state.loading && !state.error && state.alerts.length === 0 && (
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            flexWrap="wrap"
-            sx={{ gap: 1, minHeight: 56, py: 1, borderTop: '1px solid', borderColor: 'divider' }}
-          >
-            <Typography variant="body2">{t('future.chargeRadar.emptyTitle')}</Typography>
-            <Button component={RouterLink} to="/transactions" size="small" variant="outlined">
-              {t('future.chargeRadar.seeStatement')}
-            </Button>
-          </Stack>
         )}
 
         {state.alerts.map((alert) => {

@@ -73,7 +73,7 @@ function Impact({ impact, language }) {
 Impact.propTypes = { impact: PropTypes.object.isRequired, language: PropTypes.string.isRequired };
 
 /** One signal: a 56 px line (who, what was seen, last amount) and, under it, the reason and the evidence. */
-function RadarItem({ item, language }) {
+function RadarItem({ item, language, today }) {
   const { t } = useTranslation();
   const [impact, setImpact] = useState(null);
   const [impactLoading, setImpactLoading] = useState(false);
@@ -115,9 +115,18 @@ function RadarItem({ item, language }) {
       titleComponent="h3"
       title={item.counterparty}
       meta={
-        item.recurring && item.nextExpectedDate
-          ? t('billingRadar.nextChargeShort', { date: dayLabel(item.nextExpectedDate, language) })
-          : t('billingRadar.lastChargeOn', { date: dayLabel(item.lastChargeDate, language) })
+        item.recurring && item.nextExpectedDate ? (
+          // ISO dates compare as text. Expected before today and not in the data: say so, do not call it "next".
+          item.nextExpectedDate < today ? (
+            <Box component="span" sx={{ color: 'warning.main' }}>
+              {t('billingRadar.expectedNotSeen', { date: dayLabel(item.nextExpectedDate, language) })}
+            </Box>
+          ) : (
+            t('billingRadar.nextChargeShort', { date: dayLabel(item.nextExpectedDate, language) })
+          )
+        ) : (
+          t('billingRadar.lastChargeOn', { date: dayLabel(item.lastChargeDate, language) })
+        )
       }
       value={money(item.latestAmount, language)}
       aside={seals}
@@ -167,11 +176,11 @@ function RadarItem({ item, language }) {
                 delta: money(item.increaseAmount, language),
                 percent: percent(item.increasePercent, language),
               })}{' '}
-              <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
-                {t('billingRadar.annualizedImpact', {
-                  amount: money(Number(item.increaseAmount || 0) * 12, language),
-                })}
+              {t('billingRadar.annualizedImpact')}{' '}
+              <Box component="span" sx={{ color: 'warning.main', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {money(Number(item.increaseAmount || 0) * 12, language)}
               </Box>
+              .
             </Typography>
           )}
           {item.possibleDuplicate && (
@@ -204,6 +213,7 @@ function RadarItem({ item, language }) {
 RadarItem.propTypes = {
   item: PropTypes.object.isRequired,
   language: PropTypes.string.isRequired,
+  today: PropTypes.string.isRequired,
 };
 
 // The radar exposes transaction evidence and estimates; financial decisions remain with the user.
@@ -257,7 +267,7 @@ export default function BillingRadar() {
 
             {hasItems ? (
               <>
-                {/* The answer: what the recurring charges add up to, then the three counters in columns. */}
+                {/* The answer: what the recurring charges add up to; the counters are its metadata, not more numbers. */}
                 <Box>
                   <Typography variant="h6" component="p" color="text.secondary" sx={{ fontWeight: 400 }}>
                     {t('billingRadar.hero.lead')}
@@ -269,26 +279,16 @@ export default function BillingRadar() {
                     </Typography>
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {t('billingRadar.summary.monthlyHelp')}
+                    {[
+                      t('billingRadar.summary.recurringMeta', { count: report.recurringCount }),
+                      report.priceIncreaseCount > 0 &&
+                        t('billingRadar.summary.increasesMeta', { count: report.priceIncreaseCount }),
+                      report.possibleDuplicateCount > 0 &&
+                        t('billingRadar.summary.duplicatesMeta', { count: report.possibleDuplicateCount }),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                    gap: { xs: 2, md: 4 },
-                    pt: 3,
-                    borderTop: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  <StatBlock compact label={t('billingRadar.summary.recurring')} value={report.recurringCount} />
-                  <StatBlock compact label={t('billingRadar.summary.increases')} value={report.priceIncreaseCount} />
-                  <StatBlock
-                    compact
-                    label={t('billingRadar.summary.duplicates')}
-                    value={report.possibleDuplicateCount}
-                  />
                 </Box>
                 <Box component="section" aria-labelledby="radar-signals">
                   <Typography id="radar-signals" variant="h6" component="h2" sx={{ mb: 1 }}>
@@ -296,7 +296,7 @@ export default function BillingRadar() {
                   </Typography>
                   <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
                     {report.items.map((item) => (
-                      <RadarItem key={item.key} item={item} language={language} />
+                      <RadarItem key={item.key} item={item} language={language} today={report.dataThrough} />
                     ))}
                   </Box>
                 </Box>
