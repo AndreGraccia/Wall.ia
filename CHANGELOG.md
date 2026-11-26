@@ -1,5 +1,34 @@
 # Changelog
 
+## 26/11/2026 (noite): revisão de usabilidade (ADR 0022)
+
+Auditoria das 17 telas em 1440 e 390 px e pesquisa de mercado com 19 produtos (`docs/produto/pesquisa-de-mercado-2026-11.md`).
+
+### Mudou
+- **Navegação pela pergunta do dia.** Menu em Visão (Início, Futuro, Plano do mês), Dinheiro (Entradas e saídas, Extrato, Envelopes), Compromissos (Cartões e dívidas, Radar) e Mais (Análise, Carteiras, Open Finance). "Dívidas" virou "Compromissos": o Radar lista aluguel e streaming, que não são dívida. Barra do celular: Início, Futuro, Plano, Contas, Mais.
+- **"Perguntar" é uma ação no topo de todas as telas**, não um destino.
+- **O número do dia diz a premissa:** "Gaste até R$ 15,37 por dia até 04/12 e nenhum dia fica negativo." Quando o ritmo atual leva ao negativo, uma linha diz quando: "No ritmo atual (R$ 27,40 por dia), o saldo fica negativo em 02/12."
+- **Futuro:** os três números fecham a conta do limite (saldo agora + entra antes da renda − já tem destino = sobra ÷ dias). O eixo do gráfico acompanha os dados, e o trecho negativo aparece com pelo menos 8 px. A janela de 30 dias mostra 7 dias de passado. "Precisão da previsão" vira um item próprio.
+- **Selo "Confirmado" sai.** Confirmado é o normal; só "Estimado" e "Simulado" têm selo.
+- **Plano do mês abre em modo leitura.** O topo diz "Este mês faltam R$ X no plano" ou "sobram". "Próximos meses" vem logo abaixo, mês negativo diz "Falta" (antes dizia "Sobra" com valor negativo) e o editor abre em "Editar fatias". "Desativar plano" e "Ver métodos" ficam no menu "⋯". "Virar compromisso" virou "Tirar do saldo no dia da renda".
+- **Meu método:** cada sugestão é uma linha que se escolhe inteira, e há um único "Usar este método".
+- **Aviso de dados atrasados em uma linha** ("Dados de 24/11, 07:30 · Atualizar · Por quê?"). Antes ocupava 180 px no celular, acima do número do dia.
+- **Listas:** a linha inteira abre o detalhe, não só a seta. No toque, botões, links e seletores têm 44 px.
+- **Extrato:** linhas de 56 px, total líquido em cada mês, a transferência entre suas contas numa linha neutra só, e a forma de pagamento no detalhe.
+- **Entradas e saídas:** um agrupamento por vez (categoria, forma de pagamento ou conta) e o mês com setas, no lugar do campo de seleção.
+- **Cartões e dívidas:** o topo diz "Em dezembro saem R$ 1.560,48 em dívidas" com a fatura e a parcela. O Pix no crédito fica recolhido e as taxas do Banco Central passam para dentro de "Taxa, CET e custo".
+- **Radar:** os contadores viram uma linha, e "nenhuma cobrança fora do padrão" também. Só o valor anualizado fica em âmbar.
+- **Análise:** o relatório é gerado ao abrir e ao trocar o período, sem o botão "Gerar relatório".
+- **Open Finance conectado:** mostra contas, última sincronização e "Sincronizar dados" primeiro, e o passo a passo só aparece sem conexão.
+- **Envelopes vazio:** uma frase e o formulário, sem três números zerados.
+- **Perguntar e Privacidade** alinhadas como as outras telas. Pergunta vazia aponta o campo, e o login ficou sem asteriscos.
+
+### Corrigido
+- **Parcela vencida aparecia como "próxima".** Agora mostra a próxima de verdade e diz "Venceu em 25/11, ainda não vimos o pagamento."
+- **O Radar contava compra de mercado como cobrança recorrente.** No usuário de teste, o total caiu de R$ 3.179,18 para R$ 2.995,48 por mês. O critério: gasto do dia a dia cujo valor varia mais de 25% não entra; luz e aluguel continuam.
+- **Ocultar saldo** só escondia os valores de Entradas e saídas depois de recarregar a página.
+- A transferência entre contas próprias importada do Open Finance aparecia como entrada e saída no Extrato.
+
 ## 26/11/2026: Início completo, lançamentos em Entradas e saídas e ocultar saldo em todo o app
 
 ### Novo
