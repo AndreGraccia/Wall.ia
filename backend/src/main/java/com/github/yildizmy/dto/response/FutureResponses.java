@@ -318,7 +318,10 @@ public final class FutureResponses {
             int installmentsTotal,
             int installmentsPaid,
             int installmentsRemaining,
+            /* As the bank reports it: stays in the past until the bank sees the payment. */
             LocalDate nextDueDate,
+            /* First instalment due today or later (LoanPlan#upcomingDueDate); null when none is left. */
+            LocalDate upcomingDueDate,
             LocalDate lastDueDate,
             BigDecimal annualRate,
             Instant lastSyncedAt,
