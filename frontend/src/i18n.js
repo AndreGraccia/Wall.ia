@@ -1509,7 +1509,7 @@ const resources = {
         risk: {
           title: 'Atenção',
           open: 'Ver no Futuro',
-          sentence: 'Entre {{start}} e {{end}} o saldo pode chegar a {{amount}}.',
+          sentence: 'No seu ritmo de gastos, entre {{start}} e {{end}} o saldo pode chegar a {{amount}}.',
           relief: 'Volta a subir com {{label}} em {{date}}.',
           causes: 'O que pesa nesse período:',
           origin: 'origem: {{origin}}',
@@ -3160,7 +3160,7 @@ const resources = {
         risk: {
           title: 'Heads up',
           open: 'See in Future',
-          sentence: 'Between {{start}} and {{end}} your balance may reach {{amount}}.',
+          sentence: 'At your usual spending, between {{start}} and {{end}} your balance may reach {{amount}}.',
           relief: 'It goes back up with {{label}} on {{date}}.',
           causes: 'What weighs on this period:',
           origin: 'source: {{origin}}',

@@ -130,6 +130,28 @@ test('"ver se cabe" asks the engine with the draft and saves nothing', async () 
   expect(text()).toContain('plan.fit.after');
 });
 
+test('activating the plan clears the "ver se cabe" result, which compared against the old "now"', async () => {
+  answer(plan());
+  HttpService.postWithAuth.mockResolvedValue({
+    baseline: { negativeDays: 0, minBalance90: 900, minDate: '2026-12-01' },
+    scenario: { negativeDays: 0, minBalance90: 300, minDate: '2026-12-02' },
+    newMonthlyCommitment: 2000,
+  });
+  HttpService.putWithAuth.mockResolvedValue(plan());
+  await renderPage();
+  const investment = container.querySelector('input[aria-label="plan.slices.percent"][value="40"]');
+  await act(async () => {
+    Simulate.change(investment, { target: { value: '45' } });
+  });
+  await act(async () => Simulate.click(button('plan.actions.fit')));
+  expect(text()).toContain('plan.fit.after');
+
+  await act(async () => Simulate.click(button('plan.actions.activate')));
+
+  expect(HttpService.putWithAuth).toHaveBeenCalledWith('/plan/activation', { active: true });
+  expect(text()).not.toContain('plan.fit.after');
+});
+
 test('only slices that can leave the balance get the "virar compromisso" switch', async () => {
   answer(plan());
   await renderPage();

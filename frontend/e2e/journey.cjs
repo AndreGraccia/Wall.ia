@@ -1,7 +1,8 @@
 /* eslint-disable no-console */
 // End-to-end journey of the homologation script (docs/guia-do-desenvolvedor.md, 13.1) in a real browser, against the
-// whole stack: sign-up with the code read from Mailpit, the main screens at 375 and 1280 px, Open Finance sandbox
-// connect/authorise/revoke and "Baixar meus dados". Any JavaScript error or 5xx answer fails the run.
+// whole stack: sign-up with the code read from Mailpit, the main screens (Início, Plano do mês, Meu método and
+// Entradas e saídas included) at 375 and 1280 px, Open Finance sandbox connect/authorise/revoke and "Baixar meus
+// dados". Any JavaScript error or 5xx answer fails the run.
 //
 //   node e2e/journey.cjs                      (stack on http://localhost:3001, Mailpit on http://localhost:8025)
 //   E2E_BASE_URL=... E2E_MAILPIT_URL=... PLAYWRIGHT_MODULE=/path/to/node_modules/playwright node e2e/journey.cjs
@@ -14,7 +15,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:3001';
 const MAILPIT = process.env.E2E_MAILPIT_URL || 'http://localhost:8025';
-const SCREENS = ['/future', '/commitments', '/insights', '/open-finance', '/privacy'];
+const SCREENS = [
+  '/',
+  '/plan',
+  '/plan/method',
+  '/cash-flow',
+  '/future',
+  '/commitments',
+  '/insights',
+  '/open-finance',
+  '/privacy',
+];
 const PASSWORD = 'Senha-forte-123';
 
 async function codeFor(email) {

@@ -611,6 +611,8 @@ export default function Plan() {
   const accept = (next, message) => {
     setState((previous) => ({ ...previous, plan: next }));
     setDraft((next.slices || []).map(draftSlice));
+    // The simulation compared the draft with the old "now"; once saved, it no longer describes anything.
+    setFit(null);
     setNotice(message);
     setProjectionKey((key) => key + 1);
   };
