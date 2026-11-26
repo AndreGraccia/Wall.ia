@@ -117,9 +117,19 @@ test('choosing a method records it and marks it as yours', async () => {
   });
   await renderPage();
 
-  await act(async () => Simulate.click(buttons('method.choose')[0]));
+  // One radio per suggested line, one "use" button under the list (no repeated button per line).
+  const radios = container.querySelectorAll('input[type="radio"]');
+  expect(radios).toHaveLength(2);
+  expect(buttons('method.use')).toHaveLength(1);
+  await act(async () => Simulate.click(radios[1]));
+  await act(async () => Simulate.change(radios[1], { target: { checked: true, value: 'DEBT_AVALANCHE' } }));
+  expect(radios[1].checked).toBe(true);
+  await act(async () => Simulate.change(radios[0], { target: { checked: true, value: 'PRIORITIES' } }));
+
+  await act(async () => Simulate.click(buttons('method.use')[0]));
 
   expect(HttpService.putWithAuth).toHaveBeenCalledWith('/profile/method', { method: 'PRIORITIES' });
+  expect(text()).toContain('method.isCurrent');
   expect(text()).toContain('method.chosenNotice');
   expect(text()).toContain('method.chosen');
 });

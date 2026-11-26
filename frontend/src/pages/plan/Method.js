@@ -5,9 +5,11 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Container,
+  FormControlLabel,
   MenuItem,
+  Radio,
+  RadioGroup,
   Stack,
   TextField,
   ToggleButton,
@@ -101,6 +103,7 @@ export default function Method() {
   const [busy, setBusy] = useState(null);
   const [notice, setNotice] = useState(null);
   const [failure, setFailure] = useState(null);
+  const [picked, setPicked] = useState(null);
 
   const load = useCallback(async () => {
     setState((previous) => ({ ...previous, loading: true, error: null }));
@@ -122,6 +125,9 @@ export default function Method() {
   const { suggestions, methods, profile } = state;
   const current = profile?.method;
   const presetOf = (id) => methods.find((item) => item.id === id)?.preset?.length > 0;
+  const listed = suggestions?.suggestions.map((item) => item.method) || [];
+  // The radio starts on the current method when it is listed, otherwise on the first suggestion.
+  const selected = picked ?? (listed.includes(current) ? current : listed[0]) ?? null;
 
   const choose = async (id) => {
     setBusy(id);
@@ -160,7 +166,9 @@ export default function Method() {
 
   const chooseButton = (id) =>
     current === id ? (
-      <Chip size="small" label={t('method.chosen')} sx={{ bgcolor: 'secondary.lighter', color: 'secondary.main' }} />
+      <Typography variant="caption" color="text.secondary">
+        {t('method.chosen')}
+      </Typography>
     ) : (
       <Button size="small" variant="outlined" onClick={() => choose(id)} disabled={Boolean(busy)}>
         {busy === id ? t('method.choosing') : t('method.choose')}
@@ -173,16 +181,19 @@ export default function Method() {
         <title>{t('method.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <Button
-          component={RouterLink}
-          to="/plan"
-          size="small"
-          startIcon={<WalletIcon name="back" sx={{ fontSize: 18 }} />}
-          sx={{ ml: -1, mb: 1, color: 'text.secondary' }}
-        >
-          {t('method.back')}
-        </Button>
-        <PageHeading title={t('method.heading')} />
+        <PageHeading
+          title={t('method.heading')}
+          action={
+            <Button
+              component={RouterLink}
+              to="/plan"
+              startIcon={<WalletIcon name="back" sx={{ fontSize: 18 }} />}
+              sx={{ color: 'text.secondary' }}
+            >
+              {t('method.back')}
+            </Button>
+          }
+        />
 
         {state.loading && !suggestions && <PageSkeleton rows={3} />}
         {state.error && (
@@ -240,17 +251,63 @@ export default function Method() {
                   </Button>
                 </Box>
               )}
-              <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+              {/* One choice: the whole line is the radio; one "use" button under the list. */}
+              <RadioGroup
+                aria-labelledby="method-suggestions"
+                value={selected ?? ''}
+                onChange={(event) => setPicked(event.target.value)}
+                sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+              >
                 {suggestions.suggestions.map((suggestion) => (
-                  <ListRow
+                  <FormControlLabel
                     key={suggestion.method}
-                    titleComponent="h3"
-                    title={nameOf(suggestion.method, methods, t)}
-                    meta={suggestion.reasons.map((reason) => reasonText(reason, t, lang)).join(' ')}
-                    aside={chooseButton(suggestion.method)}
+                    value={suggestion.method}
+                    control={<Radio sx={{ mt: -0.75 }} />}
+                    disableTypography
+                    sx={{
+                      m: 0,
+                      minHeight: 56,
+                      py: 1.5,
+                      gap: 1,
+                      alignItems: 'flex-start',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                    label={
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle2" component="span" sx={{ display: 'block' }}>
+                          {nameOf(suggestion.method, methods, t)}
+                          {current === suggestion.method && (
+                            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                              {t('method.chosen')}
+                            </Typography>
+                          )}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'block' }}>
+                          {suggestion.reasons.map((reason) => reasonText(reason, t, lang)).join(' ')}
+                        </Typography>
+                      </Box>
+                    }
                   />
                 ))}
-              </Box>
+              </RadioGroup>
+              {selected && (
+                <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 2, mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={() => choose(selected)}
+                    disabled={selected === current || Boolean(busy)}
+                  >
+                    {busy === selected ? t('method.choosing') : t('method.use')}
+                  </Button>
+                  {selected === current && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('method.isCurrent')}
+                    </Typography>
+                  )}
+                </Stack>
+              )}
               <Disclosure label={t('method.dataUsed')} sx={{ mt: 1 }}>
                 <DataUsed data={suggestions.data} />
               </Disclosure>
