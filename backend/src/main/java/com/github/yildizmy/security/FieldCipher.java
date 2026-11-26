@@ -32,7 +32,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class FieldCipher {
+public final class FieldCipher {
 
     public static final String PREFIX = "enc:";
     static final String PREFIX_V1 = "enc:v1:";

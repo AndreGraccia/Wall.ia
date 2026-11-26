@@ -116,7 +116,7 @@ public final class RecurrenceDetector {
     static List<Integer> circularDays(List<Integer> days) {
         List<Integer> sorted = days.stream().sorted().toList();
         if (sorted.get(sorted.size() - 1) - sorted.get(0) <= 15) return sorted;
-        return days.stream().map(day -> day < 15 ? day + 31 : day).sorted().toList();
+        return days.stream().mapToInt(Integer::intValue).map(day -> day < 15 ? day + 31 : day).sorted().boxed().toList();
     }
 
     private static Category suggest(RecurrencePattern pattern, List<RecurrencePattern> all) {
