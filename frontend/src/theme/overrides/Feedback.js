@@ -1,4 +1,5 @@
 import { alpha } from '@mui/material/styles';
+import { COARSE, TOUCH_TARGET } from '../touch';
 
 const TONES = ['success', 'info', 'warning', 'error'];
 const cap = (word) => word[0].toUpperCase() + word.slice(1);
@@ -53,6 +54,8 @@ export default function Feedback(theme) {
           backgroundColor: palette.background.neutral,
         },
         sizeSmall: { height: 22 },
+        // A chip you can press (a suggestion, a filter) is a control: touch target on a finger. Seals stay small.
+        clickable: { [COARSE]: { minHeight: TOUCH_TARGET } },
         label: { paddingLeft: 10, paddingRight: 10 },
         outlined: { borderColor: palette.divider, backgroundColor: 'transparent' },
         filledPrimary: { color: palette.text.primary, backgroundColor: palette.background.neutral },

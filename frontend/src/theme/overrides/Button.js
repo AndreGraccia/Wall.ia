@@ -1,3 +1,5 @@
+import { COARSE, TOUCH_TARGET } from '../touch';
+
 // Buttons are pills (DESIGN.md). Primary: white with dark text. Secondary (outlined): a line border.
 // Tertiary (text): quiet text, underlined on hover. One visible focus ring for everything clickable.
 export default function Button(theme) {
@@ -17,6 +19,8 @@ export default function Button(theme) {
           textUnderlineOffset: 3,
           '&:hover': { textDecorationColor: 'currentColor' },
           '&:focus-visible': { ...focus, borderRadius: 4 },
+          // A text link that acts as a button is a control, so it gets the touch target; links inside prose do not.
+          '&.MuiLink-button': { [COARSE]: { display: 'inline-flex', alignItems: 'center', minHeight: TOUCH_TARGET } },
         },
       },
     },
@@ -38,6 +42,7 @@ export default function Button(theme) {
           color: palette.text.secondary,
           transition: quick,
           '&:hover': { backgroundColor: palette.background.neutral, color: palette.text.primary },
+          [COARSE]: { minWidth: TOUCH_TARGET, minHeight: TOUCH_TARGET },
         },
       },
     },
@@ -58,6 +63,7 @@ export default function Button(theme) {
           color: palette.text.secondary,
           ...theme.typography.button,
           transition: quick,
+          [COARSE]: { minHeight: TOUCH_TARGET },
           '&:hover': { backgroundColor: palette.action.hover, color: palette.text.primary },
           '&.Mui-selected, &.Mui-selected:hover': {
             backgroundColor: palette.background.neutral,
@@ -76,8 +82,14 @@ export default function Button(theme) {
           boxShadow: 'none',
           transition: quick,
           '&:hover': { boxShadow: 'none' },
+          [COARSE]: { minHeight: TOUCH_TARGET },
         },
-        sizeSmall: { minHeight: 32, padding: '4px 12px', fontSize: theme.typography.pxToRem(13) },
+        sizeSmall: {
+          minHeight: 32,
+          padding: '4px 12px',
+          fontSize: theme.typography.pxToRem(13),
+          [COARSE]: { minHeight: TOUCH_TARGET },
+        },
         sizeLarge: { minHeight: 48, padding: '12px 24px', fontSize: theme.typography.pxToRem(15) },
         containedPrimary: {
           '&:hover': { backgroundColor: palette.primary.light },
