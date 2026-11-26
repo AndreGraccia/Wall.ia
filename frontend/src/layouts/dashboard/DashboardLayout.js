@@ -26,6 +26,7 @@ import { forgetThisBrowser } from '../../utils/push';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
 import { errorKey } from '../../utils/wallet';
+import { useHiddenAmounts } from '../../utils/hiddenAmounts';
 
 // Shell layout (docs/brand/DESIGN.md): side menu from 1024 px, bottom bar below it.
 const DESKTOP = '@media (min-width:1024px)';
@@ -145,6 +146,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const user = AuthService.getCurrentUser();
   const [accountAnchor, setAccountAnchor] = useState(null);
+  const [hidden, toggleHidden] = useHiddenAmounts();
   const [moreOpen, setMoreOpen] = useState(false);
   const groups = groupsFor(user);
   // Phone: five destinations; "Mais" opens a sheet with everything else.
@@ -230,20 +232,31 @@ export default function DashboardLayout() {
             <Box component={RouterLink} to="/" sx={{ textDecoration: 'none', [DESKTOP]: { display: 'none' } }}>
               <WalliaLogo size={20} />
             </Box>
-            <IconButton
-              onClick={(event) => setAccountAnchor(event.currentTarget)}
-              aria-label={t('common.account')}
-              aria-haspopup="menu"
-              aria-expanded={Boolean(accountAnchor)}
-              aria-controls={accountAnchor ? 'account-menu' : undefined}
-              sx={{ p: 0.5 }}
-            >
-              <Avatar
-                sx={{ width: 32, height: 32, bgcolor: 'background.neutral', color: 'text.primary', fontSize: 14 }}
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto' }}>
+              <Tooltip title={t(hidden ? 'app.showBalance' : 'app.hideBalance')}>
+                <IconButton
+                  onClick={toggleHidden}
+                  aria-label={t(hidden ? 'app.showBalance' : 'app.hideBalance')}
+                  aria-pressed={hidden}
+                >
+                  <WalletIcon name={hidden ? 'eyeOff' : 'eye'} sx={{ fontSize: 20 }} />
+                </IconButton>
+              </Tooltip>
+              <IconButton
+                onClick={(event) => setAccountAnchor(event.currentTarget)}
+                aria-label={t('common.account')}
+                aria-haspopup="menu"
+                aria-expanded={Boolean(accountAnchor)}
+                aria-controls={accountAnchor ? 'account-menu' : undefined}
+                sx={{ p: 0.5 }}
               >
-                {user?.firstName?.[0] || 'U'}
-              </Avatar>
-            </IconButton>
+                <Avatar
+                  sx={{ width: 32, height: 32, bgcolor: 'background.neutral', color: 'text.primary', fontSize: 14 }}
+                >
+                  {user?.firstName?.[0] || 'U'}
+                </Avatar>
+              </IconButton>
+            </Stack>
           </Container>
           <Menu
             id="account-menu"

@@ -35,3 +35,13 @@ test('still works when the browser blocks storage', () => {
   expect(latest[0]).toBe(false);
   spy.mockRestore();
 });
+
+test('one choice hides every amount money() formats, in every screen', () => {
+  const { money } = jest.requireActual('./wallet');
+  mount();
+  expect(money(1234.5, 'pt')).toContain('1.234,50');
+  act(() => latest[1]());
+  expect(money(1234.5, 'pt')).toBe('R$ ••••');
+  act(() => latest[1]());
+  expect(money(-10, 'pt')).toContain('10,00');
+});

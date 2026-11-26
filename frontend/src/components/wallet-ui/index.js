@@ -106,7 +106,7 @@ export function PageHeading({ title, description, action }) {
         gap: 2,
         minHeight: { md: 72 },
         mb: { xs: 3, md: 4 },
-        '@media (min-width:1024px)': { pr: 7 },
+        '@media (min-width:1024px)': { pr: 12 },
       }}
     >
       <Box sx={{ minWidth: 0 }}>

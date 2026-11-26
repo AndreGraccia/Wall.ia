@@ -1,23 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  ButtonBase,
-  Container,
-  IconButton,
-  Skeleton,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, ButtonBase, Container, Skeleton, Stack, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { useWallets } from '../../context/WalletContext';
-import { EmptyState, PageHeading, WalletIcon } from '../../components/wallet-ui';
+import { EmptyState, PageHeading } from '../../components/wallet-ui';
 import { DailyLimitCard, EventRow } from '../../components/future-ui';
 import ProjectionChart from '../../components/projection-chart';
 import BankDataNotice from '../../components/bank-data';
@@ -163,7 +152,7 @@ export default function Dashboard() {
   const { transactions, wallets } = useWallets() || {};
   const user = AuthService.getCurrentUser();
   const [state, setState] = useState({ loading: true, error: null, overview: null });
-  const [hidden, toggleHidden] = useHiddenAmounts();
+  const [hidden] = useHiddenAmounts();
 
   const load = useCallback(async () => {
     setState((previous) => ({ ...previous, loading: true, error: null }));
@@ -220,20 +209,8 @@ export default function Dashboard() {
         <title>{t('dashboard.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <PageHeading
-          title={t('app.greeting', { name: user?.firstName || t('app.you') })}
-          action={
-            <Tooltip title={t(hidden ? 'app.showBalance' : 'app.hideBalance')}>
-              <IconButton
-                aria-label={t(hidden ? 'app.showBalance' : 'app.hideBalance')}
-                aria-pressed={hidden}
-                onClick={toggleHidden}
-              >
-                <WalletIcon name={hidden ? 'eyeOff' : 'eye'} sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Tooltip>
-          }
-        />
+        {/* The eye that hides every amount lives in the shell header, next to the account button. */}
+        <PageHeading title={t('app.greeting', { name: user?.firstName || t('app.you') })} />
 
         {state.loading && !overview && (
           <Stack spacing={4} role="status" aria-busy="true" aria-label={t('common.loading')}>
