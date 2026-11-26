@@ -40,7 +40,6 @@ function groupsFor(user) {
         { path: '/', label: 'navigation.dashboard', icon: 'home' },
         { path: '/future', label: 'navigation.future', icon: 'future' },
         { path: '/plan', label: 'navigation.plan', icon: 'plan' },
-        { path: '/ask', label: 'navigation.ask', icon: 'ask' },
       ],
     },
     {
@@ -48,7 +47,6 @@ function groupsFor(user) {
       items: [
         { path: '/cash-flow', label: 'navigation.cashFlow', icon: 'flow' },
         { path: '/transactions', label: 'navigation.transactions', icon: 'history' },
-        { path: '/wallets', label: 'navigation.wallets', icon: 'wallet' },
         { path: '/envelopes', label: 'navigation.envelopes', icon: 'envelope' },
       ],
     },
@@ -63,6 +61,7 @@ function groupsFor(user) {
       key: 'more',
       items: [
         { path: '/insights', label: 'navigation.insights', icon: 'insights' },
+        { path: '/wallets', label: 'navigation.wallets', icon: 'wallet' },
         { path: '/open-finance', label: 'navigation.openFinance', icon: 'bank' },
         // Aggregates for the team; the route itself also checks the role.
         ...(user?.roles?.includes('ROLE_ADMIN')
@@ -149,11 +148,12 @@ export default function DashboardLayout() {
   const [hidden, toggleHidden] = useHiddenAmounts();
   const [moreOpen, setMoreOpen] = useState(false);
   const groups = groupsFor(user);
-  // Phone: five destinations; "Mais" opens a sheet with everything else.
+  // Phone: five destinations, the daily questions (ADR 0022); "Mais" opens a sheet with everything else.
+  // "Perguntar" is an action in the top bar, on every screen, not a place.
   const bottom = [
     { path: '/', label: 'navigation.dashboard', icon: 'home' },
     { path: '/future', label: 'navigation.future', icon: 'future' },
-    { path: '/ask', label: 'navigation.ask', icon: 'ask' },
+    { path: '/plan', label: 'navigation.plan', icon: 'plan' },
     { path: '/commitments', label: 'navigation.debts', icon: 'card', also: ['/billing-radar'] },
   ];
   const bottomActive = (item) => [item.path, ...(item.also || [])].some((path) => isActive(path, pathname));
@@ -233,6 +233,13 @@ export default function DashboardLayout() {
               <WalliaLogo size={20} />
             </Box>
             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto' }}>
+              {!isActive('/ask', pathname) && (
+                <Tooltip title={t('app.askAction')}>
+                  <IconButton component={RouterLink} to="/ask" aria-label={t('app.askAction')}>
+                    <WalletIcon name="ask" sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
               <Tooltip title={t(hidden ? 'app.showBalance' : 'app.hideBalance')}>
                 <IconButton
                   onClick={toggleHidden}

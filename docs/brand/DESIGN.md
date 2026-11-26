@@ -90,28 +90,29 @@ número (o tabular da Geist resolve), "→" no fim de botão.
 │ Visão    │  Você pode gastar R$ 38,13 por dia            │
 │  Início  │  até 04/12, sem nenhum dia negativo.          │
 │  Futuro  │                                               │
-│  Pergunt.│  ─────────●┄┄┄┄┄╲___╱┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  R$ 0    │
+│  Plano   │  ─────────●┄┄┄┄┄╲___╱┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  R$ 0    │
 │ Dinheiro │  hoje            03/12          salário       │
-│  Extrato │                                               │
-│  Carteir.│  Saldo agora   Já tem destino   Depois disso  │
+│  Entr/Sa.│                                               │
+│  Extrato │  Saldo agora   Já tem destino   Depois disso  │
 │  Envelop.│  R$ 2.739      R$ 3.745         -R$ 1.006     │
-│ Dívidas  │  ───────────────────────────────────────────  │
+│ Compromi.│  ───────────────────────────────────────────  │
 │  Cartões │  3 perguntas melhoram a projeção          (>) │
 │  Radar   │  Metas, envelopes, simulação             (>)  │
 │ Mais     │                                               │
 │  Análise │                                               │
-│  O.Fin.  │                                               │
+│  Carteir.│                                               │
 │ ──────── │                                               │
 │ Sandbox  │                                               │
 └──────────┴───────────────────────────────────────────────┘
 ```
 
-- Menu lateral de 232 px em `surface1`, agrupado por assunto (Visão, Dinheiro, Dívidas, Mais),
+- Menu lateral de 232 px em `surface1`, agrupado pela pergunta do dia (Visão, Dinheiro, Compromissos, Mais; ADR 0022),
   item ativo com fundo `surface2` e texto `text`; ícones de traço fino 18 px.
-- Barra superior sem fundo: título da página à esquerda, controles da página e avatar à direita.
+- Barra superior sem fundo: título da página à esquerda, controles da página, "Perguntar" (ação, não destino), ocultar
+  saldo e avatar à direita.
 - "Ambiente simulado" aparece uma vez, no rodapé do menu, como selo discreto.
-- Mobile (< 1024): menu vira barra inferior com 5 destinos (Início, Futuro, Perguntar, Dívidas,
-  Mais) e "Mais" abre uma folha com o resto.
+- Mobile (< 1024): menu vira barra inferior com 5 destinos (Início, Futuro, Plano do mês,
+  Compromissos, Mais) e "Mais" abre uma folha com o resto.
 
 ### Futuro (tela-referência)
 
