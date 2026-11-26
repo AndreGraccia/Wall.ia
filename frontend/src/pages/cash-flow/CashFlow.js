@@ -8,19 +8,20 @@ import {
   ButtonBase,
   Chip,
   Container,
-  MenuItem,
+  IconButton,
   Skeleton,
   Stack,
   Tab,
   Tabs,
-  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
 import BankDataNotice from '../../components/bank-data';
-import { PageHeading } from '../../components/wallet-ui';
+import { PageHeading, WalletIcon } from '../../components/wallet-ui';
 import { Disclosure, ListRow } from '../../components/detail-ui';
 import { EventRow } from '../../components/future-ui';
 import { dayLabel, errorKey, monthLabel, money, percent } from '../../utils/wallet';
@@ -28,7 +29,7 @@ import { dayLabel, errorKey, monthLabel, money, percent } from '../../utils/wall
 const PAGE = 30;
 
 const TABS = ['spending', 'income'];
-const GROUPS = ['byAccount', 'byMethod', 'byCategory'];
+const GROUPS = ['byCategory', 'byMethod', 'byAccount'];
 
 /** This month and the 12 before it, the history the API keeps (ADR 0021). */
 export function lastMonths(today = new Date()) {
@@ -48,18 +49,33 @@ function groupLabel(group, key, t) {
 }
 
 /**
- * One grouping as a reading list: name and count on the left, tabular value on the right, a quiet share bar. Each
+ * The grouping picked in the segmented control, as a reading list: name and count on the left, tabular value on the right, a quiet share bar. Each
  * row filters the list of movements below (documento de evolucao 4.3 e 4.4: por conta, metodo e categoria).
  */
-function GroupList({ group, items, total, filter, onFilter }) {
+function GroupList({ group, items, total, filter, onFilter, onGroup }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
-  const id = `cash-flow-${group}`;
   return (
-    <Box component="section" aria-labelledby={id} sx={{ minWidth: 0 }}>
-      <Typography id={id} variant="subtitle1" component="h2" sx={{ mb: 1 }}>
-        {t(`cashFlow.groups.${group}`)}
-      </Typography>
+    <Box component="section" aria-labelledby="cash-flow-groups" sx={{ minWidth: 0 }}>
+      <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1.5, mb: 1.5 }}>
+        <Typography id="cash-flow-groups" variant="subtitle1" component="h2" sx={{ m: 0 }}>
+          {t('cashFlow.groupBy')}
+        </Typography>
+        {/* One grouping at a time (auditoria 26/11: three equal columns fought for attention). */}
+        <ToggleButtonGroup
+          exclusive
+          value={group}
+          onChange={(_, value) => value && onGroup(value)}
+          aria-labelledby="cash-flow-groups"
+          sx={{ flexWrap: 'wrap' }}
+        >
+          {GROUPS.map((value) => (
+            <ToggleButton key={value} value={value}>
+              {t(`cashFlow.groupOptions.${value}`)}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Stack>
       <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}>
         {items.map((item) => {
           const share = total > 0 ? Number(item.total) / total : 0;
@@ -120,6 +136,39 @@ GroupList.propTypes = {
   total: PropTypes.number,
   filter: PropTypes.object,
   onFilter: PropTypes.func.isRequired,
+  onGroup: PropTypes.func.isRequired,
+};
+
+/** "‹ Novembro de 2026 ›": steps through the 13 months the API keeps; the arrows stop at both ends. */
+function MonthStepper({ months, month, onChange }) {
+  const { t, i18n } = useTranslation();
+  const index = months.indexOf(month);
+  const older = months[index + 1];
+  const newer = months[index - 1];
+  const arrow = (turn) => ({ fontSize: 20, transform: `rotate(${turn}deg)` });
+  return (
+    <Stack direction="row" alignItems="center" role="group" aria-label={t('cashFlow.month')} sx={{ gap: 0.5 }}>
+      <IconButton onClick={() => onChange(older)} disabled={!older} aria-label={t('cashFlow.previousMonth')}>
+        <WalletIcon name="chevron" aria-hidden sx={arrow(90)} />
+      </IconButton>
+      <Typography
+        variant="subtitle1"
+        component="p"
+        aria-live="polite"
+        sx={{ m: 0, minWidth: '10em', textAlign: 'center', fontWeight: 500 }}
+      >
+        {capital(monthLabel(month, i18n.language))}
+      </Typography>
+      <IconButton onClick={() => onChange(newer)} disabled={!newer} aria-label={t('cashFlow.nextMonth')}>
+        <WalletIcon name="chevron" aria-hidden sx={arrow(-90)} />
+      </IconButton>
+    </Stack>
+  );
+}
+MonthStepper.propTypes = {
+  months: PropTypes.array.isRequired,
+  month: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
 };
 
 const FIELD = { byAccount: 'account', byMethod: 'method', byCategory: 'category' };
@@ -241,8 +290,8 @@ export default function CashFlow() {
   const month = months.includes(searchParams.get('month')) ? searchParams.get('month') : months[0];
   const tab = TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'spending';
   const [state, setState] = useState({ loading: true, error: null, data: null });
+  const group = GROUPS.includes(searchParams.get('group')) ? searchParams.get('group') : 'byCategory';
   const [filter, setFilter] = useState(null);
-  useEffect(() => setFilter(null), [month, tab]);
 
   const latest = useRef(0);
   const load = useCallback(async () => {
@@ -260,10 +309,16 @@ export default function CashFlow() {
     load();
   }, [load]);
 
+  // Month, side and grouping live in the URL; any of them changing drops the row filter, which belonged to the old view.
   const update = (patch) => {
-    const next = { month, tab, ...patch };
+    const next = { month, tab, group, ...patch };
+    setFilter(null);
     setSearchParams(
-      { ...(next.month !== months[0] && { month: next.month }), ...(next.tab !== 'spending' && { tab: next.tab }) },
+      {
+        ...(next.month !== months[0] && { month: next.month }),
+        ...(next.tab !== 'spending' && { tab: next.tab }),
+        ...(next.group !== 'byCategory' && { group: next.group }),
+      },
       { replace: true }
     );
   };
@@ -281,23 +336,10 @@ export default function CashFlow() {
       <Container maxWidth="lg">
         <PageHeading
           title={t('cashFlow.heading')}
-          action={
-            <TextField
-              select
-              size="small"
-              label={t('cashFlow.month')}
-              value={month}
-              onChange={(event) => update({ month: event.target.value })}
-              sx={{ minWidth: 200 }}
-            >
-              {months.map((value) => (
-                <MenuItem key={value} value={value}>
-                  {capital(monthLabel(value, lang))}
-                </MenuItem>
-              ))}
-            </TextField>
-          }
+          action={<MonthStepper months={months} month={month} onChange={(value) => update({ month: value })} />}
         />
+        {/* Same place as on every screen: under the heading, before tabs and numbers. */}
+        {data?.bankData?.stale && <BankDataNotice bankData={data.bankData} sx={{ mb: 3 }} />}
 
         <Tabs
           value={tab}
@@ -323,20 +365,10 @@ export default function CashFlow() {
                 <Skeleton width={180} />
                 <Skeleton width="min(280px, 70%)" height={56} />
               </Box>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gap: 4,
-                  gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, minmax(0, 1fr))' },
-                }}
-              >
-                {GROUPS.map((group) => (
-                  <Box key={group}>
-                    <Skeleton width="40%" />
-                    {[0, 1, 2].map((row) => (
-                      <Skeleton key={row} height={56} />
-                    ))}
-                  </Box>
+              <Box>
+                <Skeleton width="min(360px, 80%)" height={44} />
+                {[0, 1, 2, 3].map((row) => (
+                  <Skeleton key={row} height={56} />
                 ))}
               </Box>
             </Stack>
@@ -360,7 +392,6 @@ export default function CashFlow() {
               aria-busy={state.loading}
               sx={{ opacity: state.loading ? 0.6 : 1, transition: 'opacity 150ms' }}
             >
-              {data.bankData?.stale && <BankDataNotice bankData={data.bankData} />}
               <Box component="section" aria-labelledby="cash-flow-total">
                 <Typography id="cash-flow-total" component="h2" sx={{ m: 0 }}>
                   <Typography component="span" variant="body1" color="text.secondary" sx={{ display: 'block' }}>
@@ -402,25 +433,14 @@ export default function CashFlow() {
                   </Button>
                 </Box>
               ) : (
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gap: { xs: 4, md: 5 },
-                    alignItems: 'start',
-                    gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, minmax(0, 1fr))' },
-                  }}
-                >
-                  {GROUPS.map((group) => (
-                    <GroupList
-                      key={group}
-                      group={group}
-                      items={side[group] || []}
-                      total={total}
-                      filter={filter}
-                      onFilter={setFilter}
-                    />
-                  ))}
-                </Box>
+                <GroupList
+                  group={group}
+                  items={side[group] || []}
+                  total={total}
+                  filter={filter}
+                  onFilter={setFilter}
+                  onGroup={(value) => update({ group: value })}
+                />
               )}
               {side.count > 0 && side.items && (
                 <Movements items={side.items} filter={filter} onClear={() => setFilter(null)} />
