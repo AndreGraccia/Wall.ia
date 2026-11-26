@@ -3,7 +3,6 @@ import { Alert, Box, Button, ButtonBase, Card, Collapse, Skeleton, Stack, SvgIco
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useWallets } from '../../context/WalletContext';
-import { dateTime, directionFor, money } from '../../utils/wallet';
 
 // Read by screen readers, invisible on screen (same rule as MUI's visuallyHidden).
 export const visuallyHidden = {
@@ -215,92 +214,6 @@ export function DataState({ children }) {
   );
 }
 DataState.propTypes = { children: PropTypes.node };
-export function ActivityList({ transactions, wallets, onSelect }) {
-  const { t, i18n } = useTranslation();
-  if (!transactions.length)
-    return <EmptyState icon="history" title={t('app.noActivity')} description={t('app.noActivityHelp')} />;
-  return (
-    <Box>
-      {transactions.map((item) => {
-        const direction = directionFor(item, wallets);
-        const success = item.status === 'SUCCESS';
-        const color = success && direction === 'incoming' ? 'success.main' : 'text.primary';
-        const type = t(`app.types.${item.type?.name}`, { defaultValue: t('app.types.Transfer') });
-        // Imported entries carry the counterparty ("Netflix"); that says more than the generic type.
-        const named = item.description && item.description !== 'Initial balance';
-        const title = named ? item.description : type;
-        return (
-          <Box
-            key={item.id}
-            component="button"
-            type="button"
-            onClick={() => onSelect(item)}
-            sx={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: { xs: 1.5, sm: 2 },
-              minHeight: 56,
-              py: 1.5,
-              px: { xs: 2, sm: 3 },
-              border: 0,
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'transparent',
-              color: 'text.primary',
-              textAlign: 'left',
-              cursor: 'pointer',
-              '&:last-child': { borderBottom: 0 },
-              '&:hover': { bgcolor: 'action.hover' },
-              '&:focus-visible': { outline: '2px solid', outlineColor: 'secondary.main', outlineOffset: -2 },
-            }}
-          >
-            <Box
-              sx={{
-                width: 42,
-                height: 42,
-                flexShrink: 0,
-                borderRadius: '12px',
-                bgcolor: 'background.neutral',
-                display: 'grid',
-                placeItems: 'center',
-                color,
-              }}
-            >
-              <WalletIcon name={direction === 'incoming' ? 'down' : direction === 'outgoing' ? 'up' : 'swap'} />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" noWrap>
-                {title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {named ? `${type} · ` : ''}
-                {dateTime(item.createdAt, i18n.language)}
-              </Typography>
-            </Box>
-            <Box sx={{ textAlign: 'right', minWidth: 0 }}>
-              <Typography
-                variant="subtitle2"
-                sx={{ color, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}
-              >
-                {success && direction === 'outgoing' ? '− ' : success && direction === 'incoming' ? '+ ' : ''}
-                {money(item.amount, i18n.language)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t(`transactions.status.${item.status}`, { defaultValue: item.status })}
-              </Typography>
-            </Box>
-          </Box>
-        );
-      })}
-    </Box>
-  );
-}
-ActivityList.propTypes = {
-  transactions: PropTypes.array.isRequired,
-  wallets: PropTypes.array.isRequired,
-  onSelect: PropTypes.func.isRequired,
-};
 /**
  * A titled group. Open, it is a panel (surface1). `collapsible`, it is one 56 px row with a divider that opens
  * the panel underneath: secondary tools stay one tap away instead of lengthening the page (DESIGN.md).
