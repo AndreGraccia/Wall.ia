@@ -1,7 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <title>Wall.ia</title>
-  <rect width="32" height="32" rx="8" fill="#0F1116"/>
-  <polyline points="5,21 10.5,14.5 16,18" fill="none" stroke="#F3F5F9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <polyline points="16,18 21,23 27,10.5" fill="none" stroke="#8FA3FF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="16" cy="18" r="3.6" fill="#8FA3FF"/>
+  <rect width="32" height="32" rx="7" fill="#0F1116"/>
+  <g transform="translate(16 16) scale(1) translate(-16 -16)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.6">
+    <polyline points="4.5,22.5 10,12.5 16,19" stroke="#F3F5F9"/>
+    <polyline points="16,19 21,24.5 27.5,8.5" stroke="#8FA3FF"/>
+    <circle cx="16" cy="19" r="4.2" fill="#8FA3FF" stroke="none"/>
+  </g>
 </svg>

@@ -35,6 +35,11 @@ export default function demoAdapter(config) {
     const asked = JSON.parse(config.data || '{}').question || '';
     return reply(config, 200, data.asks[asked] || data.asks['Qual ação devo comprar na bolsa?']);
   }
+  if (method === 'post' && path === '/insights/reports') {
+    const { months, language } = JSON.parse(config.data || '{}');
+    return reply(config, 200, data.reports[`${months}|${language}`] || data.reports['3|pt-BR']);
+  }
+  if (method === 'post' && path === '/categories/rules/preview') return reply(config, 200, data.preview);
   if (method === 'get') {
     const found = lookup(config);
     return found === undefined ? reply(config, 404, null) : reply(config, 200, found);
