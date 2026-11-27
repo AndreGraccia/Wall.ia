@@ -56,6 +56,19 @@ class AccountDataSqlTest {
     }
 
     @Test
+    void theGoalTargetRulesHoldInTheDatabase() throws SQLException {
+        person(9302);
+        execute("DELETE FROM goal WHERE user_id = 9302");
+        String insert = "INSERT INTO goal (user_id, name, monthly_amount, day_of_month, created_at, target_amount, "
+                + "target_date, saved_amount) VALUES (9302, 'Viagem', 100, 10, now(), ";
+        execute(insert + "NULL, NULL, NULL)");
+        execute(insert + "3000, '2027-12-10', 0)");
+        assertThrows(SQLException.class, () -> execute(insert + "0, NULL, NULL)"));
+        assertThrows(SQLException.class, () -> execute(insert + "3000, NULL, -1)"));
+        assertThrows(SQLException.class, () -> execute(insert + "NULL, '2027-12-10', NULL)"), "a date needs a target");
+    }
+
+    @Test
     void everyExportQueryRunsAndEveryDeletionStatementCleansTheNewTables() throws SQLException {
         person(ID);
         execute("INSERT INTO month_plan (id, user_id, active, activated_at, updated_at) VALUES (" + ID + ", " + ID + ", true, now(), now())");

@@ -57,7 +57,8 @@ public class AccountExportService {
             new Section("openFinanceConsentEvents", "SELECT e.consent_id, e.event, e.actor, e.reason, e.occurred_at "
                     + "FROM open_finance_consent_event e JOIN open_finance_consent c ON c.consent_id = e.consent_id "
                     + "WHERE c.user_id = ? ORDER BY e.id", 1),
-            new Section("goals", "SELECT id, name, monthly_amount, day_of_month, created_at FROM goal "
+            new Section("goals", "SELECT id, name, monthly_amount, day_of_month, target_amount, target_date, "
+                    + "saved_amount, created_at FROM goal "
                     + "WHERE user_id = ? ORDER BY id", 1),
             new Section("envelopes", "SELECT id, name, amount, created_at FROM envelope WHERE user_id = ? ORDER BY id", 1),
             new Section("manualDebts", "SELECT id, kind, label, outstanding_balance, installment_amount, monthly_cet, "

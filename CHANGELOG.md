@@ -7,6 +7,13 @@
 - **Fila "Para revisar":** lançamentos sem categoria ou só sugeridos pelo nome, com confirmar ou trocar em um toque. Aviso em Entradas e saídas e no Início.
 - **Regras** criadas a partir da correção, com prévia, escolha entre só a partir de hoje ou também os anteriores, lista e remoção.
 
+## 27/11/2026: metas completas e comparação de métodos (ADR 0025)
+
+### Novo
+- **Meta com valor-alvo, data-alvo e valor já guardado**, tudo opcional. A Wall.ia mostra o progresso, quanto falta, a data prevista no valor atual, a contribuição necessária para chegar no prazo e se ela cabe na projeção de 90 dias. O valor guardado é informado por você.
+- **Editar uma meta**, com desfazer.
+- **Comparar dois métodos** em Meu método: como funciona, quando ajuda, limitação, esforço e o efeito na sua projeção, sem gravar nada.
+
 ## 27/11/2026: auditorias externas, correções prioritárias
 
 ### Corrigido

@@ -122,6 +122,8 @@ export function errorKey(error) {
       'CARD_SPENDING_NO_CARD',
       'GOAL_LIMIT',
       'GOAL_NOT_FOUND',
+      'GOAL_DATE_NEEDS_TARGET',
+      'GOAL_DATE_TOO_FAR',
       'ALERT_EMAIL_NOT_VERIFIED',
       'ENVELOPE_LIMIT',
       'ENVELOPE_NOT_FOUND',

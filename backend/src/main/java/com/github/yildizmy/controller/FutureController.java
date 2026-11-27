@@ -157,6 +157,14 @@ public class FutureController {
                 .body(futureService.createGoal(user.getId(), request));
     }
 
+    @PutMapping("/goals/{id}")
+    public ResponseEntity<FutureResponses.Goal> updateGoal(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable long id,
+            @Valid @RequestBody FutureRequests.Goal request) {
+        return noStore(futureService.updateGoal(user.getId(), id, request));
+    }
+
     @DeleteMapping("/goals/{id}")
     public ResponseEntity<Void> deleteGoal(@AuthenticationPrincipal UserDetailsImpl user, @PathVariable long id) {
         futureService.deleteGoal(user.getId(), id);

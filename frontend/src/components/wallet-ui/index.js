@@ -44,6 +44,7 @@ const paths = {
   future: 'M3 17l5-6 4 4 3-4M17.5 9.5h.01M20 6.5h.01M3 21h18',
   card: 'M3 6h18v12H3V6Zm0 4h18M7 15h4',
   trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6m4-6v6',
+  edit: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4',
   envelope: 'M3 6h18v12H3V6Zm0 0 9 7 9-7',
   ask: 'M4 5h16v11H9l-5 4V5Zm6.5 3.5a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.7.7-.7 1.2M12 13.5h.01',
   chevron: 'm6 9 6 6 6-6',

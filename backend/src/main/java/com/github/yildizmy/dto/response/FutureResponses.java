@@ -129,9 +129,36 @@ public final class FutureResponses {
     }
 
     /**
-     * @param nextDate next day the goal takes money out of the projection
+     * @param nextDate    next day the goal takes money out of the projection
+     * @param savedOrigin USER_VALUE when {@code savedAmount} is set: the person declared it, nothing was seen moving
+     * @param progress    null without a target
      */
-    public record Goal(long id, String name, BigDecimal monthlyAmount, int dayOfMonth, LocalDate nextDate) {
+    public record Goal(long id, String name, BigDecimal monthlyAmount, int dayOfMonth, LocalDate nextDate,
+                       BigDecimal targetAmount, LocalDate targetDate, BigDecimal savedAmount, String savedOrigin,
+                       GoalProgress progress) {
+    }
+
+    /**
+     * @param status                 REACHED, NO_DATE, DATE_TOO_SOON, ON_TRACK or LATE
+     * @param requiredMonthly        monthly contribution that reaches the target on the date; null without one
+     * @param contributionsUntilDate contribution days after today up to the date
+     * @param projectedDate          when the target is reached at the current amount; null beyond 50 years
+     * @param fit                    whether {@code requiredMonthly} fits the projection; null without it
+     */
+    public record GoalProgress(String status, BigDecimal remaining, BigDecimal savedPercent, BigDecimal requiredMonthly,
+                               Integer contributionsUntilDate, LocalDate projectedDate, GoalFit fit) {
+    }
+
+    /**
+     * The goal check without saving anything.
+     *
+     * @param fits            the contribution adds no negative day and deepens no existing hole
+     * @param incomeConfirmed false: no income in the horizon was confirmed, so only balance and bills were counted
+     * @param baseline        the horizon without this goal
+     * @param scenario        the horizon with this goal at the required amount
+     */
+    public record GoalFit(boolean fits, int horizonDays, boolean incomeConfirmed,
+                          ScenarioSummary baseline, ScenarioSummary scenario) {
     }
 
     public record Envelope(long id, String name, BigDecimal amount) {
