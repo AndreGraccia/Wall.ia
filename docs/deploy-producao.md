@@ -18,6 +18,17 @@ Arquivos envolvidos:
 | `frontend/.env.production` | `REACT_APP_API_URL=/api/v1` no build |
 | `.env.production.example` | Lista de variáveis da API, sem valores |
 
+## Caminho curto (27/11/2026)
+
+O frontend já está publicado em https://wallia-eight.vercel.app. Falta a API:
+
+1. Crie uma conta num provedor de e-mail transacional (Brevo, porta 2525, ou Resend, porta 2587) e uma chave SMTP.
+2. Abra https://render.com/deploy?repo=https://github.com/AndreGraccia/Wall.ia/tree/chore/publicacao (depois do merge, use a branch `main`) e entre com o GitHub.
+3. O Render pede só os cinco valores de e-mail. Ele cria o banco, gera `JWT_SECRET` e `DATA_ENCRYPTION_KEY` e liga tudo. Clique em **Apply**.
+4. Se o serviço ganhar um endereço diferente de `https://wallia-api.onrender.com`, troque o destino em `frontend/vercel.json` e publique o frontend de novo.
+
+Limites do plano gratuito: o banco expira em 30 dias e não tem backup; a API dorme sem uso e leva cerca de um minuto para acordar. Serve para demonstração, não para dados financeiros reais. As seções abaixo descrevem a montagem manual com o Neon.
+
 ## 0. Antes de começar
 
 - Contas: Neon, Render, Vercel e um provedor de e-mail transacional (seção 4). Todas logando com o GitHub facilitam.
