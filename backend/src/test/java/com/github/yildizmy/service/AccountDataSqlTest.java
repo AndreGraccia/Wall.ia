@@ -64,6 +64,14 @@ class AccountDataSqlTest {
         execute("INSERT INTO financial_profile (user_id, preference, main_goal, updated_at) VALUES (" + ID + ", 'DETAILED', 'BUILD_RESERVE', now())");
         execute("INSERT INTO method_choice (user_id, method, catalog_version, chosen_at) VALUES (" + ID + ", 'ENVELOPES', '2026-11-23', now())");
 
+        execute("INSERT INTO investment (id, user_id, institution, name, asset_class, created_at) VALUES (" + ID + ", " + ID
+                + ", 'Corretora', 'Reserva', 'FUND', now())");
+        execute("INSERT INTO investment_value VALUES (" + ID + ", current_date, 10.00)");
+        assertThrows(SQLException.class, () -> execute(
+                "INSERT INTO investment_value VALUES (" + ID + ", current_date, 11.00)"), "one value per date");
+        assertThrows(SQLException.class, () -> execute(
+                "INSERT INTO investment_value VALUES (" + ID + ", current_date - 1, -1)"));
+
         for (AccountExportService.Section section : AccountExportService.SECTIONS) {
             try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(section.sql())) {
                 for (int i = 1; i <= section.idParams(); i++) statement.setLong(i, ID);
@@ -80,6 +88,8 @@ class AccountDataSqlTest {
             }
         }
         assertEquals("0", scalar("SELECT count(*)::text FROM month_plan_slice WHERE month_plan_id = " + ID));
+        assertEquals("0", scalar("SELECT (SELECT count(*) FROM investment WHERE user_id = " + ID + ") + "
+                + "(SELECT count(*) FROM investment_value WHERE investment_id = " + ID + ")"));
         assertEquals("0", scalar("SELECT (SELECT count(*) FROM month_plan WHERE user_id = " + ID + ") + "
                 + "(SELECT count(*) FROM financial_profile WHERE user_id = " + ID + ") + "
                 + "(SELECT count(*) FROM method_choice WHERE user_id = " + ID + ")"));
@@ -89,7 +99,7 @@ class AccountDataSqlTest {
         execute("INSERT INTO \"user\" (id, first_name, last_name, username, email, password) VALUES (" + id
                 + ", 'Ana', 'Plano', 'ana_plano_" + id + "', 'ana" + id + "@plano.test', 'x') ON CONFLICT DO NOTHING");
         // The database outlives a run unless FlywayMigrationsTest cleaned it first: start from nothing either way.
-        for (String table : new String[]{"month_plan", "financial_profile", "method_choice"}) {
+        for (String table : new String[]{"month_plan", "financial_profile", "method_choice", "investment"}) {
             execute("DELETE FROM " + table + " WHERE user_id = " + id);
         }
     }

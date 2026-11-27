@@ -39,6 +39,7 @@ public class AccountDeletionService {
             "DELETE FROM future_alert WHERE user_id = ?",
             "DELETE FROM envelope WHERE user_id = ?",
             "DELETE FROM manual_debt WHERE user_id = ?",
+            "DELETE FROM investment WHERE user_id = ?", // its values go with it (ON DELETE CASCADE)
             "DELETE FROM month_plan WHERE user_id = ?", // its slices go with it (ON DELETE CASCADE)
             "DELETE FROM financial_profile WHERE user_id = ?",
             "DELETE FROM method_choice WHERE user_id = ?",
