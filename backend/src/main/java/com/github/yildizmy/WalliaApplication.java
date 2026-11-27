@@ -15,6 +15,8 @@ public class WalliaApplication {
 		// A generic DEBUG environment variable is commonly set by development tools.
 		// Do not let it enable Spring's verbose request and SQL-adjacent diagnostics.
 		System.setProperty("debug", System.getProperty("debug", "false"));
+		// Render and Neon give one postgres:// value; system properties override application.yml.
+		com.github.yildizmy.config.DatabaseUrl.properties(System.getenv()).forEach(System::setProperty);
 		SpringApplication app = new SpringApplication(WalliaApplication.class);
 		Environment env = app.run(args).getEnvironment();
 		logApplicationStartup(env);

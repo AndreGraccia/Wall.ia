@@ -1,43 +1,51 @@
-# Blueprint do Render: só a API (Docker). Banco no Neon, frontend na Vercel. Passo a passo em docs/deploy-producao.md.
-# Nenhum segredo aqui: tudo que tem "sync: false" o Render pede na criação do Blueprint e guarda no painel.
+# Blueprint do Render: a API (Docker) e o PostgreSQL. O frontend fica na Vercel. Passo a passo em docs/deploy-producao.md.
+# Nenhum segredo aqui: o Render liga o banco, gera as duas chaves e pede só o que tem "sync: false" (o e-mail).
+databases:
+  - name: wallia-db
+    databaseName: wallia
+    user: wallia
+    # Banco gratuito: expira 30 dias depois de criado e não tem backup. Para uso real, plano pago ou Neon
+    # (troque DATABASE_URL pela connection string do Neon).
+    plan: free
+    region: virginia
+    # Só a rede interna do Render alcança o banco.
+    ipAllowList: []
+
 services:
   - type: web
     name: wallia-api
     runtime: docker
     plan: free
-    # Mais perto do Brasil entre as regiões do Render. Crie o banco do Neon também na AWS us-east-1.
+    # Mais perto do Brasil entre as regiões do Render.
     region: virginia
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
-    # Readiness inclui o banco: o deploy só troca a versão quando a nova responde e alcança o Neon.
+    # Publicar é decisão de quem opera: nada sobe sozinho a cada commit.
+    autoDeployTrigger: "off"
+    # Readiness inclui o banco: o deploy só troca a versão quando a nova responde e alcança o PostgreSQL.
     healthCheckPath: /actuator/health/readiness
     envVars:
-      # Banco (Neon). URL JDBC sem usuário e senha, com sslmode=require.
-      # Ex.: jdbc:postgresql://ep-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require
-      - key: SPRING_DATASOURCE_URL
-        sync: false
-      - key: SPRING_DATASOURCE_USERNAME
-        sync: false
-      - key: SPRING_DATASOURCE_PASSWORD
-        sync: false
-      # Poucas conexões: 512 MB de RAM no plano free e limite de conexões no Neon free.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wallia-db
+          property: connectionString
+      # Poucas conexões: 512 MB de RAM no plano free.
       - key: SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE
         value: "5"
 
-      # Segredos da aplicação. Gere cada um com: openssl rand -base64 64 (jwt) e openssl rand -base64 32 (dados).
+      # Gerados pelo Render (Base64, 256 bits) e guardados no painel.
       - key: JWT_SECRET
-        sync: false
-      # Obrigatória em produção (ADR 0014). Perder esta chave torna as descrições ilegíveis: guarde num cofre.
+        generateValue: true
+      # Obrigatória (ADR 0014). Perder esta chave torna as descrições ilegíveis: copie do painel para um cofre.
       - key: DATA_ENCRYPTION_KEY
-        sync: false
+        generateValue: true
 
-      # Endereço público do frontend na Vercel (ex.: https://wallia.vercel.app). O navegador manda esse Origin
-      # pelo rewrite e o CORS do Spring recusa POST de qualquer outro.
+      # O navegador manda este Origin pelo rewrite da Vercel; o CORS do Spring recusa POST de qualquer outro.
       - key: FRONTEND_ORIGIN
-        sync: false
+        value: https://wallia-eight.vercel.app
 
-      # SMTP do código de cadastro. O plano free do Render bloqueia saída nas portas 25, 465 e 587:
-      # use a porta alternativa do provedor com STARTTLS (Brevo 2525, Resend 2587).
+      # SMTP do código de cadastro, os únicos valores que o Render pede. O plano free bloqueia as portas 25, 465
+      # e 587: use a porta alternativa do provedor com STARTTLS (Brevo 2525, Resend 2587).
       - key: MAIL_HOST
         sync: false
       - key: MAIL_PORT
@@ -52,18 +60,8 @@ services:
         value: "true"
       - key: MAIL_STARTTLS
         value: "true"
-
-      # Web Push (opcional; vazio desliga). Gere o par uma vez e não troque.
-      - key: VAPID_PUBLIC_KEY
-        sync: false
-      - key: VAPID_PRIVATE_KEY
-        sync: false
-      - key: VAPID_SUBJECT
-        sync: false
-
-      # Gemini (opcional; sem chave os relatórios usam a análise local).
-      - key: GEMINI_API_KEY
-        sync: false
+      # Opcionais, adicionados depois pelo painel se quiser: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
+      # (aviso no navegador) e GEMINI_API_KEY (texto da Análise).
 
       # A URL onrender.com é pública: só health fica exposto do actuator, e sem documentação da API.
       - key: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
