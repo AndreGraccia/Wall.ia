@@ -56,8 +56,8 @@ Nenhum item está **validado com usuários** nem **pronto para produção**: a v
 | Assistente com IA em todas as áreas (B57) | Planejado | Etapa 1: responder sobre plano e método com os dados da pessoa. Etapa 2: preparar a ação e pedir confirmação. O modelo nunca calcula nem grava. Depende de categorias confiáveis |
 | Calendário de saldo diário com simulação | Planejado | |
 | Cenários salvos | Planejado | |
-| Patrimônio e investimentos informativos | Planejado | Sem recomendar ativo; recomendação individual é regulada pela CVM |
-| Desenvolvimento pessoal (onde estou, onde quero chegar) | Planejado | Começar por objetivo, etapas, custo e prazo |
+| Patrimônio e investimentos informativos | Feito | Manual (ADR 0026), sem recomendar ativo; recomendação individual é regulada pela CVM. Falta gráfico da evolução e validar com pessoas |
+| Desenvolvimento pessoal (onde estou, onde quero chegar) | Feito | "Minha evolução" (ADR 0026): objetivo, etapas, custo, prazo e meta ligada. Falta validar com pessoas |
 | Plano compartilhado | Planejado | |
 
 ## P3 e operação

@@ -14,6 +14,13 @@
 - **Editar uma meta**, com desfazer.
 - **Comparar dois métodos** em Meu método: como funciona, quando ajuda, limitação, esforço e o efeito na sua projeção, sem gravar nada.
 
+## 27/11/2026: Patrimônio e Minha evolução (ADR 0026)
+
+### Novo
+- **Patrimônio** (menu Mais): saldos das contas, mais os investimentos que a pessoa informa, menos as dívidas conhecidas, cada parcela com origem e data, e a evolução dos valores informados. Só informativo: sem recomendação, cotação ou promessa de retorno, e nada entra no saldo disponível nem na projeção.
+- **Minha evolução** (menu Mais): objetivos de vida com onde estou, onde quero chegar, prazo, etapas, custo estimado e ligação opcional a uma meta. Sem pontuação.
+- As duas áreas entram na exportação e na exclusão da conta; o texto livre é cifrado. Migração V40.
+
 ## 27/11/2026: auditorias externas, correções prioritárias
 
 ### Corrigido

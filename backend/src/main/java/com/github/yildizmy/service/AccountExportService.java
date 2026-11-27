@@ -10,13 +10,14 @@ import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * "Baixar meus dados" (LGPD art. 18, II and V): everything kept about the person, in one JSON.
  * <p>
  * Columns are listed one by one on purpose. A new column only reaches the export when someone adds it here, so a
  * secret added later (a token, a hash) never leaks by default. Left out: password and e-mail code hashes, session
- * cut-off, push keys. Descriptions are stored encrypted (ADR 0014) and are exported in clear.
+ * cut-off, push keys. Encrypted text (ADR 0014) is exported in clear.
  */
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,10 @@ public class AccountExportService {
     private static final String OWN_WALLETS = "(SELECT id FROM wallet WHERE user_id = ?)";
 
     /** Section name, query, and how many times the query takes the user id. */
-    record Section(String name, String sql, int idParams) {
+    record Section(String name, String sql, int idParams, Set<String> encrypted) {
+        Section(String name, String sql, int idParams) {
+            this(name, sql, idParams, Set.of("description"));
+        }
     }
 
     static final List<Section> SECTIONS = List.of(
@@ -63,6 +67,18 @@ public class AccountExportService {
             new Section("envelopes", "SELECT id, name, amount, created_at FROM envelope WHERE user_id = ? ORDER BY id", 1),
             new Section("manualDebts", "SELECT id, kind, label, outstanding_balance, installment_amount, monthly_cet, "
                     + "created_at FROM manual_debt WHERE user_id = ? ORDER BY id", 1),
+            new Section("investments", "SELECT id, institution, name, asset_class, invested_amount, maturity_date, "
+                    + "note, created_at FROM investment WHERE user_id = ? ORDER BY id", 1,
+                    Set.of("institution", "name", "note")),
+            new Section("investmentValues", "SELECT v.investment_id, v.value_date, v.amount FROM investment_value v "
+                    + "JOIN investment i ON i.id = v.investment_id WHERE i.user_id = ? "
+                    + "ORDER BY v.investment_id, v.value_date", 1),
+            new Section("lifeGoals", "SELECT id, title, current_situation, desired_situation, target_date, "
+                    + "estimated_cost, goal_id, created_at FROM life_goal WHERE user_id = ? ORDER BY id", 1,
+                    Set.of("title", "current_situation", "desired_situation")),
+            new Section("lifeGoalSteps", "SELECT s.life_goal_id, s.position, s.description, s.done, s.done_at "
+                    + "FROM life_goal_step s JOIN life_goal g ON g.id = s.life_goal_id WHERE g.user_id = ? "
+                    + "ORDER BY s.life_goal_id, s.position", 1),
             new Section("monthPlan", "SELECT active, activated_at, updated_at FROM month_plan WHERE user_id = ?", 1),
             new Section("monthPlanSlices", "SELECT s.position, s.kind, s.label, s.percent, s.commitment "
                     + "FROM month_plan_slice s JOIN month_plan p ON p.id = s.month_plan_id WHERE p.user_id = ? "
@@ -96,23 +112,23 @@ public class AccountExportService {
         export.put("generatedAt", clock.instant().toString());
         export.put("legalBasis", "LGPD art. 18, II e V");
         export.put("profile", jdbc.queryForList("SELECT id, first_name, last_name, username, email, email_verified_at "
-                + "FROM \"user\" WHERE id = ?", userId).stream().map(AccountExportService::readable).findFirst().orElseThrow());
+                + "FROM \"user\" WHERE id = ?", userId).stream().map(row -> readable(row, Set.of())).findFirst().orElseThrow());
         for (Section section : SECTIONS) {
             Object[] ids = new Object[section.idParams()];
             java.util.Arrays.fill(ids, userId);
             export.put(section.name(), jdbc.queryForList(section.sql(), ids).stream()
-                    .map(AccountExportService::readable).toList());
+                    .map(row -> readable(row, section.encrypted())).toList());
         }
         return export;
     }
 
-    /** Dates as ISO text instead of epoch numbers, descriptions decrypted. */
-    static Map<String, Object> readable(Map<String, Object> row) {
+    /** Dates as ISO text instead of epoch numbers, the section's encrypted columns decrypted. */
+    static Map<String, Object> readable(Map<String, Object> row, Set<String> encrypted) {
         Map<String, Object> out = new LinkedHashMap<>();
         row.forEach((column, value) -> {
             if (value instanceof java.sql.Timestamp timestamp) value = timestamp.toInstant().toString();
             else if (value instanceof java.sql.Date date) value = date.toLocalDate().toString();
-            else if (value instanceof String text && "description".equals(column)) value = FieldCipher.decrypt(text);
+            else if (value instanceof String text && encrypted.contains(column)) value = FieldCipher.decrypt(text);
             out.put(column, value);
         });
         return out;

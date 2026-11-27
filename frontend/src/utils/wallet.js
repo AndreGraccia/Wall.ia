@@ -162,6 +162,16 @@ export function errorKey(error) {
       'CATEGORY_RULE_NOT_ALLOWED',
       'CATEGORY_RULE_NOT_FOUND',
       'CATEGORY_RULE_LIMIT',
+      'INVESTMENT_NOT_FOUND',
+      'INVESTMENT_LIMIT',
+      'INVESTMENT_VALUE_NOT_FOUND',
+      'INVESTMENT_VALUE_LIMIT',
+      'INVESTMENT_LAST_VALUE',
+      'INVESTMENT_FUTURE_DATE',
+      'INVALID_DATE',
+      'LIFE_GOAL_NOT_FOUND',
+      'LIFE_GOAL_LIMIT',
+      'LIFE_GOAL_STEP_NOT_FOUND',
     ].includes(code)
   )
     return `app.errors.${code}`;
