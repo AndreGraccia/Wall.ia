@@ -14,8 +14,12 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
-/** A monthly amount the user decided to set aside. It is a commitment in the projection. */
+/**
+ * A monthly amount the user decided to set aside. It is a commitment in the projection. Target, date and saved amount
+ * are optional and declared by the person; none of them is money the system saw move (ADR 0025).
+ */
 @Getter
 @Setter
 @Entity
@@ -38,6 +42,15 @@ public class Goal {
 
     @Column(name = "day_of_month", nullable = false)
     private int dayOfMonth;
+
+    @Column(name = "target_amount", precision = 12, scale = 2)
+    private BigDecimal targetAmount;
+
+    @Column(name = "target_date")
+    private LocalDate targetDate;
+
+    @Column(name = "saved_amount", precision = 12, scale = 2)
+    private BigDecimal savedAmount;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
