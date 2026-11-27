@@ -60,6 +60,7 @@ class UserScopedControllersWebTest {
     @Autowired MockMvc mvc;
     @MockitoBean FutureService futureService;
     @MockitoBean AskUsage askUsage;
+    @MockitoBean com.github.yildizmy.service.AssistantService assistantService;
     @MockitoBean FutureAlertService alertService;
     @MockitoBean ForecastService forecastService;
     @MockitoBean ChargeAlertService chargeAlertService;

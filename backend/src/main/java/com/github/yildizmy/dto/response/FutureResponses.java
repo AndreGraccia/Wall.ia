@@ -1,5 +1,7 @@
 package com.github.yildizmy.dto.response;
 
+import com.github.yildizmy.service.future.MethodAdvisor;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -223,8 +225,32 @@ public final class FutureResponses {
             ScenarioSummary after,
             BigDecimal newMonthlyCommitment,
             String cardName,
-            List<ExitAction> exitPlan
+            List<ExitAction> exitPlan,
+            Assist assist
     ) {
+        public Answer withAssist(Assist value) {
+            return new Answer(intent, amount, installments, method, verdict, balance, spendingLimit, risk, committed,
+                    nextIncome, before, after, newMonthlyCommitment, cardName, exitPlan, value);
+        }
+    }
+
+    /**
+     * What the assistant adds to an answer (ADR 0027); only the part of the question asked is filled. Nothing here is
+     * saved: a goal draft is created only when the person confirms it.
+     */
+    public record Assist(
+            Boolean planSaved,
+            List<PlanResponses.Slice> slices,
+            BigDecimal unclassified,
+            List<MethodAdvisor.Suggestion> methods,
+            Integer pendingReview,
+            GoalDraft goal
+    ) {
+    }
+
+    /** @param monthlyAmount what has to be set aside per contribution to reach the target by the date */
+    public record GoalDraft(BigDecimal targetAmount, LocalDate targetDate, BigDecimal monthlyAmount, int dayOfMonth,
+                            boolean fits) {
     }
 
     /**

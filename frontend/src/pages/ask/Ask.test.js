@@ -54,6 +54,28 @@ async function renderPage() {
   );
 }
 
+test('a savings question prepares a goal and creates it only after the person confirms', async () => {
+  const goal = { targetAmount: 3000, targetDate: '2027-11-27', monthlyAmount: 250, dayOfMonth: 5, fits: true };
+  HttpService.postWithAuth.mockResolvedValue({ intent: 'SAVE_GOAL', assist: { goal } });
+  await renderPage();
+
+  await act(async () => Simulate.click(chip('ask.s8')));
+
+  expect(text()).toContain('250,00');
+  expect(HttpService.postWithAuth).toHaveBeenCalledTimes(1);
+
+  await act(async () => Simulate.click(button('ask.assist.createGoal')));
+
+  expect(HttpService.postWithAuth).toHaveBeenLastCalledWith('/future/goals', {
+    name: 'ask.assist.goalName',
+    monthlyAmount: 250,
+    dayOfMonth: 5,
+    targetAmount: 3000,
+    targetDate: '2027-11-27',
+  });
+  expect(text()).toContain('ask.assist.goalCreated');
+});
+
 test('a suggested question is sent as typed and the answer shows the verdict with its numbers and source', async () => {
   HttpService.postWithAuth.mockResolvedValue(purchase);
   await renderPage();

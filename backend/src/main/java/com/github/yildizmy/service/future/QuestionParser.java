@@ -3,9 +3,12 @@ package com.github.yildizmy.service.future;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,7 +37,7 @@ public final class QuestionParser {
             "(r?\\$\\s*)?(\\d{1,3}(?:[.\\s]\\d{3})+(?:,\\d{1,2})?|\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?(?![\\d,])|\\d+\\.\\d{1,2}(?!\\d)|\\d+(?:,\\d{1,2})?(?![\\d,]))\\s*(mil|k|reais)?\\b");
     /** Words that introduce a price; an unmarked number without one is probably a model name ("iPhone 15"). */
     private static final Pattern PRICE_CUE = Pattern.compile(
-            "\\b(de|por|custa|custando|gastar|gasto|pagar|valor|comprar|compro|parcelar|of|for|costs?|spend|pay|buy|afford)( an?)?\\s*$");
+            "\\b(de|por|custa|custando|gastar|gasto|pagar|valor|comprar|compro|parcelar|juntar|guardar|economizar|of|for|costs?|spend|pay|buy|afford|save|save up)( an?)?\\s*$");
     private static final Pattern YEAR = Pattern.compile("(19|20)\\d{2}");
 
     /**
@@ -59,6 +62,37 @@ public final class QuestionParser {
             "salario|quando (eu )?recebo|proxim[oa] (entrada|pagamento|renda)|payday|salary|next income|get paid");
     private static final Pattern CARD = Pattern.compile("cartao|credito|\\bcard\\b|credit");
 
+    // Questions about the person's own plan, method, pending review and savings targets (assistant, ADR 0027).
+    private static final Pattern SAVE_GOAL = Pattern.compile("\\b(juntar|guardar|economizar|save up|save)\\b");
+    private static final Pattern METHOD = Pattern.compile("metodo|\\bmethods?\\b");
+    private static final Pattern REVIEW = Pattern.compile(
+            "revisar|classificar|categorizar|sem categoria|\\breview\\b|categori[sz]e|uncategori[sz]ed");
+    private static final Pattern PLAN_STATUS = Pattern.compile(
+            "meu plano|do plano|no plano|orcamento|gastando demais|gastei demais|\\bmy plan\\b|budget|spending too much|overspend");
+    private static final Pattern IN_MONTHS = Pattern.compile("\\b(?:em|in|daqui a) (\\{1,3}) (?:meses|mes|months?)\\b");
+    private static final Pattern BY_MONTH = Pattern.compile("\\b(?:ate|em|by|until) (janeiro|fevereiro|marco|abril|maio|junho|"
+            + "julho|agosto|setembro|outubro|novembro|dezembro|january|february|march|april|may|june|july|august|"
+            + "september|october|november|december)(?: (?:de )?(20\\{2}))?");
+    private static final List<String> MONTHS = List.of("janeiro", "fevereiro", "marco", "abril", "maio", "junho",
+            "julho", "agosto", "setembro", "outubro", "novembro", "dezembro", "january", "february", "march", "april",
+            "may", "june", "july", "august", "september", "october", "november", "december");
+
+    /** The date a savings question names: "em 10 meses" or "até dezembro" (the next one). Empty when it names none. */
+    public static Optional<LocalDate> targetDate(String question, LocalDate today) {
+        String text = normalize(question);
+        Matcher in = IN_MONTHS.matcher(text);
+        if (in.find()) {
+            int months = Integer.parseInt(in.group(1));
+            return months < 1 || months > 600 ? Optional.empty() : Optional.of(today.plusMonths(months));
+        }
+        Matcher by = BY_MONTH.matcher(text);
+        if (!by.find()) return Optional.empty();
+        int month = MONTHS.indexOf(by.group(1)) % 12 + 1;
+        YearMonth target = YearMonth.of(by.group(2) == null ? today.getYear() : Integer.parseInt(by.group(2)), month);
+        if (by.group(2) == null && !target.atEndOfMonth().isAfter(today)) target = target.plusYears(1);
+        return target.atEndOfMonth().isAfter(today) ? Optional.of(target.atEndOfMonth()) : Optional.empty();
+    }
+
     private QuestionParser() {
     }
 
@@ -77,6 +111,14 @@ public final class QuestionParser {
         Intent intent;
         if (INVESTMENT_WORD.matcher(text).find() || INVESTMENT_PHRASE.matcher(text).find()) {
             intent = Intent.UNKNOWN;
+        } else if (REVIEW.matcher(text).find()) {
+            intent = Intent.REVIEW;
+        } else if (METHOD.matcher(text).find()) {
+            intent = Intent.METHOD;
+        } else if (SAVE_GOAL.matcher(text).find()) {
+            intent = Intent.SAVE_GOAL;
+        } else if (PLAN_STATUS.matcher(text).find()) {
+            intent = Intent.PLAN_STATUS;
         } else if (BILL_PAYMENT.matcher(text).find()) {
             // Paying an existing bill is not a new purchase: simulating it would add the debt twice.
             intent = Intent.COMMITTED;
@@ -145,7 +187,9 @@ public final class QuestionParser {
         return ascii.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
 
-    public enum Intent { PURCHASE, DAILY_LIMIT, WHY_NEGATIVE, COMMITTED, NEXT_INCOME, UNKNOWN }
+    public enum Intent {
+        PURCHASE, DAILY_LIMIT, WHY_NEGATIVE, COMMITTED, NEXT_INCOME, PLAN_STATUS, METHOD, REVIEW, SAVE_GOAL, UNKNOWN
+    }
 
     /**
      * @param amount       value found in the question, or null when there is none or it is ambiguous

@@ -1,5 +1,12 @@
 # Changelog
 
+## 27/11/2026: assistente sobre plano, método, revisão e metas (ADR 0027)
+
+### Novo
+- O "Pergunte à Wall.ia" responde "estou gastando demais?", "qual método combina comigo?", "o que preciso revisar?" e "quero juntar 3000 até junho".
+- Na pergunta de juntar dinheiro, calcula quanto separar por mês, diz se cabe na projeção e só cria a meta depois do seu toque em "Criar esta meta".
+- Os números vêm do motor; nenhum modelo de linguagem participa. Pergunta sobre investimento continua sem resposta.
+
 ## 27/11/2026: Para revisar, categorias e regras (ADR 0024)
 
 ### Novo
