@@ -9,6 +9,7 @@ import { ListRow } from '../../components/detail-ui';
 import {
   CategoryNotice,
   CategorySelect,
+  Rules,
   categoryLabel,
   needsReview,
   useCategorize,
@@ -152,6 +153,7 @@ export default function Review() {
               </Box>
             </Box>
           )}
+          <Rules version={state.data} onChange={load} />
         </Stack>
       </Container>
     </>

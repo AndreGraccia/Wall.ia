@@ -36,6 +36,7 @@ public class AccountDeletionService {
             "DELETE FROM recurrence_decision WHERE user_id = ?",
             "DELETE FROM charge_alert_decision WHERE user_id = ?",
             "DELETE FROM category_choice WHERE user_id = ?",
+            "DELETE FROM category_rule WHERE user_id = ?",
             "DELETE FROM goal WHERE user_id = ?",
             "DELETE FROM future_alert WHERE user_id = ?",
             "DELETE FROM envelope WHERE user_id = ?",

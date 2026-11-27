@@ -115,3 +115,52 @@ test('a failed save says why and keeps the entry in the queue', async () => {
   expect(text()).toContain('app.errors.TRANSACTION_NOT_FOUND');
   expect(text()).toContain('Mercado Sol');
 });
+
+test('a correction becomes a rule only after the preview, from today on unless the past is asked for', async () => {
+  HttpService.postWithAuth.mockImplementation((url, body) =>
+    Promise.resolve(
+      url.endsWith('preview')
+        ? {
+            affected: body.includePrevious ? 1 : 0,
+            kept: 0,
+            replaces: null,
+            items: body.includePrevious ? [{ id: 9, date: `${month}-01`, amount: 77, account: 'Conta' }] : [],
+          }
+        : {}
+    )
+  );
+  await renderPage();
+  await act(async () => Simulate.click(byText('review.confirm')));
+  await act(async () => Simulate.click(byText('review.rule.offer')));
+
+  const base = { transactionId: 1, category: 'ESSENTIAL' };
+  expect(HttpService.postWithAuth).toHaveBeenLastCalledWith('/categories/rules/preview', {
+    ...base,
+    includePrevious: false,
+  });
+  await act(async () => Simulate.change(document.querySelector('input[value="all"]'), { target: { value: 'all' } }));
+  expect(document.body.textContent).toContain('77,00');
+  expect(HttpService.postWithAuth).not.toHaveBeenCalledWith('/categories/rules', expect.anything());
+
+  await act(async () => Simulate.click(byText('review.rule.save')));
+  expect(HttpService.postWithAuth).toHaveBeenLastCalledWith('/categories/rules', { ...base, includePrevious: true });
+  expect(text()).toContain('review.rule.saved');
+});
+
+test('the rules are listed and removing one reloads the month', async () => {
+  let saved = [{ id: 3, counterparty: 'Loja Aurora', side: 'spending', category: 'LEISURE', appliesFrom: null }];
+  HttpService.getWithAuth.mockImplementation((url) => Promise.resolve(url === '/categories/rules' ? saved : flow()));
+  HttpService.deleteWithAuth.mockImplementation(() => {
+    saved = [];
+    return Promise.resolve();
+  });
+  await renderPage();
+  expect(text()).toContain('review.rules.all');
+  const loads = HttpService.getWithAuth.mock.calls.filter(([url]) => url.startsWith('/cash-flow')).length;
+
+  await act(async () => Simulate.click(container.querySelector('[aria-label="review.rules.removeFor"]')));
+
+  expect(HttpService.deleteWithAuth).toHaveBeenCalledWith('/categories/rules/3');
+  expect(text()).toContain('review.rules.empty');
+  expect(HttpService.getWithAuth.mock.calls.filter(([url]) => url.startsWith('/cash-flow')).length).toBe(loads + 1);
+});

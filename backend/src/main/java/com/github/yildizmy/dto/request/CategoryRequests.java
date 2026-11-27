@@ -14,4 +14,9 @@ public final class CategoryRequests {
 
     public record Choice(@NotNull @Pattern(regexp = CATEGORY) String category) {
     }
+
+    /** @param includePrevious true also reaches the entries already there; false only from today on */
+    public record Rule(@NotNull Long transactionId, @NotNull @Pattern(regexp = CATEGORY) String category,
+                       @NotNull Boolean includePrevious) {
+    }
 }

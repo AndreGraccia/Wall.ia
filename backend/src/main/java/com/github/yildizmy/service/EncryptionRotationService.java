@@ -26,7 +26,7 @@ import java.util.Map;
 public class EncryptionRotationService {
 
     static final int BATCH = 500;
-    static final List<String> TABLES = List.of("transaction", "card_charge");
+    static final List<String> TABLES = List.of("transaction", "card_charge", "category_rule");
 
     public record Result(int rewritten, int failed) {
     }
