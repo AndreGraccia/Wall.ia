@@ -162,6 +162,9 @@ export function errorKey(error) {
       'INVESTMENT_LAST_VALUE',
       'INVESTMENT_FUTURE_DATE',
       'INVALID_DATE',
+      'LIFE_GOAL_NOT_FOUND',
+      'LIFE_GOAL_LIMIT',
+      'LIFE_GOAL_STEP_NOT_FOUND',
     ].includes(code)
   )
     return `app.errors.${code}`;

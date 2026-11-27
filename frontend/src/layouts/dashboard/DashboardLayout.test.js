@@ -74,6 +74,7 @@ test('on the phone, what a bar item covers is not repeated in the "Mais" sheet',
   const links = [...sheet.querySelectorAll('a')].map((link) => link.getAttribute('href'));
   expect(links).toContain('/wallets');
   expect(links).toContain('/wealth');
+  expect(links).toContain('/life-goals');
   expect(links).not.toContain('/billing-radar');
   expect(links).not.toContain('/commitments');
   // The side menu of the desktop still lists it.
