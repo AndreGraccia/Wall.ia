@@ -1528,6 +1528,36 @@ const resources = {
         source: 'Calculado pelo motor da Wall.ia com os seus dados. Nenhum modelo de linguagem definiu estes números.',
         openFuture: 'Ver no Futuro',
       },
+      onboarding: {
+        title: 'Primeiros passos',
+        progress: '{{done}} de {{total}} feitos',
+        dismiss: 'Dispensar',
+        done: 'Feito',
+        dismissed: 'Primeiros passos dispensados. Para retomar, abra o menu da conta.',
+        resume: 'Retomar primeiros passos',
+        steps: {
+          data: {
+            title: 'Conectar uma conta ou registrar seus dados',
+            help: 'Sem dados não há projeção.',
+          },
+          income: {
+            title: 'Confirmar sua renda recorrente',
+            help: 'É a base do plano do mês.',
+          },
+          questions: {
+            title: 'Responder as perguntas da projeção',
+            help: 'Cada resposta melhora a projeção.',
+          },
+          method: {
+            title: 'Escolher um método',
+            help: 'Define o que aparece primeiro no Início.',
+          },
+          goal: {
+            title: 'Criar uma meta',
+            help: 'Quanto guardar por mês, e para quê.',
+          },
+        },
+      },
       dashboard: {
         monthTotals: 'Em {{month}}',
         monthIncome: 'Ganhos',
@@ -3219,6 +3249,36 @@ const resources = {
           'I cannot answer that yet. Ask about a purchase, how much to spend per day, a negative balance, what is already committed or your next income.',
         source: 'Calculated by the Wall.ia engine from your data. No language model set these numbers.',
         openFuture: 'See in Future',
+      },
+      onboarding: {
+        title: 'First steps',
+        progress: '{{done}} of {{total}} done',
+        dismiss: 'Dismiss',
+        done: 'Done',
+        dismissed: 'First steps dismissed. To resume, open the account menu.',
+        resume: 'Resume first steps',
+        steps: {
+          data: {
+            title: 'Connect an account or add your data',
+            help: 'There is no projection without data.',
+          },
+          income: {
+            title: 'Confirm your recurring income',
+            help: 'The month plan is built on it.',
+          },
+          questions: {
+            title: 'Answer the projection questions',
+            help: 'Each answer improves the projection.',
+          },
+          method: {
+            title: 'Choose a method',
+            help: 'It decides what comes first on Home.',
+          },
+          goal: {
+            title: 'Create a goal',
+            help: 'How much to set aside each month, and for what.',
+          },
+        },
       },
       dashboard: {
         monthTotals: 'In {{month}}',
