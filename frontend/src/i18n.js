@@ -127,7 +127,7 @@ const resources = {
           MONTH_PLAN_TOO_MANY_SLICES: 'O plano aceita até 12 fatias.',
           MONTH_PLAN_INVALID_PERCENT: 'Use percentuais de 0 a 100, com até duas casas.',
           MONTH_PLAN_INVALID_LABEL: 'Dê a cada fatia um nome de até 40 caracteres.',
-          MONTH_PLAN_SLICE_NOT_COMMITTABLE: 'Fixo e Lazer não viram compromisso: já estão na projeção.',
+          MONTH_PLAN_SLICE_NOT_COMMITTABLE: 'Essenciais e Lazer não viram compromisso: já estão na projeção.',
           MONTH_PLAN_DUPLICATE_SLICE: 'Cada tipo de fatia aparece uma vez só, exceto as personalizadas.',
           MONTH_PLAN_INCOMPLETE: 'Um plano ativo precisa somar 100%.',
           MONTH_PLAN_NEEDS_INCOME: 'Confirme sua renda no Futuro para calcular o plano.',
@@ -1170,11 +1170,12 @@ const resources = {
         loadError: 'Não foi possível carregar entradas e saídas.',
         why: 'Por quê?',
         whyText:
-          'Transferência entre suas contas não conta como ganho nem gasto. A categoria é a que você confirmou no Futuro; o resto fica como dia a dia ou sem categoria.',
+          'Transferência entre suas contas não conta como ganho nem gasto. A categoria é a que você confirmou no Futuro. No dia a dia, essenciais e lazer são reconhecidos pelo nome do lançamento; o que o nome não diz fica como não classificado.',
         categories: {
           UNCONFIRMED_RECURRENCE: 'Recorrência sem resposta',
-          EVERYDAY: 'Dia a dia',
-          UNCLASSIFIED: 'Sem categoria',
+          ESSENTIAL: 'Essenciais do dia a dia',
+          LEISURE: 'Lazer',
+          UNCLASSIFIED: 'Não classificado',
           BILL: 'Contas fixas',
         },
       },
@@ -1216,7 +1217,7 @@ const resources = {
             PERCENT_503020:
               'Três fatias largas: 50% para necessidades, 30% para desejos e 20% para poupança e dívidas.',
             PERCENT_BALANCED:
-              'Seis fatias: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% estudo e 12,5% reserva de emergência.',
+              'Seis fatias: 35% essenciais, 20% lazer, 15% investimento, 7,5% futuro, 10% estudo e 12,5% reserva de emergência.',
             ZERO_BASED:
               'Começa pelo que suas contas fixas já levam ({{fixed}} da renda) e deixa o resto sem destino. Você distribui até não sobrar nenhum real.',
             CUSTOM:
@@ -1226,7 +1227,7 @@ const resources = {
         presetLabels: {
           PERCENT_503020: { FIXED: 'Necessidades', LEISURE: 'Desejos', FUTURE: 'Poupança e dívidas' },
           PERCENT_BALANCED: {
-            FIXED: 'Fixo',
+            FIXED: 'Essenciais',
             LEISURE: 'Lazer',
             INVESTMENT: 'Investimento',
             FUTURE: 'Futuro',
@@ -1235,7 +1236,7 @@ const resources = {
           },
         },
         kinds: {
-          FIXED: 'Fixo',
+          FIXED: 'Essenciais',
           LEISURE: 'Lazer',
           INVESTMENT: 'Investimento',
           FUTURE: 'Futuro',
@@ -1255,7 +1256,7 @@ const resources = {
           free: 'sem destino',
           why: 'Por quê?',
           whyText:
-            'Fixo compara suas contas fixas e parcelas com a meta. Lazer compara o gasto do dia a dia do mês com o teto. As outras fatias só saem do saldo se você marcar "tirar do saldo no dia da renda": aí saem nesse dia e o limite diário cai junto.',
+            'Essenciais compara com a meta suas contas fixas, parcelas e o que já saiu no mês com mercado, saúde e transporte. Lazer compara o lazer do mês com o teto. Os dois são reconhecidos pelo nome do lançamento na conta; o que não é reconhecido não entra em nenhum, e compras no cartão contam na fatura. As outras fatias só saem do saldo se você marcar "tirar do saldo no dia da renda": aí saem nesse dia e o limite diário cai junto.',
         },
         sum: {
           total: 'Soma {{percent}}',
@@ -1265,10 +1266,11 @@ const resources = {
           complete: 'fecha 100%',
         },
         roles: {
-          fixed: 'Contas fixas {{used}} de {{goal}}',
-          fixedOver: 'Contas fixas passam a meta em {{amount}}',
-          leisure: 'Gasto no mês {{used}} de {{goal}}',
-          leisureOver: 'O gasto do mês passou o teto em {{amount}}',
+          fixed: 'Essenciais {{used}} de {{goal}}',
+          fixedOver: 'Essenciais passam a meta em {{amount}}',
+          leisure: 'Lazer no mês {{used}} de {{goal}}',
+          leisureOver: 'O lazer do mês passou o teto em {{amount}}',
+          unclassified: '{{amount}} do mês não classificado: fica fora de Essenciais e de Lazer.',
           used: '{{percent}} usado',
           committed: 'separado no dia da renda',
           reserved: 'planejado',
@@ -1352,6 +1354,12 @@ const resources = {
           CONFIRMED_INCOME_KNOWN: 'Sua renda confirmada é {{monthlyIncome}} por mês.',
           DAILY_LIMIT_UNTIL_NEXT_INCOME: 'O Futuro já calcula quanto dá para gastar por dia até a próxima entrada.',
           NO_CONFIRMED_INCOME: 'Sem renda confirmada, métodos de percentual não calculam valores.',
+          GOAL_LEAVE_DEBT: 'Seu objetivo principal é sair das dívidas.',
+          GOAL_LEAVE_DEBT_NO_DEBT_DATA:
+            'Seu objetivo é sair das dívidas, mas não há dívida com taxa registrada: comece pela ordem do que pagar.',
+          GOAL_BUILD_RESERVE: 'Seu objetivo principal é montar uma reserva.',
+          GOAL_ORGANIZE_MONTH: 'Seu objetivo principal é organizar o mês.',
+          GOAL_STABILITY: 'Seu objetivo principal é ter estabilidade.',
         },
         dataUsed: 'Dados usados',
         data: {
@@ -1388,10 +1396,11 @@ const resources = {
           },
           PERCENT_BALANCED: {
             name: 'Equilibrado 35/20/15',
-            how: 'Seis fatias: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento pessoal e estudo e 12,5% reserva de emergência.',
+            how: 'Seis fatias: 35% essenciais, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento pessoal e estudo e 12,5% reserva de emergência.',
             helps:
-              'Quando você quer separar, além das contas e do lazer, uma parte para estudo e outra para a reserva.',
-            limits: 'Seis fatias pedem renda que comporte todas; com contas fixas acima de 35% a fatia Fixo estoura.',
+              'Quando você quer separar, além dos essenciais e do lazer, uma parte para estudo e outra para a reserva.',
+            limits:
+              'Seis fatias pedem renda que comporte todas; com contas fixas e essenciais acima de 35% a fatia Essenciais estoura.',
           },
           ZERO_BASED: {
             name: 'Base zero',
@@ -1528,6 +1537,36 @@ const resources = {
         source: 'Calculado pelo motor da Wall.ia com os seus dados. Nenhum modelo de linguagem definiu estes números.',
         openFuture: 'Ver no Futuro',
       },
+      onboarding: {
+        title: 'Primeiros passos',
+        progress: '{{done}} de {{total}} feitos',
+        dismiss: 'Dispensar',
+        done: 'Feito',
+        dismissed: 'Primeiros passos dispensados. Para retomar, abra o menu da conta.',
+        resume: 'Retomar primeiros passos',
+        steps: {
+          data: {
+            title: 'Conectar uma conta ou registrar seus dados',
+            help: 'Sem dados não há projeção.',
+          },
+          income: {
+            title: 'Confirmar sua renda recorrente',
+            help: 'É a base do plano do mês.',
+          },
+          questions: {
+            title: 'Responder as perguntas da projeção',
+            help: 'Cada resposta melhora a projeção.',
+          },
+          method: {
+            title: 'Escolher um método',
+            help: 'Define o que aparece primeiro no Início.',
+          },
+          goal: {
+            title: 'Criar uma meta',
+            help: 'Quanto guardar por mês, e para quê.',
+          },
+        },
+      },
       dashboard: {
         monthTotals: 'Em {{month}}',
         monthIncome: 'Ganhos',
@@ -1575,7 +1614,7 @@ const resources = {
           committed: 'Separado no Futuro todo mês',
           plannedOnly: 'Planejado; nenhum movimento registrado',
           footnote:
-            'Planejado é a meta do mês, não dinheiro já gasto ou investido. Só Fixo e Lazer são medidos pelos lançamentos.',
+            'Planejado é a meta do mês, não dinheiro já gasto ou investido. Só Essenciais e Lazer são medidos pelos lançamentos.',
         },
         goals: {
           title: 'Metas e reservas',
@@ -1819,7 +1858,7 @@ const resources = {
           MONTH_PLAN_INVALID_PERCENT: 'Use percentages from 0 to 100, with up to two decimals.',
           MONTH_PLAN_INVALID_LABEL: 'Give each slice a name of up to 40 characters.',
           MONTH_PLAN_SLICE_NOT_COMMITTABLE:
-            'Fixed and Leisure cannot become commitments: they are already in the projection.',
+            'Essentials and Leisure cannot become commitments: they are already in the projection.',
           MONTH_PLAN_DUPLICATE_SLICE: 'Each kind of slice appears once, except custom ones.',
           MONTH_PLAN_INCOMPLETE: 'An active plan has to add up to 100%.',
           MONTH_PLAN_NEEDS_INCOME: 'Confirm your income in Future to calculate the plan.',
@@ -2859,10 +2898,11 @@ const resources = {
         loadError: 'Could not load money in and out.',
         why: 'Why?',
         whyText:
-          'A transfer between your own accounts is neither income nor spending. The category is the one you confirmed in Future; the rest is everyday or unclassified.',
+          'A transfer between your own accounts is neither income nor spending. The category is the one you confirmed in Future. For day-to-day spending, essentials and leisure are recognised by the name of the entry; what the name does not say stays unclassified.',
         categories: {
           UNCONFIRMED_RECURRENCE: 'Unanswered recurrence',
-          EVERYDAY: 'Everyday',
+          ESSENTIAL: 'Day-to-day essentials',
+          LEISURE: 'Leisure',
           UNCLASSIFIED: 'Unclassified',
           BILL: 'Fixed bills',
         },
@@ -2913,7 +2953,7 @@ const resources = {
         presetLabels: {
           PERCENT_503020: { FIXED: 'Needs', LEISURE: 'Wants', FUTURE: 'Savings and debts' },
           PERCENT_BALANCED: {
-            FIXED: 'Fixed',
+            FIXED: 'Essentials',
             LEISURE: 'Leisure',
             INVESTMENT: 'Investment',
             FUTURE: 'Future',
@@ -2922,7 +2962,7 @@ const resources = {
           },
         },
         kinds: {
-          FIXED: 'Fixed',
+          FIXED: 'Essentials',
           LEISURE: 'Leisure',
           INVESTMENT: 'Investment',
           FUTURE: 'Future',
@@ -2942,7 +2982,7 @@ const resources = {
           free: 'unassigned',
           why: 'Why?',
           whyText:
-            'Fixed compares your fixed bills and instalments with the goal. Leisure compares this month\'s everyday spending with the ceiling. The other slices only leave the balance if you mark "take from the balance on income day": then they leave on that day and the daily limit drops with them.',
+            'Essentials compares with the goal your fixed bills, instalments and what already went this month on groceries, health and transport. Leisure compares this month\'s leisure with the ceiling. Both are recognised by the name of the entry on the account; what is not recognised counts in neither, and card purchases count in the card bill. The other slices only leave the balance if you mark "take from the balance on income day": then they leave on that day and the daily limit drops with them.',
         },
         sum: {
           total: 'Total {{percent}}',
@@ -2952,10 +2992,11 @@ const resources = {
           complete: 'adds up to 100%',
         },
         roles: {
-          fixed: 'Fixed bills {{used}} of {{goal}}',
-          fixedOver: 'Fixed bills go over the goal by {{amount}}',
-          leisure: 'Spent this month {{used}} of {{goal}}',
-          leisureOver: "This month's spending went over the ceiling by {{amount}}",
+          fixed: 'Essentials {{used}} of {{goal}}',
+          fixedOver: 'Essentials go over the goal by {{amount}}',
+          leisure: 'Leisure this month {{used}} of {{goal}}',
+          leisureOver: "This month's leisure went over the ceiling by {{amount}}",
+          unclassified: '{{amount}} of this month is unclassified: it counts in neither Essentials nor Leisure.',
           used: '{{percent}} used',
           committed: 'set aside on income day',
           reserved: 'planned',
@@ -3041,6 +3082,12 @@ const resources = {
           DAILY_LIMIT_UNTIL_NEXT_INCOME:
             'Future already calculates how much you can spend per day until the next income.',
           NO_CONFIRMED_INCOME: 'Without confirmed income, percentage methods cannot calculate amounts.',
+          GOAL_LEAVE_DEBT: 'Your main goal is to get out of debt.',
+          GOAL_LEAVE_DEBT_NO_DEBT_DATA:
+            'Your goal is to get out of debt, but no debt with a rate is on record: start with the order of what to pay.',
+          GOAL_BUILD_RESERVE: 'Your main goal is to build a reserve.',
+          GOAL_ORGANIZE_MONTH: 'Your main goal is to organise the month.',
+          GOAL_STABILITY: 'Your main goal is stability.',
         },
         dataUsed: 'Data used',
         data: {
@@ -3077,11 +3124,11 @@ const resources = {
           },
           PERCENT_BALANCED: {
             name: 'Balanced 35/20/15',
-            how: 'Six slices: 35% fixed, 20% leisure, 15% investment, 7.5% future, 10% personal development and study and 12.5% emergency reserve.',
+            how: 'Six slices: 35% essentials, 20% leisure, 15% investment, 7.5% future, 10% personal development and study and 12.5% emergency reserve.',
             helps:
-              'When you want to set aside, besides bills and leisure, a share for study and another for a reserve.',
+              'When you want to set aside, besides essentials and leisure, a share for study and another for a reserve.',
             limits:
-              'Six slices need an income that fits them all; with fixed bills above 35% the Fixed slice overflows.',
+              'Six slices need an income that fits them all; with fixed bills and essentials above 35% the Essentials slice overflows.',
           },
           ZERO_BASED: {
             name: 'Zero-based',
@@ -3220,6 +3267,36 @@ const resources = {
         source: 'Calculated by the Wall.ia engine from your data. No language model set these numbers.',
         openFuture: 'See in Future',
       },
+      onboarding: {
+        title: 'First steps',
+        progress: '{{done}} of {{total}} done',
+        dismiss: 'Dismiss',
+        done: 'Done',
+        dismissed: 'First steps dismissed. To resume, open the account menu.',
+        resume: 'Resume first steps',
+        steps: {
+          data: {
+            title: 'Connect an account or add your data',
+            help: 'There is no projection without data.',
+          },
+          income: {
+            title: 'Confirm your recurring income',
+            help: 'The month plan is built on it.',
+          },
+          questions: {
+            title: 'Answer the projection questions',
+            help: 'Each answer improves the projection.',
+          },
+          method: {
+            title: 'Choose a method',
+            help: 'It decides what comes first on Home.',
+          },
+          goal: {
+            title: 'Create a goal',
+            help: 'How much to set aside each month, and for what.',
+          },
+        },
+      },
       dashboard: {
         monthTotals: 'In {{month}}',
         monthIncome: 'Income',
@@ -3267,7 +3344,7 @@ const resources = {
           committed: 'Set aside in Future every month',
           plannedOnly: 'Planned; no movement recorded',
           footnote:
-            'Planned is the goal for the month, not money already spent or invested. Only Fixed and Leisure are measured from transactions.',
+            'Planned is the goal for the month, not money already spent or invested. Only Essentials and Leisure are measured from transactions.',
         },
         goals: {
           title: 'Goals and reserves',

@@ -81,14 +81,17 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public PlanResponses.Suggestions suggestions(long userId) {
-        String preference = profiles.findByUserId(userId).map(FinancialProfile::getPreference).orElse(FinancialProfile.NOT_SAID);
-        MethodAdvisor.Facts facts = facts(userId, MethodAdvisor.Preference.valueOf(preference));
+        FinancialProfile profile = profiles.findByUserId(userId).orElse(null);
+        String preference = profile == null ? FinancialProfile.NOT_SAID : profile.getPreference();
+        String goal = profile == null ? FinancialProfile.NOT_SAID : profile.getMainGoal();
+        MethodAdvisor.Facts facts = facts(userId, MethodAdvisor.Preference.valueOf(preference),
+                MethodAdvisor.Goal.valueOf(goal));
         MethodAdvisor.Advice advice = MethodAdvisor.suggest(facts);
         return new PlanResponses.Suggestions(MethodCatalog.VERSION, advice.needsConfirmedIncome(), preference,
                 advice.suggestions(), derived(facts));
     }
 
-    private MethodAdvisor.Facts facts(long userId, MethodAdvisor.Preference preference) {
+    private MethodAdvisor.Facts facts(long userId, MethodAdvisor.Preference preference, MethodAdvisor.Goal goal) {
         FutureService.Context context = futureService.context(userId);
         BigDecimal income = MonthPlanCalculator.income(context.confirmed()).map(MonthPlanCalculator.Income::monthly).orElse(null);
         BigDecimal fixed = MonthPlanCalculator.fixedUsed(context.confirmed(), context.loanPlans()).total();
@@ -97,7 +100,7 @@ public class ProfileService {
                         && loan.getOutstandingBalance().signum() > 0)
                 .count();
         int debts = (int) (loansWithRate + manualDebts.countByUserId(userId));
-        return new MethodAdvisor.Facts(income, MethodAdvisor.variableIncome(context.confirmed()), fixed, debts, preference);
+        return new MethodAdvisor.Facts(income, MethodAdvisor.variableIncome(context.confirmed()), fixed, debts, preference, goal);
     }
 
     private static PlanResponses.Derived derived(MethodAdvisor.Facts facts) {
@@ -115,6 +118,6 @@ public class ProfileService {
                 profile == null ? null : profile.getUpdatedAt(),
                 history.isEmpty() ? null : history.get(0).method(),
                 history,
-                derived(facts(userId, MethodAdvisor.Preference.NOT_SAID)));
+                derived(facts(userId, MethodAdvisor.Preference.NOT_SAID, MethodAdvisor.Goal.NOT_SAID)));
     }
 }

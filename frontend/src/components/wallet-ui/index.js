@@ -90,9 +90,12 @@ export function IconTile({ name, size = 54, sx }) {
   );
 }
 IconTile.propTypes = { name: PropTypes.string.isRequired, size: PropTypes.number, sx: PropTypes.object };
+/** CSS variable with the width of the actions the shell pins to the top right on desktop (DashboardLayout). */
+export const SHELL_ACTIONS_WIDTH = '--shell-actions-width';
+
 /**
- * The page title row. On desktop it shares the top line with the account button, which the shell pins to the
- * top right (DashboardLayout), so it keeps that corner free.
+ * The page title row. On desktop it shares the top line with the shell's actions, so it keeps that corner free:
+ * their measured width plus the same 16 px gap the row uses.
  */
 export function PageHeading({ title, description, action }) {
   return (
@@ -105,7 +108,7 @@ export function PageHeading({ title, description, action }) {
         gap: 2,
         minHeight: { md: 72 },
         mb: { xs: 3, md: 4 },
-        '@media (min-width:1024px)': { pr: 12 },
+        '@media (min-width:1024px)': { pr: `calc(var(${SHELL_ACTIONS_WIDTH}, 0px) + 16px)` },
       }}
     >
       <Box sx={{ minWidth: 0 }}>

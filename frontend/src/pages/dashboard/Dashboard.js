@@ -24,6 +24,7 @@ import {
   RiskAlert,
   useGet,
 } from './sections';
+import Onboarding from './Onboarding';
 
 /**
  * Where the money is now and the month so far, under the number of the day (proposta de André Graccia, ADR 0021;
@@ -201,6 +202,7 @@ export default function Dashboard() {
   const suggestions = useGet(profile.data && !profile.data.method ? '/methods/suggestions' : null);
   const chosen = (catalog.data?.methods || []).find((method) => method.id === profile.data?.method);
   const highlight = chosen ? HIGHLIGHT_BY_TOOL[chosen.where?.tool] : null;
+  const onboarding = <Onboarding userId={user?.id} sources={sources} plan={plan} profile={profile} goals={goals} />;
   const shortcuts = (
     <>
       <Button component={RouterLink} to="/ask" variant="outlined">
@@ -255,6 +257,7 @@ export default function Dashboard() {
             }
           />
         )}
+        {noData && onboarding}
 
         {overview && !noData && (
           <Stack spacing={{ xs: 4, md: 5 }}>
@@ -284,6 +287,7 @@ export default function Dashboard() {
             )}
             <MonthTotals hidden={hidden} balance={overview.balance} />
             {ready && <RiskAlert windows={projection.riskWindows} hidden={hidden} />}
+            {onboarding}
             {ready && <HorizonSummary projection={projection} hidden={hidden} />}
 
             <Box

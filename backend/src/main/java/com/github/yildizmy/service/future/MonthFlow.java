@@ -49,14 +49,21 @@ public final class MonthFlow {
                        List<Item> items) {
     }
 
-    /** @param everyday the spending that is neither a bill nor a debt: what the leisure slice measures */
-    public record Result(Side income, Side spending, BigDecimal everyday) {
+    /**
+     * The everyday spending (neither bill nor debt) is split by {@link SpendingNames}.
+     *
+     * @param essentials   food shopping, health and transport: measured by the essentials (FIXED) slice
+     * @param leisure      what the leisure slice measures
+     * @param unclassified all the spending in the UNCLASSIFIED category; it counts in no slice
+     */
+    public record Result(Side income, Side spending, BigDecimal essentials, BigDecimal leisure, BigDecimal unclassified) {
     }
 
     /**
      * Categories: the one the person confirmed for the recurrence; CARD_INVOICE and LOAN for what is projected from
-     * card and loan data; UNCONFIRMED_RECURRENCE for a recurrence still waiting for an answer; EVERYDAY for the rest of
-     * the spending (same rule as the everyday average); UNCLASSIFIED for what nobody told us about. Never a guess.
+     * card and loan data; UNCONFIRMED_RECURRENCE for a recurrence still waiting for an answer; ESSENTIAL or LEISURE for
+     * everyday spending (same rule as the everyday average) whose name says which; UNCLASSIFIED for the rest. What a
+     * name does not say is never called leisure.
      *
      * @param confirmedCategories pattern key to the category the person confirmed
      * @param pendingKeys         pattern keys nobody answered yet
@@ -84,12 +91,16 @@ public final class MonthFlow {
         Set<Long> everydayIds = DailySpending.everyday(candidates.stream().map(Line::movement).toList(), fixedKeys).stream()
                 .map(Movement::id).collect(Collectors.toSet());
         candidates.stream().filter(line -> everydayIds.contains(line.movement().id()))
-                .forEach(line -> categories.put(line, "EVERYDAY"));
+                .forEach(line -> categories.put(line, SpendingNames.of(line.movement().counterparty()).name()));
 
         List<Line> income = lines.stream().filter(line -> line.movement().direction() == Direction.IN).toList();
         List<Line> spending = lines.stream().filter(line -> line.movement().direction() == Direction.OUT).toList();
-        BigDecimal everyday = sum(spending.stream().filter(line -> "EVERYDAY".equals(categories.get(line))).toList());
-        return new Result(side(income, categories), side(spending, categories), everyday);
+        return new Result(side(income, categories), side(spending, categories), totalOf(spending, categories, "ESSENTIAL"),
+                totalOf(spending, categories, "LEISURE"), totalOf(spending, categories, "UNCLASSIFIED"));
+    }
+
+    private static BigDecimal totalOf(List<Line> lines, Map<Line, String> categories, String category) {
+        return sum(lines.stream().filter(line -> category.equals(categories.get(line))).toList());
     }
 
     private static Side side(List<Line> lines, Map<Line, String> categories) {

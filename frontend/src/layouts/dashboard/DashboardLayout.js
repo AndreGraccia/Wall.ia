@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useLayoutEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -20,13 +20,15 @@ import {
 import { useTranslation } from 'react-i18next';
 import { enqueueSnackbar } from 'notistack';
 import { WalletProvider } from '../../context/WalletContext';
-import { PageSkeleton, WalletIcon } from '../../components/wallet-ui';
+import { PageSkeleton, SHELL_ACTIONS_WIDTH, WalletIcon } from '../../components/wallet-ui';
 import { WalliaLogo } from '../../components/brand';
 import { forgetThisBrowser } from '../../utils/push';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
 import { errorKey } from '../../utils/wallet';
 import { useHiddenAmounts } from '../../utils/hiddenAmounts';
+import { COARSE, TOUCH_TARGET } from '../../theme/touch';
+import { setOnboardingDismissed, useOnboardingDismissed } from '../../utils/onboarding';
 
 // Shell layout (docs/brand/DESIGN.md): side menu from 1024 px, bottom bar below it.
 const DESKTOP = '@media (min-width:1024px)';
@@ -73,6 +75,7 @@ function groupsFor(user) {
 }
 
 const isActive = (path, pathname) => (path === '/' ? pathname === '/' : pathname.startsWith(path));
+const pathsOf = (item) => [item.path, ...(item.also || [])];
 
 function NavItem({ item, active, onClick }) {
   const { t } = useTranslation();
@@ -85,6 +88,7 @@ function NavItem({ item, active, onClick }) {
       sx={{
         width: '100%',
         minHeight: 40,
+        [COARSE]: { minHeight: TOUCH_TARGET },
         px: 1.5,
         gap: 1.5,
         justifyContent: 'flex-start',
@@ -138,6 +142,27 @@ function DemoSeal() {
   );
 }
 
+/**
+ * On desktop the header actions are pinned over the page title's line. Their measured width goes to a CSS variable
+ * that PageHeading leaves free, so one action more or less (or a longer one) never covers a page control.
+ */
+function usePublishedWidth() {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    const root = document.documentElement.style;
+    const publish = () => root.setProperty(SHELL_ACTIONS_WIDTH, `${node.offsetWidth}px`);
+    publish();
+    const observer = window.ResizeObserver && new window.ResizeObserver(publish);
+    observer?.observe(node);
+    return () => {
+      observer?.disconnect();
+      root.removeProperty(SHELL_ACTIONS_WIDTH);
+    };
+  }, []);
+  return ref;
+}
+
 export default function DashboardLayout() {
   const { t, i18n } = useTranslation();
   const english = i18n.resolvedLanguage?.startsWith('en');
@@ -146,7 +171,9 @@ export default function DashboardLayout() {
   const user = AuthService.getCurrentUser();
   const [accountAnchor, setAccountAnchor] = useState(null);
   const [hidden, toggleHidden] = useHiddenAmounts();
+  const onboardingOff = useOnboardingDismissed(user?.id);
   const [moreOpen, setMoreOpen] = useState(false);
+  const actionsRef = usePublishedWidth();
   const groups = groupsFor(user);
   // Phone: five destinations, the daily questions (ADR 0022); "Mais" opens a sheet with everything else.
   // "Perguntar" is an action in the top bar, on every screen, not a place.
@@ -157,7 +184,7 @@ export default function DashboardLayout() {
     { path: '/plan', label: 'navigation.planShort', icon: 'plan' },
     { path: '/commitments', label: 'navigation.debtsShort', icon: 'card', also: ['/billing-radar'] },
   ];
-  const bottomActive = (item) => [item.path, ...(item.also || [])].some((path) => isActive(path, pathname));
+  const bottomActive = (item) => pathsOf(item).some((path) => isActive(path, pathname));
   const inMore = !bottom.some(bottomActive);
 
   const logout = async () => {
@@ -233,7 +260,7 @@ export default function DashboardLayout() {
             <Box component={RouterLink} to="/" sx={{ textDecoration: 'none', [DESKTOP]: { display: 'none' } }}>
               <WalliaLogo size={20} />
             </Box>
-            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto' }}>
+            <Stack ref={actionsRef} direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto' }}>
               {!isActive('/ask', pathname) && (
                 <Tooltip title={t('app.askAction')}>
                   <IconButton component={RouterLink} to="/ask" aria-label={t('app.askAction')}>
@@ -289,6 +316,18 @@ export default function DashboardLayout() {
               {english ? 'Português' : 'English'}
             </MenuItem>
             <Divider />
+            {onboardingOff && (
+              <MenuItem
+                component={RouterLink}
+                to="/"
+                onClick={() => {
+                  setOnboardingDismissed(user?.id, false);
+                  closeAccount();
+                }}
+              >
+                {t('onboarding.resume')}
+              </MenuItem>
+            )}
             <MenuItem component={RouterLink} to="/about" onClick={closeAccount}>
               {t('app.about')}
             </MenuItem>
@@ -313,12 +352,7 @@ export default function DashboardLayout() {
                 </Container>
               }
             >
-              {/* money() reads the preference while rendering, and a page does not re-render by itself when the eye
-                  toggles. ponytail: remounting the page refetches it and drops an unsaved draft; move money() to a
-                  context hook if toggling mid-edit ever matters. */}
-              <Box key={hidden ? 'hidden' : 'shown'}>
-                <Outlet />
-              </Box>
+              <Outlet />
             </Suspense>
           </Box>
         </Box>
@@ -381,7 +415,8 @@ export default function DashboardLayout() {
             groups={groups
               .map((group) => ({
                 ...group,
-                items: group.items.filter((item) => !bottom.some((entry) => entry.path === item.path)),
+                // What a bar item already covers (its path and the screens under it) is not repeated here.
+                items: group.items.filter((item) => !bottom.some((entry) => pathsOf(entry).includes(item.path))),
               }))
               .filter((group) => group.items.length)}
             pathname={pathname}

@@ -28,18 +28,13 @@ public final class BillingRadarDetector {
     private static final BigDecimal MIN_INCREASE_AMOUNT = new BigDecimal("2.00");
     private static final BigDecimal MIN_INCREASE_PERCENT = new BigDecimal("10.0");
     private static final int MAX_EVIDENCE = 6;
-    /**
-     * Everyday spending (groceries, food) that happens to land every month is a habit, not a charge to review.
-     * Conservative on purpose: a merchant leaves the recurring total only when the name is everyday spending AND
-     * the amounts vary more than 25% (max/min above {@link RecurrenceDetector#STABLE_RATIO}, the same line that
-     * separates "the same bill" from "different purchases" in the projection). Electricity moving ~20% and rent
-     * stay; a supermarket club with a fixed price stays; four market trips of R$ 179 to R$ 263 a month leave.
-     * ponytail: name keywords because movements carry no category; swap for the transaction category or MCC
-     * when Open Finance sends one.
+    /*
+     * Everyday spending (groceries, food, pharmacy, transport) that happens to land every month is a habit, not a
+     * charge to review. Conservative on purpose: a merchant leaves the recurring total only when {@link SpendingNames}
+     * recognises it AND the amounts vary more than 25% (max/min above {@link RecurrenceDetector#STABLE_RATIO}, the
+     * same line that separates "the same bill" from "different purchases" in the projection). Electricity moving ~20%
+     * and rent stay; a supermarket club with a fixed price stays; four market trips of R$ 179 to R$ 263 a month leave.
      */
-    private static final java.util.regex.Pattern EVERYDAY = java.util.regex.Pattern.compile(
-            "mercado|atacad|hortifruti|sacolao|padaria|acougue|feira|restaurante|lanchonete"
-                    + "|ifood|rappi");
 
     private BillingRadarDetector() {
     }
@@ -157,7 +152,7 @@ public final class BillingRadarDetector {
     }
 
     static boolean everydayVariable(List<RecurrenceDetector.Movement> sorted) {
-        if (!EVERYDAY.matcher(RecurrenceDetector.normalize(sorted.get(0).counterparty())).find()) return false;
+        if (SpendingNames.of(sorted.get(0).counterparty()) == SpendingNames.Group.UNCLASSIFIED) return false;
         BigDecimal min = sorted.stream().map(RecurrenceDetector.Movement::amount).min(BigDecimal::compareTo).orElseThrow();
         BigDecimal max = sorted.stream().map(RecurrenceDetector.Movement::amount).max(BigDecimal::compareTo).orElseThrow();
         return min.signum() > 0 && max.divide(min, 4, RoundingMode.HALF_UP).compareTo(RecurrenceDetector.STABLE_RATIO) > 0;

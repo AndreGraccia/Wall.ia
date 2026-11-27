@@ -133,3 +133,23 @@ test('choosing a method records it and marks it as yours', async () => {
   expect(text()).toContain('method.chosenNotice');
   expect(text()).toContain('method.chosen');
 });
+
+test('changing the main goal asks for the suggestions again, because the rules read it', async () => {
+  HttpService.putWithAuth.mockResolvedValue({ ...profile, mainGoal: 'LEAVE_DEBT' });
+  await renderPage();
+  HttpService.getWithAuth.mockClear();
+
+  // The preferences card starts closed.
+  const card = [...container.querySelectorAll('button, [role="button"]')].find((item) =>
+    `${item.textContent} ${item.getAttribute('aria-label')}`.includes('method.profile.title')
+  );
+  await act(async () => Simulate.click(card));
+  const select = container.querySelector('[aria-haspopup="listbox"]');
+  await act(async () => Simulate.mouseDown(select, { button: 0 }));
+  const option = [...document.querySelectorAll('[role="option"]')].find((item) =>
+    item.textContent.includes('method.profile.goals.LEAVE_DEBT')
+  );
+  await act(async () => Simulate.click(option));
+
+  expect(HttpService.getWithAuth).toHaveBeenCalledWith('/methods/suggestions');
+});

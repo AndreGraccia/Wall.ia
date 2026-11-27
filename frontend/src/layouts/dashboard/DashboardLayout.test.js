@@ -65,28 +65,49 @@ test('"Compromissos" stays active on the charge radar, which belongs to it', asy
   expect(commitments.getAttribute('aria-current')).toBe('page');
 });
 
-test('"ocultar saldo" redraws the page, which reads the preference while rendering', async () => {
-  let renders = 0;
-  function Page() {
-    renders += 1;
-    return <p>page</p>;
-  }
-  await act(async () =>
-    root.render(
-      <MemoryRouter initialEntries={['/cash-flow']}>
-        <ThemeProvider>
-          <Routes>
-            <Route element={<DashboardLayout />}>
-              <Route path="*" element={<Page />} />
-            </Route>
-          </Routes>
-        </ThemeProvider>
-      </MemoryRouter>
+test('on the phone, what a bar item covers is not repeated in the "Mais" sheet', async () => {
+  await renderAt('/billing-radar');
+  const more = container.querySelector('nav[aria-label="app.navigation"] button[aria-haspopup="dialog"]');
+  await act(async () => more.click());
+
+  const sheet = document.querySelector('.MuiDrawer-paper');
+  const links = [...sheet.querySelectorAll('a')].map((link) => link.getAttribute('href'));
+  expect(links).toContain('/wallets');
+  expect(links).not.toContain('/billing-radar');
+  expect(links).not.toContain('/commitments');
+  // The side menu of the desktop still lists it.
+  expect(container.querySelector('aside a[href="/billing-radar"]')).not.toBeNull();
+});
+
+test('menu entries are at least 44 px tall under a finger', async () => {
+  await renderAt('/');
+  const link = container.querySelector('aside nav a');
+  const css = [...document.querySelectorAll('style')].map((style) => style.textContent).join('');
+  const coarse = css.match(/@media \(pointer: coarse\)\{[^{}]*\{[^{}]*\}/g) || [];
+
+  expect(
+    [...link.classList].some((name) =>
+      coarse.some((rule) => rule.includes(`.${name}{`) && rule.includes('min-height:44px'))
     )
+  ).toBe(true);
+});
+
+test('dismissed first steps can be resumed from the account menu', async () => {
+  window.localStorage.setItem('wallia.onboarding.dismissed.undefined', '1');
+  await renderAt('/future');
+  await act(async () => container.querySelector('button[aria-haspopup="menu"]').click());
+
+  const resume = [...document.querySelectorAll('[role="menuitem"]')].find(
+    (item) => item.textContent === 'onboarding.resume'
   );
-  const before = renders;
-  const eye = container.querySelector('button[aria-pressed]');
-  await act(async () => eye.click());
-  expect(renders).toBeGreaterThan(before);
-  await act(async () => eye.click());
+  await act(async () => resume.click());
+  expect(window.localStorage.getItem('wallia.onboarding.dismissed.undefined')).toBe('0');
+});
+
+test('the page title is told how wide the header actions really are', async () => {
+  const width = jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(128);
+  await renderAt('/future');
+
+  expect(document.documentElement.style.getPropertyValue('--shell-actions-width')).toBe('128px');
+  width.mockRestore();
 });

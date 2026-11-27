@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A credit card reduced to what the projection needs: billing days and contracted charges.
@@ -17,8 +18,18 @@ public record CardPlan(
         String institution,
         int closingDay,
         int dueDay,
-        List<Charge> charges
+        List<Charge> charges,
+        Map<YearMonth, BigDecimal> paid
 ) {
+
+    public CardPlan(long id, String name, String institution, int closingDay, int dueDay, List<Charge> charges) {
+        this(id, name, institution, closingDay, dueDay, charges, Map.of());
+    }
+
+    /** The same card with what was already paid of an invoice before its due date (B12). */
+    public CardPlan withPaid(Map<YearMonth, BigDecimal> payments) {
+        return new CardPlan(id, name, institution, closingDay, dueDay, charges, Map.copyOf(payments));
+    }
 
     /** Invoice (identified by its due month) that a purchase made on {@code date} falls into. */
     public YearMonth invoiceFor(LocalDate date) {
@@ -43,7 +54,14 @@ public record CardPlan(
                 .toList();
     }
 
+    /** What is still to leave the balance for one invoice: billed minus paid early. */
     public BigDecimal invoiceTotal(YearMonth invoice) {
+        BigDecimal alreadyPaid = paid.get(invoice);
+        return alreadyPaid == null ? billedTotal(invoice) : billedTotal(invoice).subtract(alreadyPaid).max(BigDecimal.ZERO);
+    }
+
+    /** Everything billed on one invoice; the value a payment is matched against. */
+    public BigDecimal billedTotal(YearMonth invoice) {
         return invoiceLines(invoice).stream()
                 .map(line -> line.charge().amountFor(line.installment()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
