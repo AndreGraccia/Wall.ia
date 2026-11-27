@@ -31,6 +31,16 @@ public final class MonthFlow {
     public record Line(Movement movement, String paymentType) {
     }
 
+    /**
+     * Where a category came from: the person's choice for this movement, one of their rules, a confirmed recurrence,
+     * card data, a word in the name (a suggestion to review) or nothing at all.
+     */
+    public enum Origin { CHOSEN, RULE, RECURRENCE, DATA, NAME, NONE }
+
+    /** A category and its origin. One the person decided prevails over every automatic one. */
+    public record Choice(String category, Origin origin) {
+    }
+
     public record Group(String key, BigDecimal total, int count) {
     }
 
@@ -39,9 +49,10 @@ public final class MonthFlow {
      *
      * @param method   Open Finance payment type, or {@link #UNKNOWN_METHOD}
      * @param category same rule as {@code byCategory}
+     * @param origin   where {@code category} came from
      */
     public record Item(long id, LocalDate date, String counterparty, BigDecimal amount, String account, String method,
-                       String category) {
+                       String category, Origin origin) {
     }
 
     /** @param items the movements of the side, newest first */
@@ -52,7 +63,8 @@ public final class MonthFlow {
     /**
      * The everyday spending (neither bill nor debt) is split by {@link SpendingNames}.
      *
-     * @param essentials   food shopping, health and transport: measured by the essentials (FIXED) slice
+     * @param essentials   what the essentials (FIXED) slice measures besides the counted recurrences and the loans:
+     *                     everyday essentials, and bills no counted recurrence already includes
      * @param leisure      what the leisure slice measures
      * @param unclassified all the spending in the UNCLASSIFIED category; it counts in no slice
      */
@@ -60,28 +72,34 @@ public final class MonthFlow {
     }
 
     /**
-     * Categories: the one the person confirmed for the recurrence; CARD_INVOICE and LOAN for what is projected from
-     * card and loan data; UNCONFIRMED_RECURRENCE for a recurrence still waiting for an answer; ESSENTIAL or LEISURE for
-     * everyday spending (same rule as the everyday average) whose name says which; UNCLASSIFIED for the rest. What a
-     * name does not say is never called leisure.
+     * Categories: the person's choice or rule first. Without one: CARD_INVOICE and LOAN for what is projected from
+     * card and loan data; the one the person confirmed for the recurrence; UNCONFIRMED_RECURRENCE for a recurrence
+     * still waiting for an answer; ESSENTIAL or LEISURE for everyday spending (same rule as the everyday average) whose
+     * name says which; UNCLASSIFIED for the rest. What a name does not say is never called leisure.
      *
      * @param confirmedCategories pattern key to the category the person confirmed
      * @param pendingKeys         pattern keys nobody answered yet
+     * @param countedKeys         recurrences the essentials slice already counts by their typical amount
+     * @param choices             movement id to the category the person decided
      */
     public static Result of(List<Line> lines, Map<String, String> confirmedCategories, Set<String> pendingKeys,
-                            List<CardPlan> cards) {
-        Map<Line, String> categories = new LinkedHashMap<>();
+                            Set<String> countedKeys, List<CardPlan> cards, Map<Long, Choice> choices) {
+        Map<Line, Choice> categories = new LinkedHashMap<>();
         List<Line> candidates = new java.util.ArrayList<>();
         for (Line line : lines) {
             Movement movement = line.movement();
             String key = RecurrenceDetector.keyOf(movement);
-            String category;
-            if (movement.direction() == Direction.OUT && CardBillPayment.isBillPayment(movement, cards)) category = "CARD_INVOICE";
-            else if (movement.direction() == Direction.OUT && RecurrenceDetector.coveredElsewhere(movement.counterparty())) category = "LOAN";
-            else if (confirmedCategories.containsKey(key)) category = confirmedCategories.get(key);
-            else if (pendingKeys.contains(key)) category = "UNCONFIRMED_RECURRENCE";
-            else {
-                category = "UNCLASSIFIED";
+            Choice category;
+            if (movement.direction() == Direction.OUT && CardBillPayment.isBillPayment(movement, cards)) {
+                category = new Choice("CARD_INVOICE", Origin.DATA);
+            } else if (movement.direction() == Direction.OUT && RecurrenceDetector.coveredElsewhere(movement.counterparty())) {
+                category = new Choice("LOAN", Origin.NAME);
+            } else if (confirmedCategories.containsKey(key)) {
+                category = new Choice(confirmedCategories.get(key), Origin.RECURRENCE);
+            } else if (pendingKeys.contains(key)) {
+                category = new Choice("UNCONFIRMED_RECURRENCE", Origin.NONE);
+            } else {
+                category = new Choice("UNCLASSIFIED", Origin.NONE);
                 candidates.add(line);
             }
             categories.put(line, category);
@@ -90,27 +108,38 @@ public final class MonthFlow {
         fixedKeys.addAll(pendingKeys);
         Set<Long> everydayIds = DailySpending.everyday(candidates.stream().map(Line::movement).toList(), fixedKeys).stream()
                 .map(Movement::id).collect(Collectors.toSet());
-        candidates.stream().filter(line -> everydayIds.contains(line.movement().id()))
-                .forEach(line -> categories.put(line, SpendingNames.of(line.movement().counterparty()).name()));
+        candidates.stream().filter(line -> everydayIds.contains(line.movement().id())).forEach(line -> {
+            SpendingNames.Group named = SpendingNames.of(line.movement().counterparty());
+            if (named != SpendingNames.Group.UNCLASSIFIED) categories.put(line, new Choice(named.name(), Origin.NAME));
+        });
+        lines.forEach(line -> {
+            Choice chosen = choices.get(line.movement().id());
+            if (chosen != null) categories.put(line, chosen);
+        });
 
         List<Line> income = lines.stream().filter(line -> line.movement().direction() == Direction.IN).toList();
         List<Line> spending = lines.stream().filter(line -> line.movement().direction() == Direction.OUT).toList();
-        return new Result(side(income, categories), side(spending, categories), totalOf(spending, categories, "ESSENTIAL"),
+        BigDecimal essentials = sum(spending.stream()
+                .filter(line -> Categories.ESSENTIALS_SLICE.contains(categories.get(line).category()))
+                .filter(line -> !countedKeys.contains(RecurrenceDetector.keyOf(line.movement())))
+                .toList());
+        return new Result(side(income, categories), side(spending, categories), essentials,
                 totalOf(spending, categories, "LEISURE"), totalOf(spending, categories, "UNCLASSIFIED"));
     }
 
-    private static BigDecimal totalOf(List<Line> lines, Map<Line, String> categories, String category) {
-        return sum(lines.stream().filter(line -> category.equals(categories.get(line))).toList());
+    private static BigDecimal totalOf(List<Line> lines, Map<Line, Choice> categories, String category) {
+        return sum(lines.stream().filter(line -> category.equals(categories.get(line).category())).toList());
     }
 
-    private static Side side(List<Line> lines, Map<Line, String> categories) {
+    private static Side side(List<Line> lines, Map<Line, Choice> categories) {
         return new Side(sum(lines), lines.size(),
                 groups(lines, line -> account(line.movement())),
                 groups(lines, MonthFlow::method),
-                groups(lines, categories::get),
+                groups(lines, line -> categories.get(line).category()),
                 lines.stream()
                         .map(line -> new Item(line.movement().id(), line.movement().date(), line.movement().counterparty(),
-                                line.movement().amount(), account(line.movement()), method(line), categories.get(line)))
+                                line.movement().amount(), account(line.movement()), method(line),
+                                categories.get(line).category(), categories.get(line).origin()))
                         .sorted(Comparator.comparing(Item::date).reversed().thenComparing(Item::id, Comparator.reverseOrder()))
                         .toList());
     }

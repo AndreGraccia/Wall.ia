@@ -45,7 +45,7 @@ class ProfileServiceTest {
     private final FutureService future = new FutureService(mock(WalletRepository.class), mock(TransactionRepository.class),
             mock(RecurrenceDecisionRepository.class), mock(CreditCardRepository.class), loans, mock(GoalRepository.class),
             mock(EnvelopeRepository.class), manualDebts, mock(MonthPlanRepository.class), mock(UserService.class),
-            mock(com.github.yildizmy.service.market.MarketRatesService.class), clock);
+            mock(com.github.yildizmy.service.market.MarketRatesService.class), mock(CategoryResolver.class), clock);
     private final ProfileService service = new ProfileService(future, profiles, choices, manualDebts,
             mock(UserService.class), clock);
 

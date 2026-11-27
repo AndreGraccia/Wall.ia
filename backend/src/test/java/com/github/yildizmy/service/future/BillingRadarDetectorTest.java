@@ -164,6 +164,18 @@ class BillingRadarDetectorTest {
         assertTrue(BillingRadarDetector.detect(movements).get(0).recurring());
     }
 
+    @Test
+    void theCategoryThePersonDecidedPrevailsOverTheName() {
+        var out = RecurrenceDetector.Direction.OUT;
+        var movements = List.of(movement(1, "2026-09-10", "100.00", out, "Mercado Clube"),
+                movement(2, "2026-10-10", "180.00", out, "Mercado Clube"));
+        assertTrue(BillingRadarDetector.detect(movements).isEmpty(), "by name: everyday shopping");
+
+        var decided = java.util.Map.of(2L, new MonthFlow.Choice("SUBSCRIPTION", MonthFlow.Origin.CHOSEN));
+
+        assertTrue(BillingRadarDetector.detect(movements, decided).get(0).recurring());
+    }
+
     private static RecurrenceDetector.Movement movement(long id, String date, String amount,
                                                          RecurrenceDetector.Direction direction, String counterparty) {
         return movement(id, date, amount, direction, counterparty, "Conta principal", "Banco de teste");
