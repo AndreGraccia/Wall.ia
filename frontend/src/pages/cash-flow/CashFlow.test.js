@@ -24,7 +24,7 @@ const side = (total, method, category) => ({
 });
 const month0 = lastMonths()[0];
 const spending = {
-  ...side(1620, 'PIX', 'EVERYDAY'),
+  ...side(1620, 'PIX', 'ESSENTIAL'),
   count: 2,
   byMethod: [
     { key: 'PIX', total: 1500, count: 1 },
@@ -38,7 +38,7 @@ const spending = {
       amount: 1500,
       account: 'Banco Aurora · Conta',
       method: 'PIX',
-      category: 'EVERYDAY',
+      category: 'ESSENTIAL',
     },
     {
       id: 1,
@@ -47,7 +47,7 @@ const spending = {
       amount: 120,
       account: 'Banco Aurora · Conta',
       method: 'BOLETO',
-      category: 'EVERYDAY',
+      category: 'ESSENTIAL',
     },
   ],
 };
@@ -108,7 +108,7 @@ async function renderPage(entry = '/cash-flow') {
 test('the spending tab opens first; switching to income shows the income side', async () => {
   await renderPage();
   expect(text()).toContain('1.620,00');
-  expect(text()).toContain('cashFlow.categories.EVERYDAY');
+  expect(text()).toContain('cashFlow.categories.ESSENTIAL');
   // The payment method is a grouping, not part of each row (ADR 0022).
   expect(text()).not.toContain('paymentMethods.PIX');
   expect(text()).toContain('cashFlow.realized');
@@ -149,7 +149,7 @@ test('one grouping at a time, by category first; the segmented control switches 
   await renderPage();
   const groupRows = () => [...container.querySelectorAll('[aria-label="cashFlow.filter.by"]')];
   expect(groupRows()).toHaveLength(1);
-  expect(groupRows()[0].textContent).toContain('cashFlow.categories.EVERYDAY');
+  expect(groupRows()[0].textContent).toContain('cashFlow.categories.ESSENTIAL');
 
   const method = [...container.querySelectorAll('button')].find(
     (item) => item.textContent === 'cashFlow.groupOptions.byMethod'

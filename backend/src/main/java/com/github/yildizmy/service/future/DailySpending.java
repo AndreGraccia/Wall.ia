@@ -73,7 +73,7 @@ public final class DailySpending {
     /**
      * The outflows of {@code movements} that are everyday spending: not a bill projected on its own, not a card bill
      * or loan, not money going to and coming back from the same counterparty. One rule for the average above, the
-     * leisure slice of the month plan and the "Entradas e saídas" categories (ADR 0021).
+     * measured slices of the month plan and the "Entradas e saídas" categories (ADR 0021).
      */
     public static List<Movement> everyday(List<Movement> movements, Set<String> fixedKeys) {
         // ponytail: a counterparty that both sends and receives money is treated as the user's own

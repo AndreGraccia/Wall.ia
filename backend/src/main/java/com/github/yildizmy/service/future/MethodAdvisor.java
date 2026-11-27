@@ -16,6 +16,15 @@ import java.util.Map;
  * <p>
  * Rules, in this order (the first ones decide what comes first):
  * <ol>
+ *   <li>Declared main goal (OTHER and NOT_SAID change nothing):
+ *   <ul>
+ *     <li>LEAVE_DEBT: DEBT_AVALANCHE, plus DEBT_SNOWBALL with two or more debts; with no debt with a rate on record,
+ *         PRIORITIES (debts are never assumed).</li>
+ *     <li>BUILD_RESERVE: with income PAY_YOURSELF_FIRST, plus PERCENT_BALANCED when the fixed bills are at most half
+ *         of it; without income ENVELOPES.</li>
+ *     <li>ORGANIZE_MONTH: INCOME_CYCLE with income, then ENVELOPES.</li>
+ *     <li>STABILITY: INCOME_CYCLE with income, PRIORITIES without.</li>
+ *   </ul></li>
  *   <li>Variable income: INCOME_CYCLE first.</li>
  *   <li>Confirmed fixed bills above half the confirmed income: PRIORITIES and INCOME_CYCLE, before any percent.</li>
  *   <li>Two or more debts with a rate: DEBT_AVALANCHE and DEBT_SNOWBALL.</li>
@@ -34,6 +43,8 @@ public final class MethodAdvisor {
 
     public enum Preference { SIMPLE, DETAILED, NOT_SAID }
 
+    public enum Goal { STABILITY, LEAVE_DEBT, ORGANIZE_MONTH, BUILD_RESERVE, OTHER, NOT_SAID }
+
     /**
      * What the rules read. Derived from the data on every call, never stored.
      *
@@ -42,7 +53,7 @@ public final class MethodAdvisor {
      * @param debtsWithRate   loans with a rate and the debts typed by the person (they always carry the CET)
      */
     public record Facts(BigDecimal confirmedIncome, boolean variableIncome, BigDecimal fixedMonthly, int debtsWithRate,
-                        Preference preference) {
+                        Preference preference, Goal goal) {
 
         /** Fixed over income in percent, one decimal; null without income. */
         public BigDecimal fixedSharePercent() {
@@ -63,12 +74,15 @@ public final class MethodAdvisor {
 
     public static Advice suggest(Facts facts) {
         boolean income = facts.confirmedIncome() != null && facts.confirmedIncome().signum() > 0;
+        boolean fixedAboveHalf = income
+                && facts.fixedMonthly().multiply(BigDecimal.valueOf(2)).compareTo(facts.confirmedIncome()) > 0;
         Map<String, List<Reason>> picked = new LinkedHashMap<>();
 
+        addGoal(picked, facts.goal(), facts.debtsWithRate(), income, fixedAboveHalf);
         if (income && facts.variableIncome()) {
             add(picked, "INCOME_CYCLE", new Reason("VARIABLE_INCOME", Map.of()));
         }
-        if (income && facts.fixedMonthly().multiply(BigDecimal.valueOf(2)).compareTo(facts.confirmedIncome()) > 0) {
+        if (fixedAboveHalf) {
             Reason reason = new Reason("FIXED_ABOVE_HALF_OF_INCOME", Map.of("fixedSharePercent", facts.fixedSharePercent(),
                     "fixedMonthly", facts.fixedMonthly(), "monthlyIncome", facts.confirmedIncome()));
             add(picked, "PRIORITIES", reason);
@@ -103,6 +117,36 @@ public final class MethodAdvisor {
         List<Suggestion> suggestions = new ArrayList<>();
         picked.forEach((method, reasons) -> suggestions.add(new Suggestion(method, List.copyOf(reasons))));
         return new Advice(!income, List.copyOf(suggestions));
+    }
+
+    /** The goal rules: what the person said comes before what the data suggests. */
+    private static void addGoal(Map<String, List<Reason>> picked, Goal goal, int debts, boolean income,
+                                boolean fixedAboveHalf) {
+        Reason reason = new Reason("GOAL_" + goal.name(), Map.of());
+        switch (goal) {
+            case LEAVE_DEBT -> {
+                if (debts == 0) {
+                    add(picked, "PRIORITIES", new Reason("GOAL_LEAVE_DEBT_NO_DEBT_DATA", Map.of()));
+                } else {
+                    add(picked, "DEBT_AVALANCHE", reason);
+                    if (debts >= 2) add(picked, "DEBT_SNOWBALL", reason);
+                }
+            }
+            case BUILD_RESERVE -> {
+                if (income) {
+                    add(picked, "PAY_YOURSELF_FIRST", reason);
+                    if (!fixedAboveHalf) add(picked, "PERCENT_BALANCED", reason);
+                } else add(picked, "ENVELOPES", reason);
+            }
+            case ORGANIZE_MONTH -> {
+                if (income) add(picked, "INCOME_CYCLE", reason);
+                add(picked, "ENVELOPES", reason);
+            }
+            case STABILITY -> add(picked, income ? "INCOME_CYCLE" : "PRIORITIES", reason);
+            case OTHER, NOT_SAID -> {
+                // Nothing declared that a rule can read.
+            }
+        }
     }
 
     /** A confirmed income that changes in value or in day, as the recurrence detector saw it. */

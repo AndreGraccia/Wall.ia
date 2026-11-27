@@ -27,11 +27,12 @@ public final class PlanResponses {
      * @param totalPercent      sum of the slices; 100 means complete
      * @param monthlyCommitment what the active plan takes from the balance per month; zero unless active with income
      * @param goalsInsideFuture monthly goals already set aside, counted inside a committed FUTURE slice
+     * @param unclassified      this month's spending no slice measures because nothing identifies it; null without income
      */
     public record MonthPlan(String status, List<String> warnings, boolean saved, boolean complete,
                             BigDecimal totalPercent, boolean active, Instant activatedAt, Income income,
                             List<Slice> slices, BigDecimal monthlyCommitment, BigDecimal goalsInsideFuture,
-                            FixedDetail fixed) {
+                            FixedDetail fixed, BigDecimal unclassified) {
     }
 
     /**
@@ -59,8 +60,14 @@ public final class PlanResponses {
                         BigDecimal committed, String certainty, String origin) {
     }
 
-    /** @param recurring confirmed rent, bills and subscriptions (ESTIMATED); @param loans bank instalments (CONFIRMED) */
-    public record FixedDetail(BigDecimal recurring, BigDecimal loans) {
+    /**
+     * What the essentials (FIXED) slice has used.
+     *
+     * @param recurring  confirmed rent, bills and subscriptions (ESTIMATED)
+     * @param loans      bank instalments (CONFIRMED)
+     * @param essentials everyday essentials already spent this month, recognised by name (CONFIRMED)
+     */
+    public record FixedDetail(BigDecimal recurring, BigDecimal loans, BigDecimal essentials) {
     }
 
     /** One month of settled movements, cash regime (ADR 0011), without transfers between the person's own accounts. */
@@ -71,7 +78,7 @@ public final class PlanResponses {
     /**
      * The three totals of the Início screen.
      *
-     * @param leisure              everyday spending of the month (what the leisure slice measures), from the statement
+     * @param leisure              leisure spending of the month (what the leisure slice measures), from the statement
      * @param investment           the committed INVESTMENT slice of the active plan, current month only. There is no
      *                             record of a real contribution, so this is the decision, not the movement; zero otherwise
      * @param investmentOrigin     "Plano do mês" when {@code investment} comes from the plan, null otherwise

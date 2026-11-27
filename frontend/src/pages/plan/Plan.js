@@ -670,7 +670,10 @@ export default function Plan() {
   const complete = total === 10000;
   const savedSlices = (plan?.slices || []).map(draftSlice);
   const dirty = JSON.stringify(body(draft)) !== JSON.stringify(body(savedSlices));
-  const fixedUsed = plan?.fixed ? Number(plan.fixed.recurring || 0) + Number(plan.fixed.loans || 0) : null;
+  // The essentials slice: fixed bills and instalments plus the everyday essentials of the month.
+  const fixedUsed = plan?.fixed
+    ? Number(plan.fixed.recurring || 0) + Number(plan.fixed.loans || 0) + Number(plan.fixed.essentials || 0)
+    : null;
   const leisureSaved = plan?.slices?.find((slice) => slice.kind === 'LEISURE');
   const leisureUsed = leisureSaved?.used != null ? Number(leisureSaved.used) : null;
   const usedFor = (slice) => (slice.kind === 'FIXED' ? fixedUsed : slice.kind === 'LEISURE' ? leisureUsed : null);
@@ -955,6 +958,11 @@ export default function Plan() {
                       <SliceLine key={slice.id} slice={slice} amount={amountFor(slice, index)} used={usedFor(slice)} />
                     ))}
                   </Box>
+                  {Number(plan.unclassified) > 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      {t('plan.slices.unclassified', { amount: money(plan.unclassified, i18n.language) })}
+                    </Typography>
+                  )}
                   {!plan.active && (
                     <Box sx={{ mt: 2 }}>
                       {activateButton}

@@ -64,6 +64,7 @@ class MonthPlanServiceTest {
     private final MonthPlanService service = new MonthPlanService(future, plans, mock(UserService.class), clock);
     private final Wallet account = new Wallet();
     private long ids = 1;
+    private final List<Transaction> history = new ArrayList<>();
 
     MonthPlanServiceTest() {
         account.setId(1L);
@@ -71,7 +72,6 @@ class MonthPlanServiceTest {
         account.setInstitutionName("Banco Aurora");
         account.setBalance(new BigDecimal("3000.00"));
         when(wallets.findByUserId(7L)).thenReturn(List.of(account));
-        List<Transaction> history = new ArrayList<>();
         for (String month : List.of("2026-08", "2026-09", "2026-10", "2026-11")) {
             history.add(movement(4L, "Deposit", "5000.00", "Empresa X", month + "-05T13:00:00Z", "TED"));
             history.add(movement(5L, "Withdrawal", "1500.00", "Imobiliaria Lar", month + "-10T13:00:00Z", "BOLETO"));
@@ -191,6 +191,8 @@ class MonthPlanServiceTest {
 
     @Test
     void theViewMeasuresFixedAndLeisureAndShowsWhatTheMarkedSlicesCommit() {
+        history.add(movement(5L, "Withdrawal", "80.00", "Restaurante Sabor", "2026-11-14T13:00:00Z", "PIX"));
+        history.add(movement(5L, "Withdrawal", "30.00", "Loja Aurora", "2026-11-15T13:00:00Z", "PIX"));
         confirmIncomeAndRent();
         stored(andre(), false);
 
@@ -202,11 +204,13 @@ class MonthPlanServiceTest {
         PlanResponses.Slice fixed = plan.slices().get(0);
         assertEquals("THERMOMETER", fixed.role());
         assertEquals(new BigDecimal("1750.00"), fixed.amount());
-        assertEquals(new BigDecimal("1500.00"), fixed.used());
-        assertEquals(new BigDecimal("85.7"), fixed.usedPercent());
+        assertEquals(new BigDecimal("1620.00"), fixed.used(), "1500 of rent plus 120 at the market");
+        assertEquals(new BigDecimal("92.6"), fixed.usedPercent());
+        assertEquals(new BigDecimal("120.00"), plan.fixed().essentials());
+        assertEquals(new BigDecimal("30.00"), plan.unclassified(), "the unknown shop counts in no slice");
         PlanResponses.Slice leisure = plan.slices().get(1);
-        assertEquals(new BigDecimal("120.00"), leisure.used(), "only the market: salary and rent are not everyday");
-        assertEquals(new BigDecimal("880.00"), leisure.remaining());
+        assertEquals(new BigDecimal("80.00"), leisure.used(), "only the restaurant: the market is essential");
+        assertEquals(new BigDecimal("920.00"), leisure.remaining());
         assertEquals("COMMITMENT", plan.slices().get(2).role());
         assertEquals(new BigDecimal("750.00"), plan.slices().get(2).committed());
         assertEquals("RESERVED", plan.slices().get(3).role(), "Future was not marked");
@@ -245,10 +249,10 @@ class MonthPlanServiceTest {
         assertEquals("2026-11", flow.month());
         assertEquals(new BigDecimal("5000.00"), flow.home().income());
         assertEquals(new BigDecimal("1620.00"), flow.home().spending());
-        assertEquals(new BigDecimal("120.00"), flow.home().leisure());
+        assertEquals(BigDecimal.ZERO, flow.home().leisure(), "the market is not leisure");
         assertEquals(new BigDecimal("750.00"), flow.home().investment());
         assertEquals("Plano do mês", flow.home().investmentOrigin());
-        assertEquals(new BigDecimal("870.00"), flow.home().leisureAndInvestment());
+        assertEquals(new BigDecimal("750.00"), flow.home().leisureAndInvestment());
         assertEquals(new BigDecimal("1375.00"), service.view(7L).monthlyCommitment());
     }
 
@@ -272,7 +276,7 @@ class MonthPlanServiceTest {
         PlanResponses.CashFlow flow = service.cashFlow(7L, YearMonth.of(2026, 11));
 
         assertEquals("SALARY", flow.income().byCategory().get(0).key());
-        assertEquals(List.of("RENT", "EVERYDAY"), flow.spending().byCategory().stream().map(group -> group.key()).toList());
+        assertEquals(List.of("RENT", "ESSENTIAL"), flow.spending().byCategory().stream().map(group -> group.key()).toList());
         assertEquals(List.of("BOLETO", "PIX"), flow.spending().byMethod().stream().map(group -> group.key()).toList());
         assertEquals("Banco Aurora · Conta", flow.spending().byAccount().get(0).key());
     }

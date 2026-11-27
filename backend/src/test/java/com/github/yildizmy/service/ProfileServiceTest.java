@@ -115,6 +115,18 @@ class ProfileServiceTest {
     }
 
     @Test
+    void theDeclaredMainGoalReachesTheSuggestions() {
+        FinancialProfile profile = new FinancialProfile();
+        profile.setMainGoal("ORGANIZE_MONTH");
+        when(profiles.findByUserId(7L)).thenReturn(Optional.of(profile));
+
+        var first = service.suggestions(7L).suggestions().get(0);
+
+        assertEquals("ENVELOPES", first.method());
+        assertEquals("GOAL_ORGANIZE_MONTH", first.reasons().get(0).code());
+    }
+
+    @Test
     void updatingTheProfileStoresWhatWasDeclared() {
         var profile = service.update(7L, "SIMPLE", "BUILD_RESERVE");
 

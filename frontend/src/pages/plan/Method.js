@@ -153,8 +153,8 @@ export default function Method() {
     try {
       const saved = await HttpService.putWithAuth('/profile', next);
       setState((previous) => ({ ...previous, profile: saved }));
-      // The rules read the preference: the suggestions follow it.
-      if (patch.preference) {
+      // The rules read the preference and the main goal: the suggestions follow them.
+      if (patch.preference || patch.mainGoal) {
         const fresh = await HttpService.getWithAuth('/methods/suggestions');
         setState((previous) => ({ ...previous, suggestions: fresh }));
       }
