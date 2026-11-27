@@ -41,9 +41,9 @@ Nenhum item está **validado com usuários** nem **pronto para produção**: a v
 | Fila "Para revisar" e correção de categoria | Planejado | Primeira entrega depois da A3: categoria por transação, com origem e desfazer |
 | Regra criada a partir da correção, com prévia | Planejado | Depende da fila |
 | Dividir uma transação entre categorias | Planejado | Depende da fila |
-| Meta com valor e data (B56) | Planejado | Modelo de meta com alvo, prazo e acumulado |
+| Meta com valor e data (B56) | Feito | Valor guardado é declarado; falta pré-visualizar antes de salvar e ligar a uma conta (ADR 0025) |
 | Perfil ampliado (ciclo de renda, dependentes, reserva) | Planejado | Só com uso concreto para cada dado (LGPD) |
-| Comparar dois métodos lado a lado | Planejado | `POST /plan/fit` já simula sem gravar |
+| Comparar dois métodos lado a lado | Feito | A simulação supõe separar as fatias que podem virar compromisso, dito na tela (ADR 0025) |
 | Fundos para despesas anuais e orçamento flexível | Planejado | |
 | Início com modo resumido e ordem escolhida | Planejado | O dono pediu a tela completa; testar com pessoas antes |
 | Unificar Extrato, Entradas e saídas, Carteiras e Análise | Planejado | Só depois do teste de tarefas |

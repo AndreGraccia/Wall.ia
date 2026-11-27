@@ -1,5 +1,12 @@
 # Changelog
 
+## 27/11/2026: metas completas e comparação de métodos (ADR 0025)
+
+### Novo
+- **Meta com valor-alvo, data-alvo e valor já guardado**, tudo opcional. A Wall.ia mostra o progresso, quanto falta, a data prevista no valor atual, a contribuição necessária para chegar no prazo e se ela cabe na projeção de 90 dias. O valor guardado é informado por você.
+- **Editar uma meta**, com desfazer.
+- **Comparar dois métodos** em Meu método: como funciona, quando ajuda, limitação, esforço e o efeito na sua projeção, sem gravar nada.
+
 ## 27/11/2026: auditorias externas, correções prioritárias
 
 ### Corrigido
