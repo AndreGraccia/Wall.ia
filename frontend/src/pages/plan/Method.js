@@ -22,6 +22,7 @@ import HttpService from '../../services/HttpService';
 import { PageHeading, PageSkeleton, SectionCard, WalletIcon } from '../../components/wallet-ui';
 import { Disclosure, ListRow } from '../../components/detail-ui';
 import { dayLabel, errorKey, money, percent } from '../../utils/wallet';
+import MethodCompare from './MethodCompare';
 
 // Where each method runs in the app (the catalog carries the API route; the screen needs the page).
 const TOOL_ROUTES = {
@@ -314,6 +315,9 @@ export default function Method() {
             </Box>
 
             <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+              <SectionCard collapsible title={t('method.compare.title')}>
+                <MethodCompare methods={methods} initial={listed} nameOf={(id) => nameOf(id, methods, t)} />
+              </SectionCard>
               <SectionCard collapsible title={t('method.catalogTitle')} summary={String(methods.length)}>
                 <Box sx={{ px: 3, pb: 1 }}>
                   {methods.map((method) => {

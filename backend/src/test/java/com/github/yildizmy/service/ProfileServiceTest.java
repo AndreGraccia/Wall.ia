@@ -58,6 +58,12 @@ class ProfileServiceTest {
     }
 
     @Test
+    void everyCatalogMethodSaysHowMuchEffortItAsks() {
+        com.github.yildizmy.service.future.MethodCatalog.METHODS.forEach(method ->
+                org.junit.jupiter.api.Assertions.assertNotNull(method.effort(), method.id()));
+    }
+
+    @Test
     void nothingDeclaredIsNotSaidAndNoMethod() {
         var profile = service.profile(7L);
 
