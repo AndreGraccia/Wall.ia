@@ -335,8 +335,12 @@ public class FutureService {
         LocalDate today = LocalDate.now(clock.withZone(ZONE));
         List<CreditCard> cardEntities = creditCardRepository.findByUserIdOrderById(userId);
         List<Loan> loanEntities = loanRepository.findByUserIdOrderById(userId);
-        List<FutureResponses.Card> cards = cardEntities.stream()
-                .map(card -> toResponse(toPlan(card), card, today))
+        // Same rule as the projection: a bill the statement shows as paid is no longer owed.
+        List<CardPlan> plans = CardBillPayment.withEarlyPayments(cardEntities.stream().map(this::toPlan).toList(),
+                bankMovements(transactionRepository.findAllByUserIdSince(userId,
+                        today.minusMonths(2).atStartOfDay(ZONE).toInstant()), walletRepository.findByUserId(userId)), today);
+        List<FutureResponses.Card> cards = java.util.stream.IntStream.range(0, plans.size())
+                .mapToObj(i -> toResponse(plans.get(i), cardEntities.get(i), today))
                 .toList();
         List<FutureResponses.Loan> loans = loanEntities.stream()
                 .map(loan -> {
@@ -715,6 +719,8 @@ public class FutureService {
         List<CardPlan> cardPlans = cards.stream().map(this::toPlan).toList();
         // The card bill paid from the account is the invoice's purchases, already projected as the invoice (B12).
         List<Movement> movements = CardBillPayment.withoutBillPayments(movements(transactions, wallets), cardPlans);
+        // A bill already paid before its due date left the balance: only what is still owed is projected.
+        cardPlans = CardBillPayment.withEarlyPayments(cardPlans, bankMovements(transactions, wallets), today);
         List<RecurrencePattern> patterns = RecurrenceDetector.detect(movements);
         Map<String, RecurrenceDecision> decisions = decisionRepository.findByUserId(userId).stream()
                 .collect(Collectors.toMap(RecurrenceDecision::getPatternKey, Function.identity()));
@@ -824,6 +830,12 @@ public class FutureService {
         // Same cash view as the projection: the card bill is the invoice's purchases, not a monthly charge (B12).
         return CardBillPayment.withoutBillPayments(movements(transactionRepository.findAllByUserIdSince(userId,
                 today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant()), wallets), cardPlans);
+    }
+
+    private static List<Movement> bankMovements(List<Transaction> transactions, List<Wallet> wallets) {
+        return movements(transactions.stream()
+                .filter(transaction -> transaction.getSource() == TransactionSource.OPEN_FINANCE)
+                .toList(), wallets);
     }
 
     static List<Movement> movements(List<Transaction> transactions, List<Wallet> wallets) {

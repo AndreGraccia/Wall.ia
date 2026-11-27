@@ -1,5 +1,16 @@
 # Changelog
 
+## 27/11/2026: auditorias externas, correções prioritárias
+
+### Corrigido
+- **Fatura paga antes do vencimento saía duas vezes:** o saldo já tinha o pagamento e a projeção descontava a fatura de novo no vencimento. Agora o pagamento que nomeia o cartão (parcial reduz o valor) ou que tem o valor exato de uma única fatura aberta tira a fatura da projeção e libera o limite. Na dúvida, nada é escondido.
+- **Ocultar saldo desmontava a página**, descartando rascunho, filtro e refazendo consultas.
+- No computador, o botão Perguntar ficava em cima do seletor de 90 dias do Futuro.
+- O Radar aparecia ao mesmo tempo na aba "Contas" e na folha "Mais" no celular.
+
+### Novo
+- **Primeiros passos no Início:** conectar, confirmar a renda, responder as perguntas, escolher um método e criar uma meta; some quando tudo está feito, pode ser dispensado e volta pelo menu da conta.
+
 ## 26/11/2026: correções P0 das auditorias (ADR 0023)
 
 ### Mudou
