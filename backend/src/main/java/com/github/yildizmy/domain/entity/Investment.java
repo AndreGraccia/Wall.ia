@@ -1,9 +1,10 @@
 package com.github.yildizmy.domain.entity;
 
 import com.github.yildizmy.domain.EncryptedText;
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -11,17 +12,17 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
+import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.SortNatural;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /** An investment the person typed (ADR 0026). Informative only: never part of the balance or of the projection. */
 @Getter
@@ -63,8 +64,11 @@ public class Investment {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    /** One value per date, oldest first; the last one is the current value. */
-    @OneToMany(mappedBy = "investment", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("valueDate")
-    private List<InvestmentValue> values = new ArrayList<>();
+    /** What it was worth on each informed date; the latest date is the current value. */
+    @ElementCollection
+    @CollectionTable(name = "investment_value", joinColumns = @JoinColumn(name = "investment_id"))
+    @MapKeyColumn(name = "value_date")
+    @Column(name = "amount", precision = 14, scale = 2, nullable = false)
+    @SortNatural
+    private SortedMap<LocalDate, BigDecimal> values = new TreeMap<>();
 }

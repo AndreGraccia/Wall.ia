@@ -2,7 +2,6 @@ package com.github.yildizmy.service;
 
 import com.github.yildizmy.domain.entity.CreditCard;
 import com.github.yildizmy.domain.entity.Investment;
-import com.github.yildizmy.domain.entity.InvestmentValue;
 import com.github.yildizmy.domain.entity.Wallet;
 import com.github.yildizmy.domain.enums.WalletSource;
 import com.github.yildizmy.dto.request.WealthRequests;
@@ -125,8 +124,7 @@ class WealthServiceTest {
         assertEquals("Corretora", saved.getValue().getInstitution());
         assertEquals("Reserva", saved.getValue().getName());
         assertNull(saved.getValue().getNote());
-        assertEquals(money("10.50"), saved.getValue().getValues().get(0).getAmount());
-        assertEquals(TODAY, saved.getValue().getValues().get(0).getValueDate());
+        assertEquals(money("10.50"), saved.getValue().getValues().get(TODAY));
         verify(users).lockForUpdate(7L);
     }
 
@@ -138,6 +136,12 @@ class WealthServiceTest {
         assertEquals("INVESTMENT_LIMIT", code(() -> service.create(7L,
                 new WealthRequests.NewInvestment("C", "N", "OTHER", money("1"), TODAY, null, null, null))));
         verify(investments, never()).save(any());
+    }
+
+    @Test
+    void aMaturityTheDatabaseCannotHoldIsRefused() {
+        assertEquals("INVALID_DATE", code(() -> service.create(7L, new WealthRequests.NewInvestment("C", "N", "OTHER",
+                money("1"), TODAY, null, LocalDate.of(999999, 1, 1), null))));
     }
 
     @Test
@@ -161,7 +165,7 @@ class WealthServiceTest {
     void theHistoryHasALimit() {
         Investment investment = investment(5);
         for (int i = 0; i < WealthService.MAX_VALUES; i++) {
-            investment.getValues().add(new InvestmentValue(investment, TODAY.minusDays(i + 1), money("1")));
+            investment.getValues().put(TODAY.minusDays(i + 1), money("1"));
         }
         when(investments.findByIdAndUserId(5L, 7L)).thenReturn(Optional.of(investment));
 
@@ -228,10 +232,8 @@ class WealthServiceTest {
         investment.setInstitution("Corretora");
         investment.setName("Aplicação " + id);
         investment.setAssetClass("OTHER");
-        investment.setValues(new ArrayList<>());
         for (Value value : values) {
-            investment.getValues().add(new InvestmentValue(investment, LocalDate.parse(value.date()),
-                    money(value.amount()).setScale(2)));
+            investment.getValues().put(LocalDate.parse(value.date()), money(value.amount()).setScale(2));
         }
         return investment;
     }

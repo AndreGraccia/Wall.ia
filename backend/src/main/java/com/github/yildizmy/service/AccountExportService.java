@@ -72,6 +72,12 @@ public class AccountExportService {
             new Section("investmentValues", "SELECT v.investment_id, v.value_date, v.amount FROM investment_value v "
                     + "JOIN investment i ON i.id = v.investment_id WHERE i.user_id = ? "
                     + "ORDER BY v.investment_id, v.value_date", 1),
+            new Section("lifeGoals", "SELECT id, title, current_situation, desired_situation, target_date, "
+                    + "estimated_cost, goal_id, created_at FROM life_goal WHERE user_id = ? ORDER BY id", 1,
+                    Set.of("title", "current_situation", "desired_situation")),
+            new Section("lifeGoalSteps", "SELECT s.life_goal_id, s.position, s.description, s.done, s.done_at "
+                    + "FROM life_goal_step s JOIN life_goal g ON g.id = s.life_goal_id WHERE g.user_id = ? "
+                    + "ORDER BY s.life_goal_id, s.position", 1),
             new Section("monthPlan", "SELECT active, activated_at, updated_at FROM month_plan WHERE user_id = ?", 1),
             new Section("monthPlanSlices", "SELECT s.position, s.kind, s.label, s.percent, s.commitment "
                     + "FROM month_plan_slice s JOIN month_plan p ON p.id = s.month_plan_id WHERE p.user_id = ? "

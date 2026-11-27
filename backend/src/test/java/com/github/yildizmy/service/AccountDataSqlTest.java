@@ -72,6 +72,15 @@ class AccountDataSqlTest {
         assertThrows(SQLException.class, () -> execute(
                 "INSERT INTO investment_value VALUES (" + ID + ", current_date - 1, -1)"));
 
+        execute("INSERT INTO goal (id, user_id, name, monthly_amount, day_of_month, created_at) OVERRIDING SYSTEM VALUE VALUES ("
+                + ID + ", " + ID + ", 'Curso', 10, 5, now())");
+        execute("INSERT INTO life_goal (id, user_id, title, current_situation, desired_situation, goal_id, created_at) VALUES ("
+                + ID + ", " + ID + ", 't', 'a', 'b', " + ID + ", now())");
+        execute("INSERT INTO life_goal_step (life_goal_id, position, description) VALUES (" + ID + ", 0, 'passo')");
+        execute("DELETE FROM goal WHERE id = " + ID);
+        assertEquals("1", scalar("SELECT count(*)::text FROM life_goal WHERE id = " + ID + " AND goal_id IS NULL"),
+                "deleting the goal only drops the link");
+
         for (AccountExportService.Section section : AccountExportService.SECTIONS) {
             try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(section.sql())) {
                 for (int i = 1; i <= section.idParams(); i++) statement.setLong(i, ID);
@@ -90,6 +99,8 @@ class AccountDataSqlTest {
         assertEquals("0", scalar("SELECT count(*)::text FROM month_plan_slice WHERE month_plan_id = " + ID));
         assertEquals("0", scalar("SELECT (SELECT count(*) FROM investment WHERE user_id = " + ID + ") + "
                 + "(SELECT count(*) FROM investment_value WHERE investment_id = " + ID + ")"));
+        assertEquals("0", scalar("SELECT (SELECT count(*) FROM life_goal WHERE user_id = " + ID + ") + "
+                + "(SELECT count(*) FROM life_goal_step WHERE life_goal_id = " + ID + ")"));
         assertEquals("0", scalar("SELECT (SELECT count(*) FROM month_plan WHERE user_id = " + ID + ") + "
                 + "(SELECT count(*) FROM financial_profile WHERE user_id = " + ID + ") + "
                 + "(SELECT count(*) FROM method_choice WHERE user_id = " + ID + ")"));
@@ -99,7 +110,7 @@ class AccountDataSqlTest {
         execute("INSERT INTO \"user\" (id, first_name, last_name, username, email, password) VALUES (" + id
                 + ", 'Ana', 'Plano', 'ana_plano_" + id + "', 'ana" + id + "@plano.test', 'x') ON CONFLICT DO NOTHING");
         // The database outlives a run unless FlywayMigrationsTest cleaned it first: start from nothing either way.
-        for (String table : new String[]{"month_plan", "financial_profile", "method_choice", "investment"}) {
+        for (String table : new String[]{"month_plan", "financial_profile", "method_choice", "investment", "life_goal", "goal"}) {
             execute("DELETE FROM " + table + " WHERE user_id = " + id);
         }
     }

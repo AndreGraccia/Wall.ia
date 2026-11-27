@@ -35,7 +35,11 @@ public class EncryptionRotationService {
             new Column("card_charge", "description"),
             new Column("investment", "institution"),
             new Column("investment", "name"),
-            new Column("investment", "note"));
+            new Column("investment", "note"),
+            new Column("life_goal", "title"),
+            new Column("life_goal", "current_situation"),
+            new Column("life_goal", "desired_situation"),
+            new Column("life_goal_step", "description"));
 
     public record Result(int rewritten, int failed) {
     }

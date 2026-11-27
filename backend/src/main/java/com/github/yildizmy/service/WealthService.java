@@ -2,7 +2,6 @@ package com.github.yildizmy.service;
 
 import com.github.yildizmy.domain.entity.CreditCard;
 import com.github.yildizmy.domain.entity.Investment;
-import com.github.yildizmy.domain.entity.InvestmentValue;
 import com.github.yildizmy.domain.entity.Wallet;
 import com.github.yildizmy.domain.enums.WalletSource;
 import com.github.yildizmy.dto.request.WealthRequests;
@@ -82,7 +81,7 @@ public class WealthService {
         investment.setUser(userService.getReferenceById(userId));
         investment.setCreatedAt(clock.instant());
         apply(investment, request.details());
-        investment.getValues().add(new InvestmentValue(investment, request.valueDate(), cents(request.value())));
+        investment.getValues().put(request.valueDate(), cents(request.value()));
         investments.save(investment);
         return view(userId);
     }
@@ -99,16 +98,10 @@ public class WealthService {
         userService.lockForUpdate(userId);
         Investment investment = owned(userId, id);
         checkDate(request.valueDate());
-        BigDecimal amount = cents(request.value());
-        investment.getValues().stream()
-                .filter(value -> value.getValueDate().equals(request.valueDate()))
-                .findFirst()
-                .ifPresentOrElse(value -> value.setAmount(amount), () -> {
-                    if (investment.getValues().size() >= MAX_VALUES) {
-                        throw new WalletRuleException("INVESTMENT_VALUE_LIMIT");
-                    }
-                    investment.getValues().add(new InvestmentValue(investment, request.valueDate(), amount));
-                });
+        if (!investment.getValues().containsKey(request.valueDate()) && investment.getValues().size() >= MAX_VALUES) {
+            throw new WalletRuleException("INVESTMENT_VALUE_LIMIT");
+        }
+        investment.getValues().put(request.valueDate(), cents(request.value()));
         return view(userId);
     }
 
@@ -117,12 +110,9 @@ public class WealthService {
     public WealthResponses.Wealth deleteValue(long userId, long id, LocalDate date) {
         userService.lockForUpdate(userId);
         Investment investment = owned(userId, id);
-        InvestmentValue value = investment.getValues().stream()
-                .filter(candidate -> candidate.getValueDate().equals(date))
-                .findFirst()
-                .orElseThrow(() -> new WalletRuleException("INVESTMENT_VALUE_NOT_FOUND"));
+        if (!investment.getValues().containsKey(date)) throw new WalletRuleException("INVESTMENT_VALUE_NOT_FOUND");
         if (investment.getValues().size() == 1) throw new WalletRuleException("INVESTMENT_LAST_VALUE");
-        investment.getValues().remove(value);
+        investment.getValues().remove(date);
         return view(userId);
     }
 
@@ -174,11 +164,19 @@ public class WealthService {
         if (date.isBefore(EARLIEST)) throw new WalletRuleException("INVALID_DATE");
     }
 
+    /** A year the database cannot hold would be a 500. */
+    private static void checkMaturity(LocalDate date) {
+        if (date != null && (date.isBefore(EARLIEST) || date.getYear() > 2200)) {
+            throw new WalletRuleException("INVALID_DATE");
+        }
+    }
+
     private LocalDate today() {
         return LocalDate.now(clock.withZone(ZONE));
     }
 
     private static void apply(Investment investment, WealthRequests.Details details) {
+        checkMaturity(details.maturityDate());
         investment.setInstitution(details.institution().trim());
         investment.setName(details.name().trim());
         investment.setAssetClass(details.assetClass());
@@ -194,10 +192,8 @@ public class WealthService {
     }
 
     private static WealthResponses.Investment toResponse(Investment investment) {
-        // Sorted here too: a value added in this transaction sits at the end of the list, whatever its date.
-        List<WealthResponses.Point> history = investment.getValues().stream()
-                .map(value -> new WealthResponses.Point(value.getValueDate(), value.getAmount()))
-                .sorted(Comparator.comparing(WealthResponses.Point::date))
+        List<WealthResponses.Point> history = investment.getValues().entrySet().stream()
+                .map(value -> new WealthResponses.Point(value.getKey(), value.getValue()))
                 .toList();
         WealthResponses.Point current = history.get(history.size() - 1);
         return new WealthResponses.Investment(investment.getId(), investment.getInstitution(), investment.getName(),
