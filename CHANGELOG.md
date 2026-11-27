@@ -1,5 +1,14 @@
 # Changelog
 
+## 26/11/2026: correções P0 das auditorias (ADR 0023)
+
+### Mudou
+- **A fatia Fixo vira Essenciais** e mede contas fixas mais mercado, saúde e transporte do mês. Lazer mede só o que o nome identifica como lazer; o resto aparece como não classificado.
+- **O objetivo principal declarado entra nas sugestões de método**, com o motivo na tela.
+
+### Corrigido
+- Transferências de mesmo valor e dia com mais de um par possível não são mais escondidas.
+
 ## 26/11/2026 (noite): revisão de usabilidade (ADR 0022)
 
 Auditoria das 17 telas em 1440 e 390 px e pesquisa de mercado com 19 produtos (`docs/produto/pesquisa-de-mercado-2026-11.md`).
