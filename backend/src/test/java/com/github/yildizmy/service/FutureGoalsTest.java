@@ -85,15 +85,15 @@ class FutureGoalsTest {
     }
 
     @Test
-    void aDateNeedsATargetAndMustBeAheadAndWithinFiftyYears() {
+    void aDateNeedsATargetAndMustBeWithinFiftyYears() {
         assertEquals("GOAL_DATE_NEEDS_TARGET", refused(request("300.00", null, "2026-06-10", null)));
-        assertEquals("GOAL_DATE_PAST", refused(request("300.00", "1000.00", "2026-01-30", null)));
+        assertEquals("GOAL_DATE_TOO_FAR", refused(request("300.00", "1000.00", "1975-01-31", null)));
         assertEquals("GOAL_DATE_TOO_FAR", refused(request("300.00", "1000.00", "2076-01-31", null)));
         verify(goals, never()).save(any(Goal.class));
     }
 
     @Test
-    void aGoalWhoseDatePassedCanStillBeUpdatedWithoutChoosingANewDate() {
+    void aGoalWhoseDatePassedCanStillBeUpdatedAndSaysSo() {
         Goal goal = stored("300.00", "1000.00", "2026-01-10", null);
         when(goals.findByIdAndUserId(1L, 7L)).thenReturn(Optional.of(goal));
 

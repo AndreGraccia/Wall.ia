@@ -111,6 +111,8 @@ const resources = {
           MANUAL_DEBT_NOT_FOUND: 'Essa dívida não existe mais.',
           GOAL_LIMIT: 'Você já tem 10 metas. Remova uma para criar outra.',
           GOAL_NOT_FOUND: 'Essa meta não existe mais.',
+          GOAL_DATE_NEEDS_TARGET: 'Informe o valor-alvo para usar uma data.',
+          GOAL_DATE_TOO_FAR: 'Escolha uma data-alvo a até 50 anos de hoje.',
           ALERT_EMAIL_NOT_VERIFIED:
             'Para receber alertas, confirme seu e-mail com o código da tela Open Finance ou ative os avisos neste navegador.',
           PUSH_UNAVAILABLE: 'Os avisos no navegador não estão disponíveis neste ambiente.',
@@ -563,6 +565,42 @@ const resources = {
           removed: 'Meta removida. A projeção foi atualizada.',
           restored: 'Meta de volta. A projeção foi atualizada.',
           amountInvalid: 'Informe um valor entre R$ 0,01 e R$ 1.000.000,00.',
+          edit: 'Editar',
+          editLabel: 'Editar a meta {{name}}',
+          editing: 'Editando {{name}}',
+          update: 'Salvar meta',
+          cancel: 'Cancelar',
+          updated: 'Meta atualizada. A projeção foi atualizada.',
+          optional: 'Opcional: quanto você quer juntar, até quando e quanto já guardou.',
+          target: 'Valor-alvo',
+          date: 'Data-alvo',
+          savedField: 'Já guardado',
+          savedHelp: 'Informado por você. Não movimenta dinheiro.',
+          targetInvalid: 'Informe um valor de até R$ 100.000.000,00.',
+          targetNeeded: 'Informe o valor-alvo para usar uma data.',
+          savedOnly: 'Já guardado: {{amount}} (informado por você)',
+          progressLabel: 'Progresso da meta {{name}}',
+          progress: '{{saved}} de {{target}} ({{percent}})',
+          remaining: 'faltam {{amount}}',
+          savedOrigin: 'Valor guardado informado por você. Não é um movimento visto no banco.',
+          savedMissing: 'Você não informou quanto já guardou: a conta parte de zero.',
+          status: {
+            REACHED:
+              'Meta alcançada pelo valor que você informou. A contribuição mensal segue na projeção até você remover a meta.',
+            NO_DATE: 'No valor atual, você chega ao alvo em {{projected}} (previsão).',
+            NO_DATE_FAR: 'No valor atual, o alvo levaria mais de 50 anos.',
+            ON_TRACK: 'No valor atual, você chega em {{projected}}, dentro do prazo de {{date}} (previsão).',
+            LATE: 'O prazo não cabe no valor atual: você chegaria em {{projected}}, depois de {{date}}. Para chegar na data, são {{required}} por mês.',
+            LATE_FAR:
+              'O prazo não cabe no valor atual, que levaria mais de 50 anos. Para chegar em {{date}}, são {{required}} por mês.',
+            DATE_TOO_SOON:
+              'Não há dia de contribuição entre hoje e {{date}}. Escolha uma data mais distante ou atualize o valor guardado.',
+          },
+          requiredFits:
+            '{{required}} por mês cabe na projeção de {{days}} dias: não cria dia negativo. Menor saldo: {{amount}}.',
+          requiredDoesNotFit:
+            '{{required}} por mês não cabe na projeção de {{days}} dias: dias abaixo de zero: {{negative}}; menor saldo: {{amount}}.',
+          noIncome: 'Nenhuma entrada confirmada no período: a conta considera só o saldo e as saídas.',
         },
         exit: {
           title: 'Como evitar o negativo',
@@ -1841,6 +1879,8 @@ const resources = {
           MANUAL_DEBT_NOT_FOUND: 'This debt no longer exists.',
           GOAL_LIMIT: 'You already have 10 goals. Remove one to create another.',
           GOAL_NOT_FOUND: 'This goal no longer exists.',
+          GOAL_DATE_NEEDS_TARGET: 'Type the target amount to use a date.',
+          GOAL_DATE_TOO_FAR: 'Pick a target date within 50 years of today.',
           ALERT_EMAIL_NOT_VERIFIED:
             'To receive alerts, confirm your e-mail with the code on the Open Finance page or turn on alerts in this browser.',
           PUSH_UNAVAILABLE: 'Browser alerts are not available in this environment.',
@@ -2296,6 +2336,42 @@ const resources = {
           removed: 'Goal removed. The projection was updated.',
           restored: 'Goal restored. The projection was updated.',
           amountInvalid: 'Type an amount between R$ 0.01 and R$ 1,000,000.00.',
+          edit: 'Edit',
+          editLabel: 'Edit the goal {{name}}',
+          editing: 'Editing {{name}}',
+          update: 'Save goal',
+          cancel: 'Cancel',
+          updated: 'Goal updated. The projection was updated.',
+          optional: 'Optional: how much you want to gather, by when and how much you already set aside.',
+          target: 'Target amount',
+          date: 'Target date',
+          savedField: 'Already set aside',
+          savedHelp: 'Entered by you. No money moves.',
+          targetInvalid: 'Type an amount up to R$ 100,000,000.00.',
+          targetNeeded: 'Type the target amount to use a date.',
+          savedOnly: 'Already set aside: {{amount}} (entered by you)',
+          progressLabel: 'Progress of the goal {{name}}',
+          progress: '{{saved}} of {{target}} ({{percent}})',
+          remaining: '{{amount}} to go',
+          savedOrigin: 'Saved amount entered by you. It is not a movement seen at the bank.',
+          savedMissing: 'You did not say how much is already set aside: the count starts at zero.',
+          status: {
+            REACHED:
+              'Target reached by the amount you entered. The monthly contribution stays in the projection until you remove the goal.',
+            NO_DATE: 'At the current amount you reach the target on {{projected}} (forecast).',
+            NO_DATE_FAR: 'At the current amount the target would take more than 50 years.',
+            ON_TRACK: 'At the current amount you get there on {{projected}}, within the {{date}} date (forecast).',
+            LATE: 'The date does not fit the current amount: you would get there on {{projected}}, after {{date}}. To make the date it takes {{required}} a month.',
+            LATE_FAR:
+              'The date does not fit the current amount, which would take more than 50 years. To make {{date}} it takes {{required}} a month.',
+            DATE_TOO_SOON:
+              'There is no contribution day between today and {{date}}. Pick a later date or update the saved amount.',
+          },
+          requiredFits:
+            '{{required}} a month fits the {{days}}-day projection: it adds no negative day. Lowest balance: {{amount}}.',
+          requiredDoesNotFit:
+            '{{required}} a month does not fit the {{days}}-day projection: days below zero: {{negative}}; lowest balance: {{amount}}.',
+          noIncome: 'No confirmed income in the period: only the balance and the outflows were counted.',
         },
         exit: {
           title: 'How to avoid going negative',

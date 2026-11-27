@@ -518,9 +518,12 @@ public class FutureService {
         if (date != null) {
             if (request.targetAmount() == null) throw new WalletRuleException("GOAL_DATE_NEEDS_TARGET");
             LocalDate today = LocalDate.now(clock.withZone(ZONE));
-            // A date that already passed may stay (updating what is saved); it just cannot be newly chosen.
-            if (!date.isAfter(today) && !date.equals(goal.getTargetDate())) throw new WalletRuleException("GOAL_DATE_PAST");
-            if (date.isAfter(today.plusYears(GoalProgress.MAX_YEARS))) throw new WalletRuleException("GOAL_DATE_TOO_FAR");
+            // A date that passed is accepted: a saved goal gets there by itself, and undo has to restore it. It comes
+            // back as DATE_TOO_SOON.
+            if (date.isAfter(today.plusYears(GoalProgress.MAX_YEARS))
+                    || date.isBefore(today.minusYears(GoalProgress.MAX_YEARS))) {
+                throw new WalletRuleException("GOAL_DATE_TOO_FAR");
+            }
         }
         goal.setName(request.name().trim());
         goal.setMonthlyAmount(request.monthlyAmount());
