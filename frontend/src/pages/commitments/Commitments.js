@@ -416,7 +416,15 @@ export default function Commitments() {
         <title>{t('commitments.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <PageHeading title={t('commitments.heading')} />
+        {/* On the phone this is the way to the radar: the bar covers it under "Contas", so "Mais" leaves it out. */}
+        <PageHeading
+          title={t('commitments.heading')}
+          action={
+            <Button component={RouterLink} to="/billing-radar" variant="outlined" size="small">
+              {t('navigation.billingRadar')}
+            </Button>
+          }
+        />
         {state.loading && !data && <PageSkeleton rows={3} />}
         {data && <BankDataNotice bankData={data.bankData} sx={{ mb: 3 }} />}
         {state.error && (

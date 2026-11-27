@@ -23,7 +23,58 @@ class MethodAdvisorTest {
     private static final Set<String> PERCENT = Set.of("PERCENT_503020", "PERCENT_BALANCED", "ZERO_BASED");
 
     private static Facts facts(String income, boolean variable, String fixed, int debts, Preference preference) {
-        return new Facts(income == null ? null : new BigDecimal(income), variable, new BigDecimal(fixed), debts, preference);
+        return new Facts(income == null ? null : new BigDecimal(income), variable, new BigDecimal(fixed), debts, preference,
+                MethodAdvisor.Goal.NOT_SAID);
+    }
+
+    private static Advice withGoal(MethodAdvisor.Goal goal, String income, String fixed, int debts) {
+        return MethodAdvisor.suggest(new Facts(income == null ? null : new BigDecimal(income), false,
+                new BigDecimal(fixed), debts, Preference.SIMPLE, goal));
+    }
+
+    private static String firstReason(Advice advice) {
+        return advice.suggestions().get(0).reasons().get(0).code();
+    }
+
+    @Test
+    void leavingDebtPutsThePayoffMethodsFirstAndNeverAssumesADebt() {
+        Advice two = withGoal(MethodAdvisor.Goal.LEAVE_DEBT, "4000.00", "2400.00", 2);
+        assertEquals(List.of("DEBT_AVALANCHE", "DEBT_SNOWBALL", "PRIORITIES"), methods(two));
+        assertEquals("GOAL_LEAVE_DEBT", firstReason(two));
+
+        assertEquals("DEBT_AVALANCHE", methods(withGoal(MethodAdvisor.Goal.LEAVE_DEBT, "4000.00", "1000.00", 1)).get(0));
+        assertFalse(methods(withGoal(MethodAdvisor.Goal.LEAVE_DEBT, "4000.00", "1000.00", 1)).contains("DEBT_SNOWBALL"));
+
+        Advice none = withGoal(MethodAdvisor.Goal.LEAVE_DEBT, "4000.00", "1000.00", 0);
+        assertEquals("PRIORITIES", methods(none).get(0));
+        assertEquals("GOAL_LEAVE_DEBT_NO_DEBT_DATA", firstReason(none));
+    }
+
+    @Test
+    void buildingAReserveSuggestsPayingYourselfFirstAndThePercentOnlyWhenTheBillsFit() {
+        Advice advice = withGoal(MethodAdvisor.Goal.BUILD_RESERVE, "4000.00", "1000.00", 0);
+        assertEquals(List.of("PAY_YOURSELF_FIRST", "PERCENT_BALANCED", "PERCENT_503020"), methods(advice));
+        assertEquals("GOAL_BUILD_RESERVE", firstReason(advice));
+
+        assertFalse(methods(withGoal(MethodAdvisor.Goal.BUILD_RESERVE, "4000.00", "2400.00", 0))
+                .subList(0, 2).contains("PERCENT_BALANCED"));
+        assertEquals("ENVELOPES", methods(withGoal(MethodAdvisor.Goal.BUILD_RESERVE, null, "0", 0)).get(0));
+    }
+
+    @Test
+    void organisingTheMonthAndStabilityStartFromTheCashCycle() {
+        assertEquals(List.of("INCOME_CYCLE", "ENVELOPES"),
+                methods(withGoal(MethodAdvisor.Goal.ORGANIZE_MONTH, "4000.00", "1000.00", 0)).subList(0, 2));
+        Advice stability = withGoal(MethodAdvisor.Goal.STABILITY, "4000.00", "1000.00", 0);
+        assertEquals("INCOME_CYCLE", methods(stability).get(0));
+        assertEquals("GOAL_STABILITY", firstReason(stability));
+        assertEquals("PRIORITIES", methods(withGoal(MethodAdvisor.Goal.STABILITY, null, "0", 0)).get(0));
+    }
+
+    @Test
+    void anOtherOrUnsaidGoalChangesNothing() {
+        assertEquals(withGoal(MethodAdvisor.Goal.NOT_SAID, "4000.00", "1000.00", 0),
+                withGoal(MethodAdvisor.Goal.OTHER, "4000.00", "1000.00", 0));
     }
 
     private static List<String> methods(Advice advice) {

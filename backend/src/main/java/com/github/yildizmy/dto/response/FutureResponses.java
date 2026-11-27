@@ -1,5 +1,7 @@
 package com.github.yildizmy.dto.response;
 
+import com.github.yildizmy.service.future.MethodAdvisor;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -129,9 +131,36 @@ public final class FutureResponses {
     }
 
     /**
-     * @param nextDate next day the goal takes money out of the projection
+     * @param nextDate    next day the goal takes money out of the projection
+     * @param savedOrigin USER_VALUE when {@code savedAmount} is set: the person declared it, nothing was seen moving
+     * @param progress    null without a target
      */
-    public record Goal(long id, String name, BigDecimal monthlyAmount, int dayOfMonth, LocalDate nextDate) {
+    public record Goal(long id, String name, BigDecimal monthlyAmount, int dayOfMonth, LocalDate nextDate,
+                       BigDecimal targetAmount, LocalDate targetDate, BigDecimal savedAmount, String savedOrigin,
+                       GoalProgress progress) {
+    }
+
+    /**
+     * @param status                 REACHED, NO_DATE, DATE_TOO_SOON, ON_TRACK or LATE
+     * @param requiredMonthly        monthly contribution that reaches the target on the date; null without one
+     * @param contributionsUntilDate contribution days after today up to the date
+     * @param projectedDate          when the target is reached at the current amount; null beyond 50 years
+     * @param fit                    whether {@code requiredMonthly} fits the projection; null without it
+     */
+    public record GoalProgress(String status, BigDecimal remaining, BigDecimal savedPercent, BigDecimal requiredMonthly,
+                               Integer contributionsUntilDate, LocalDate projectedDate, GoalFit fit) {
+    }
+
+    /**
+     * The goal check without saving anything.
+     *
+     * @param fits            the contribution adds no negative day and deepens no existing hole
+     * @param incomeConfirmed false: no income in the horizon was confirmed, so only balance and bills were counted
+     * @param baseline        the horizon without this goal
+     * @param scenario        the horizon with this goal at the required amount
+     */
+    public record GoalFit(boolean fits, int horizonDays, boolean incomeConfirmed,
+                          ScenarioSummary baseline, ScenarioSummary scenario) {
     }
 
     public record Envelope(long id, String name, BigDecimal amount) {
@@ -196,8 +225,32 @@ public final class FutureResponses {
             ScenarioSummary after,
             BigDecimal newMonthlyCommitment,
             String cardName,
-            List<ExitAction> exitPlan
+            List<ExitAction> exitPlan,
+            Assist assist
     ) {
+        public Answer withAssist(Assist value) {
+            return new Answer(intent, amount, installments, method, verdict, balance, spendingLimit, risk, committed,
+                    nextIncome, before, after, newMonthlyCommitment, cardName, exitPlan, value);
+        }
+    }
+
+    /**
+     * What the assistant adds to an answer (ADR 0027); only the part of the question asked is filled. Nothing here is
+     * saved: a goal draft is created only when the person confirms it.
+     */
+    public record Assist(
+            Boolean planSaved,
+            List<PlanResponses.Slice> slices,
+            BigDecimal unclassified,
+            List<MethodAdvisor.Suggestion> methods,
+            Integer pendingReview,
+            GoalDraft goal
+    ) {
+    }
+
+    /** @param monthlyAmount what has to be set aside per contribution to reach the target by the date */
+    public record GoalDraft(BigDecimal targetAmount, LocalDate targetDate, BigDecimal monthlyAmount, int dayOfMonth,
+                            boolean fits) {
     }
 
     /**

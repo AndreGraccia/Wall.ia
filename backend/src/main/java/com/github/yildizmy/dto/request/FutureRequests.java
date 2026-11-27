@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public final class FutureRequests {
 
@@ -31,10 +32,19 @@ public final class FutureRequests {
     public record Question(@NotBlank @Size(max = 300) String question) {
     }
 
+    /**
+     * Target, date and saved amount are optional (B56, ADR 0025); the update replaces the whole goal, so a field left
+     * out is cleared.
+     *
+     * @param savedAmount what the person says is already set aside; never checked against an account
+     */
     public record Goal(
             @NotBlank @Size(max = 60) String name,
             @NotNull @DecimalMin("0.01") @DecimalMax("1000000.00") @Digits(integer = 7, fraction = 2) BigDecimal monthlyAmount,
-            @NotNull @Min(1) @Max(31) Integer dayOfMonth
+            @NotNull @Min(1) @Max(31) Integer dayOfMonth,
+            @DecimalMin("0.01") @DecimalMax("100000000.00") @Digits(integer = 9, fraction = 2) BigDecimal targetAmount,
+            LocalDate targetDate,
+            @DecimalMin("0.00") @DecimalMax("100000000.00") @Digits(integer = 9, fraction = 2) BigDecimal savedAmount
     ) {
     }
 

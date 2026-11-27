@@ -22,6 +22,7 @@ import HttpService from '../../services/HttpService';
 import { PageHeading, PageSkeleton, SectionCard, WalletIcon } from '../../components/wallet-ui';
 import { Disclosure, ListRow } from '../../components/detail-ui';
 import { dayLabel, errorKey, money, percent } from '../../utils/wallet';
+import MethodCompare from './MethodCompare';
 
 // Where each method runs in the app (the catalog carries the API route; the screen needs the page).
 const TOOL_ROUTES = {
@@ -153,8 +154,8 @@ export default function Method() {
     try {
       const saved = await HttpService.putWithAuth('/profile', next);
       setState((previous) => ({ ...previous, profile: saved }));
-      // The rules read the preference: the suggestions follow it.
-      if (patch.preference) {
+      // The rules read the preference and the main goal: the suggestions follow them.
+      if (patch.preference || patch.mainGoal) {
         const fresh = await HttpService.getWithAuth('/methods/suggestions');
         setState((previous) => ({ ...previous, suggestions: fresh }));
       }
@@ -314,6 +315,9 @@ export default function Method() {
             </Box>
 
             <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+              <SectionCard collapsible title={t('method.compare.title')}>
+                <MethodCompare methods={methods} initial={listed} nameOf={(id) => nameOf(id, methods, t)} />
+              </SectionCard>
               <SectionCard collapsible title={t('method.catalogTitle')} summary={String(methods.length)}>
                 <Box sx={{ px: 3, pb: 1 }}>
                   {methods.map((method) => {

@@ -24,6 +24,13 @@ import BankDataNotice from '../../components/bank-data';
 import { PageHeading, WalletIcon } from '../../components/wallet-ui';
 import { Disclosure, ListRow } from '../../components/detail-ui';
 import { EventRow } from '../../components/future-ui';
+import {
+  CategoryNotice,
+  CategorySelect,
+  categoryLabel,
+  needsReview,
+  useCategorize,
+} from '../../components/category-ui';
 import { dayLabel, errorKey, monthLabel, money, percent } from '../../utils/wallet';
 
 const PAGE = 30;
@@ -43,8 +50,7 @@ const capital = (text) => text.replace(/^./, (letter) => letter.toLocaleUpperCas
 
 function groupLabel(group, key, t) {
   if (group === 'byMethod') return t(`paymentMethods.${key}`, { defaultValue: key });
-  if (group === 'byCategory')
-    return t(`cashFlow.categories.${key}`, { defaultValue: t(`future.categories.${key}`, { defaultValue: key }) });
+  if (group === 'byCategory') return categoryLabel(key, t);
   return key;
 }
 
@@ -140,7 +146,7 @@ GroupList.propTypes = {
 };
 
 /** "‹ Novembro de 2026 ›": steps through the 13 months the API keeps; the arrows stop at both ends. */
-function MonthStepper({ months, month, onChange }) {
+export function MonthStepper({ months, month, onChange }) {
   const { t, i18n } = useTranslation();
   const index = months.indexOf(month);
   const older = months[index + 1];
@@ -179,7 +185,7 @@ export function filterItems(items, filter) {
   return filter ? items.filter((item) => item[FIELD[filter.group]] === filter.key) : items;
 }
 
-function Movements({ items, filter, onClear }) {
+function Movements({ items, side, change, filter, onClear }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [shown, setShown] = useState(PAGE);
@@ -210,11 +216,34 @@ function Movements({ items, filter, onClear }) {
               // Same as the Extrato (ADR 0022): category and account; the payment method is a grouping above.
               dayLabel(item.date, lang),
               groupLabel('byCategory', item.category, t),
+              item.origin === 'NAME' && t('review.suggested'),
               item.account,
             ]
               .filter(Boolean)
               .join(' · ')}
             value={money(item.amount, lang)}
+            detailLabel={t('review.edit', { name: item.counterparty || t('cashFlow.items.noName') })}
+            detail={
+              item.origin && (
+                <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1.5, py: 1 }}>
+                  <CategorySelect
+                    side={side}
+                    value={item.category}
+                    label={t('review.category')}
+                    disabled={change.busy}
+                    onChange={(category) => change.choose(item, category)}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    {t(`review.origin.${item.origin}`)}
+                  </Typography>
+                  {item.origin === 'CHOSEN' && (
+                    <Button size="small" onClick={() => change.clear(item)} disabled={change.busy}>
+                      {t('review.backToAutomatic')}
+                    </Button>
+                  )}
+                </Stack>
+              )
+            }
           />
         ))}
       </Box>
@@ -226,7 +255,13 @@ function Movements({ items, filter, onClear }) {
     </Box>
   );
 }
-Movements.propTypes = { items: PropTypes.array.isRequired, filter: PropTypes.object, onClear: PropTypes.func };
+Movements.propTypes = {
+  items: PropTypes.array.isRequired,
+  side: PropTypes.string.isRequired,
+  change: PropTypes.object.isRequired,
+  filter: PropTypes.object,
+  onClear: PropTypes.func,
+};
 
 /**
  * What still leaves this month, from the same projection as Futuro (bills, card invoice, instalments). Apart from
@@ -308,6 +343,7 @@ export default function CashFlow() {
   useEffect(() => {
     load();
   }, [load]);
+  const change = useCategorize(load);
 
   // Month, side and grouping live in the URL; any of them changing drops the row filter, which belonged to the old view.
   const update = (patch) => {
@@ -327,6 +363,7 @@ export default function CashFlow() {
   const side = data && (tab === 'income' ? data.income : data.spending);
   const name = monthLabel(month, lang, { month: 'long' });
   const total = side ? Number(side.total) : 0;
+  const pending = [...(data?.income?.items || []), ...(data?.spending?.items || [])].filter(needsReview).length;
 
   return (
     <>
@@ -340,6 +377,20 @@ export default function CashFlow() {
         />
         {/* Same place as on every screen: under the heading, before tabs and numbers. */}
         {data?.bankData?.stale && <BankDataNotice bankData={data.bankData} sx={{ mb: 3 }} />}
+
+        {pending > 0 && data.month === month && (
+          <Alert
+            severity="info"
+            sx={{ mb: 3 }}
+            action={
+              <Button color="inherit" component={RouterLink} to={`/cash-flow/review?month=${month}`}>
+                {t('review.open')}
+              </Button>
+            }
+          >
+            {t('review.pending', { count: pending })}
+          </Alert>
+        )}
 
         <Tabs
           value={tab}
@@ -443,7 +494,16 @@ export default function CashFlow() {
                 />
               )}
               {side.count > 0 && side.items && (
-                <Movements items={side.items} filter={filter} onClear={() => setFilter(null)} />
+                <>
+                  <CategoryNotice change={change} />
+                  <Movements
+                    items={side.items}
+                    side={tab}
+                    change={change}
+                    filter={filter}
+                    onClear={() => setFilter(null)}
+                  />
+                </>
               )}
               {tab === 'spending' && data.currentMonth && <StillToLeave month={month} />}
               {data.bankData && !data.bankData.stale && <BankDataNotice bankData={data.bankData} />}

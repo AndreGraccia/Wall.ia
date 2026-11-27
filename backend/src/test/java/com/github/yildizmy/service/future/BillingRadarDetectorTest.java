@@ -123,6 +123,20 @@ class BillingRadarDetectorTest {
     }
 
     @Test
+    void pharmacyAndFuelWithVaryingAmountsAreAHabitButAStreamingPriceRiseStays() {
+        List<RecurrenceDetector.Movement> movements = List.of(
+                movement(1, "2026-08-04", "40.00", RecurrenceDetector.Direction.OUT, "Drogaria Central"),
+                movement(2, "2026-09-04", "95.00", RecurrenceDetector.Direction.OUT, "Drogaria Central"),
+                movement(3, "2026-08-23", "120.00", RecurrenceDetector.Direction.OUT, "Posto Shell"),
+                movement(4, "2026-09-23", "210.00", RecurrenceDetector.Direction.OUT, "Posto Shell"),
+                movement(5, "2026-08-15", "39.90", RecurrenceDetector.Direction.OUT, "Netflix"),
+                movement(6, "2026-09-15", "55.90", RecurrenceDetector.Direction.OUT, "Netflix"));
+
+        assertEquals(List.of("Netflix"),
+                BillingRadarDetector.detect(movements).stream().map(BillingRadarDetector.Signal::counterparty).toList());
+    }
+
+    @Test
     void fixedBillsThatVaryALittleStayRecurring() {
         // Rent is exact and electricity moves about 20%: both stay, the everyday rule must not touch them.
         List<RecurrenceDetector.Movement> movements = List.of(
@@ -148,6 +162,18 @@ class BillingRadarDetectorTest {
                 movement(3, "2026-10-05", "14.90", RecurrenceDetector.Direction.OUT, "Supermercado Clube"));
 
         assertTrue(BillingRadarDetector.detect(movements).get(0).recurring());
+    }
+
+    @Test
+    void theCategoryThePersonDecidedPrevailsOverTheName() {
+        var out = RecurrenceDetector.Direction.OUT;
+        var movements = List.of(movement(1, "2026-09-10", "100.00", out, "Mercado Clube"),
+                movement(2, "2026-10-10", "180.00", out, "Mercado Clube"));
+        assertTrue(BillingRadarDetector.detect(movements).isEmpty(), "by name: everyday shopping");
+
+        var decided = java.util.Map.of(2L, new MonthFlow.Choice("SUBSCRIPTION", MonthFlow.Origin.CHOSEN));
+
+        assertTrue(BillingRadarDetector.detect(movements, decided).get(0).recurring());
     }
 
     private static RecurrenceDetector.Movement movement(long id, String date, String amount,

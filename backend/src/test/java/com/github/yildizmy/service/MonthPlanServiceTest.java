@@ -1,5 +1,7 @@
 package com.github.yildizmy.service;
 
+import com.github.yildizmy.domain.entity.CategoryChoice;
+import com.github.yildizmy.domain.entity.CategoryRule;
 import com.github.yildizmy.domain.entity.MonthPlan;
 import com.github.yildizmy.domain.entity.RecurrenceDecision;
 import com.github.yildizmy.domain.entity.Transaction;
@@ -10,6 +12,8 @@ import com.github.yildizmy.domain.enums.Status;
 import com.github.yildizmy.domain.enums.TransactionSource;
 import com.github.yildizmy.dto.response.PlanResponses;
 import com.github.yildizmy.exception.WalletRuleException;
+import com.github.yildizmy.repository.CategoryChoiceRepository;
+import com.github.yildizmy.repository.CategoryRuleRepository;
 import com.github.yildizmy.repository.CreditCardRepository;
 import com.github.yildizmy.repository.EnvelopeRepository;
 import com.github.yildizmy.repository.GoalRepository;
@@ -19,6 +23,7 @@ import com.github.yildizmy.repository.MonthPlanRepository;
 import com.github.yildizmy.repository.RecurrenceDecisionRepository;
 import com.github.yildizmy.repository.TransactionRepository;
 import com.github.yildizmy.repository.WalletRepository;
+import com.github.yildizmy.service.future.MonthFlow;
 import com.github.yildizmy.service.future.MonthPlanCalculator;
 import com.github.yildizmy.service.future.MonthPlanCalculator.Kind;
 import com.github.yildizmy.service.future.MonthPlanCalculator.Slice;
@@ -56,14 +61,17 @@ class MonthPlanServiceTest {
     private final TransactionRepository transactions = mock(TransactionRepository.class);
     private final RecurrenceDecisionRepository decisions = mock(RecurrenceDecisionRepository.class);
     private final MonthPlanRepository plans = mock(MonthPlanRepository.class);
+    private final CategoryChoiceRepository choices = mock(CategoryChoiceRepository.class);
+    private final CategoryRuleRepository rules = mock(CategoryRuleRepository.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-23T15:00:00Z"), ZoneOffset.UTC);
     private final FutureService future = new FutureService(wallets, transactions, decisions,
             mock(CreditCardRepository.class), mock(LoanRepository.class), mock(GoalRepository.class),
             mock(EnvelopeRepository.class), mock(ManualDebtRepository.class), plans, mock(UserService.class),
-            mock(com.github.yildizmy.service.market.MarketRatesService.class), clock);
+            mock(com.github.yildizmy.service.market.MarketRatesService.class), new CategoryResolver(choices, rules), clock);
     private final MonthPlanService service = new MonthPlanService(future, plans, mock(UserService.class), clock);
     private final Wallet account = new Wallet();
     private long ids = 1;
+    private final List<Transaction> history = new ArrayList<>();
 
     MonthPlanServiceTest() {
         account.setId(1L);
@@ -71,7 +79,6 @@ class MonthPlanServiceTest {
         account.setInstitutionName("Banco Aurora");
         account.setBalance(new BigDecimal("3000.00"));
         when(wallets.findByUserId(7L)).thenReturn(List.of(account));
-        List<Transaction> history = new ArrayList<>();
         for (String month : List.of("2026-08", "2026-09", "2026-10", "2026-11")) {
             history.add(movement(4L, "Deposit", "5000.00", "Empresa X", month + "-05T13:00:00Z", "TED"));
             history.add(movement(5L, "Withdrawal", "1500.00", "Imobiliaria Lar", month + "-10T13:00:00Z", "BOLETO"));
@@ -191,6 +198,8 @@ class MonthPlanServiceTest {
 
     @Test
     void theViewMeasuresFixedAndLeisureAndShowsWhatTheMarkedSlicesCommit() {
+        history.add(movement(5L, "Withdrawal", "80.00", "Restaurante Sabor", "2026-11-14T13:00:00Z", "PIX"));
+        history.add(movement(5L, "Withdrawal", "30.00", "Loja Aurora", "2026-11-15T13:00:00Z", "PIX"));
         confirmIncomeAndRent();
         stored(andre(), false);
 
@@ -202,11 +211,13 @@ class MonthPlanServiceTest {
         PlanResponses.Slice fixed = plan.slices().get(0);
         assertEquals("THERMOMETER", fixed.role());
         assertEquals(new BigDecimal("1750.00"), fixed.amount());
-        assertEquals(new BigDecimal("1500.00"), fixed.used());
-        assertEquals(new BigDecimal("85.7"), fixed.usedPercent());
+        assertEquals(new BigDecimal("1620.00"), fixed.used(), "1500 of rent plus 120 at the market");
+        assertEquals(new BigDecimal("92.6"), fixed.usedPercent());
+        assertEquals(new BigDecimal("120.00"), plan.fixed().essentials());
+        assertEquals(new BigDecimal("30.00"), plan.unclassified(), "the unknown shop counts in no slice");
         PlanResponses.Slice leisure = plan.slices().get(1);
-        assertEquals(new BigDecimal("120.00"), leisure.used(), "only the market: salary and rent are not everyday");
-        assertEquals(new BigDecimal("880.00"), leisure.remaining());
+        assertEquals(new BigDecimal("80.00"), leisure.used(), "only the restaurant: the market is essential");
+        assertEquals(new BigDecimal("920.00"), leisure.remaining());
         assertEquals("COMMITMENT", plan.slices().get(2).role());
         assertEquals(new BigDecimal("750.00"), plan.slices().get(2).committed());
         assertEquals("RESERVED", plan.slices().get(3).role(), "Future was not marked");
@@ -245,10 +256,10 @@ class MonthPlanServiceTest {
         assertEquals("2026-11", flow.month());
         assertEquals(new BigDecimal("5000.00"), flow.home().income());
         assertEquals(new BigDecimal("1620.00"), flow.home().spending());
-        assertEquals(new BigDecimal("120.00"), flow.home().leisure());
+        assertEquals(BigDecimal.ZERO, flow.home().leisure(), "the market is not leisure");
         assertEquals(new BigDecimal("750.00"), flow.home().investment());
         assertEquals("Plano do mês", flow.home().investmentOrigin());
-        assertEquals(new BigDecimal("870.00"), flow.home().leisureAndInvestment());
+        assertEquals(new BigDecimal("750.00"), flow.home().leisureAndInvestment());
         assertEquals(new BigDecimal("1375.00"), service.view(7L).monthlyCommitment());
     }
 
@@ -272,9 +283,192 @@ class MonthPlanServiceTest {
         PlanResponses.CashFlow flow = service.cashFlow(7L, YearMonth.of(2026, 11));
 
         assertEquals("SALARY", flow.income().byCategory().get(0).key());
-        assertEquals(List.of("RENT", "EVERYDAY"), flow.spending().byCategory().stream().map(group -> group.key()).toList());
+        assertEquals(List.of("RENT", "ESSENTIAL"), flow.spending().byCategory().stream().map(group -> group.key()).toList());
         assertEquals(List.of("BOLETO", "PIX"), flow.spending().byMethod().stream().map(group -> group.key()).toList());
         assertEquals("Banco Aurora · Conta", flow.spending().byAccount().get(0).key());
+    }
+
+    private CategoryService categoryService() {
+        return new CategoryService(future, choices, rules, mock(UserService.class), clock);
+    }
+
+    private void chosen(Object... idAndCategory) {
+        List<CategoryChoice> rows = new ArrayList<>();
+        for (int i = 0; i < idAndCategory.length; i += 2) {
+            CategoryChoice row = new CategoryChoice();
+            row.setTransactionId(((Number) idAndCategory[i]).longValue());
+            row.setCategory((String) idAndCategory[i + 1]);
+            rows.add(row);
+        }
+        when(choices.findByUserId(7L)).thenReturn(rows);
+    }
+
+    private long idOf(String description, String month) {
+        return history.stream().filter(item -> item.getDescription().equals(description)
+                && item.getCreatedAt().toString().startsWith(month)).findFirst().orElseThrow().getId();
+    }
+
+    @Test
+    void theChosenCategoryPrevailsInTheCashFlowAndInThePlan() {
+        confirmIncomeAndRent();
+        stored(andre(), false);
+        chosen(idOf("Mercado Bom", "2026-11"), "LEISURE");
+
+        PlanResponses.MonthPlan plan = service.view(7L);
+        var item = service.cashFlow(7L, null).spending().items().get(0);
+
+        assertEquals(new BigDecimal("1500.00"), plan.slices().get(0).used(), "the market left the essentials");
+        assertEquals(new BigDecimal("120.00"), plan.slices().get(1).used());
+        assertEquals("LEISURE", item.category());
+        assertEquals(MonthFlow.Origin.CHOSEN, item.origin());
+    }
+
+    @Test
+    void withoutAChoiceTheOriginSaysWhetherItWasTheNameOrTheRecurrence() {
+        confirmIncomeAndRent();
+
+        var items = service.cashFlow(7L, null).spending().items();
+
+        assertEquals(MonthFlow.Origin.NAME, items.get(0).origin(), "market, by name: a suggestion");
+        assertEquals(MonthFlow.Origin.RECURRENCE, items.get(1).origin());
+    }
+
+    @Test
+    void aRecurringChargeMovedToLeisureIsNotMeasuredTwice() {
+        confirmIncomeAndRent();
+        stored(andre(), false);
+        chosen(idOf("Imobiliaria Lar", "2026-11"), "LEISURE");
+
+        PlanResponses.MonthPlan plan = service.view(7L);
+
+        assertEquals(new BigDecimal("120.00"), plan.slices().get(0).used(), "only the market");
+        assertEquals(new BigDecimal("1500.00"), plan.slices().get(1).used());
+    }
+
+    @Test
+    void aBillThePersonPointsOutCountsInTheEssentialsAndAConfirmedOneIsNotAddedTwice() {
+        history.add(movement(5L, "Withdrawal", "30.00", "Loja Aurora", "2026-11-15T13:00:00Z", "PIX"));
+        confirmIncomeAndRent();
+        stored(andre(), false);
+        chosen(idOf("Loja Aurora", "2026-11"), "BILL", idOf("Imobiliaria Lar", "2026-11"), "ESSENTIAL");
+
+        PlanResponses.MonthPlan plan = service.view(7L);
+
+        assertEquals(new BigDecimal("1650.00"), plan.slices().get(0).used(), "1500 once, 120 market, 30 bill");
+        assertEquals(BigDecimal.ZERO, plan.unclassified());
+    }
+
+    @Test
+    void choosingSavesOnlyForOwnMovementsAndOnlyCategoriesOfThatSide() {
+        long market = idOf("Mercado Bom", "2026-11");
+
+        categoryService().choose(7L, market, "LEISURE");
+
+        verify(choices).save(org.mockito.ArgumentMatchers.argThat(row -> row.getUserId() == 7L
+                && row.getTransactionId() == market && row.getCategory().equals("LEISURE")));
+        assertEquals("TRANSACTION_NOT_FOUND", code(() -> categoryService().choose(7L, 999L, "LEISURE")));
+        assertEquals("CATEGORY_NOT_ALLOWED", code(() -> categoryService().choose(7L, market, "SALARY")));
+    }
+
+    @Test
+    void undoingRemovesOnlyTheCallersChoice() {
+        CategoryChoice row = new CategoryChoice();
+        when(choices.findByUserIdAndTransactionId(7L, 3L)).thenReturn(Optional.of(row));
+
+        categoryService().clear(7L, 3L);
+        categoryService().clear(8L, 3L);
+
+        verify(choices).delete(row);
+    }
+
+    private CategoryRule rule(long id, String counterparty, String category, String appliesFrom) {
+        CategoryRule rule = new CategoryRule();
+        rule.setId(id);
+        rule.setUserId(7L);
+        rule.setDirection(com.github.yildizmy.service.future.RecurrenceDetector.Direction.OUT);
+        rule.setDescription(counterparty);
+        rule.setCategory(category);
+        rule.setAppliesFrom(appliesFrom == null ? null : java.time.LocalDate.parse(appliesFrom));
+        return rule;
+    }
+
+    private String categoryOf(String description, String month) {
+        long id = idOf(description, month);
+        return service.cashFlow(7L, YearMonth.parse(month)).spending().items().stream()
+                .filter(item -> item.id() == id).findFirst().map(item -> item.category() + " " + item.origin())
+                .orElseThrow();
+    }
+
+    @Test
+    void aRuleReachesThePreviousEntriesOnlyWhenAskedAndTheOneByOneChoiceWins() {
+        history.add(movement(5L, "Withdrawal", "90.00", "Mercado Bom", "2026-10-12T13:00:00Z", "PIX"));
+        when(rules.findByUserIdOrderById(7L)).thenReturn(List.of(rule(1, "MERCADO  BOM", "LEISURE", null)));
+
+        assertEquals("LEISURE RULE", categoryOf("Mercado Bom", "2026-10"));
+        assertEquals("LEISURE RULE", categoryOf("Mercado Bom", "2026-11"));
+
+        chosen(idOf("Mercado Bom", "2026-11"), "OTHER");
+        assertEquals("OTHER CHOSEN", categoryOf("Mercado Bom", "2026-11"));
+
+        chosen();
+        when(rules.findByUserIdOrderById(7L)).thenReturn(List.of(rule(1, "Mercado Bom", "LEISURE", "2026-11-01")));
+        assertEquals("ESSENTIAL NAME", categoryOf("Mercado Bom", "2026-10"), "before the rule starts");
+        assertEquals("LEISURE RULE", categoryOf("Mercado Bom", "2026-11"));
+
+        when(rules.findByUserIdOrderById(7L)).thenReturn(List.of());
+        assertEquals("ESSENTIAL NAME", categoryOf("Mercado Bom", "2026-11"), "removing the rule undoes it");
+    }
+
+    @Test
+    void thePreviewListsWhatWouldChangeAndSavesNothing() {
+        history.add(movement(5L, "Withdrawal", "90.00", "Mercado Bom", "2026-10-12T13:00:00Z", "PIX"));
+        history.add(movement(5L, "Withdrawal", "70.00", "Mercado Bom", "2026-09-12T13:00:00Z", "PIX"));
+        long current = idOf("Mercado Bom", "2026-11");
+        chosen(current, "LEISURE", idOf("Mercado Bom", "2026-09"), "OTHER");
+        when(rules.findByUserIdOrderById(7L)).thenReturn(List.of(rule(1, "Mercado Bom", "BILL", "2026-11-23")));
+
+        var all = categoryService().preview(7L, current, "LEISURE", true);
+        var onlyFuture = categoryService().preview(7L, current, "LEISURE", false);
+
+        assertEquals(1, all.affected(), "October; the other two were picked one by one");
+        assertEquals(idOf("Mercado Bom", "2026-10"), all.items().get(0).id());
+        assertEquals(1, all.kept(), "September keeps a different choice");
+        assertEquals("BILL", all.replaces());
+        assertEquals(0, onlyFuture.affected());
+        verify(rules, never()).save(any());
+    }
+
+    @Test
+    void creatingARuleTakesTheCounterpartyFromTheOwnEntryAndReplacesTheOldOne() {
+        long market = idOf("Mercado Bom", "2026-11");
+        CategoryRule old = rule(1, "Mercado Bom", "BILL", null);
+        when(rules.findByUserIdOrderById(7L)).thenReturn(List.of(old));
+        when(rules.save(any(CategoryRule.class))).thenAnswer(invocation -> {
+            CategoryRule saved = invocation.getArgument(0);
+            saved.setId(2L);
+            return saved;
+        });
+
+        var created = categoryService().createRule(7L, market, "LEISURE", false);
+
+        assertEquals("Mercado Bom", created.counterparty());
+        assertEquals("spending", created.side());
+        assertEquals(java.time.LocalDate.parse("2026-11-23"), created.appliesFrom());
+        verify(rules).deleteAll(List.of(old));
+        assertEquals("TRANSACTION_NOT_FOUND", code(() -> categoryService().createRule(7L, 999L, "LEISURE", true)));
+        assertEquals("CATEGORY_NOT_ALLOWED", code(() -> categoryService().createRule(7L, market, "SALARY", true)));
+    }
+
+    @Test
+    void theRuleLimitAndSomeoneElsesRuleAreRefused() {
+        long market = idOf("Mercado Bom", "2026-11");
+        when(rules.findByUserIdOrderById(7L)).thenReturn(java.util.stream.IntStream.range(0, CategoryService.MAX_RULES)
+                .mapToObj(i -> rule(i, "Loja " + i, "OTHER", null)).toList());
+        when(rules.findByIdAndUserId(1L, 8L)).thenReturn(Optional.empty());
+
+        assertEquals("CATEGORY_RULE_LIMIT", code(() -> categoryService().createRule(7L, market, "LEISURE", true)));
+        assertEquals("CATEGORY_RULE_NOT_FOUND", code(() -> categoryService().deleteRule(8L, 1L)));
+        verify(rules, never()).delete(any(CategoryRule.class));
     }
 
     @Test

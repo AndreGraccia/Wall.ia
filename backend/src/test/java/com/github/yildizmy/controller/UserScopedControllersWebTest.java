@@ -60,6 +60,7 @@ class UserScopedControllersWebTest {
     @Autowired MockMvc mvc;
     @MockitoBean FutureService futureService;
     @MockitoBean AskUsage askUsage;
+    @MockitoBean com.github.yildizmy.service.AssistantService assistantService;
     @MockitoBean FutureAlertService alertService;
     @MockitoBean ForecastService forecastService;
     @MockitoBean ChargeAlertService chargeAlertService;
@@ -129,6 +130,25 @@ class UserScopedControllersWebTest {
         mvc.perform(delete("/api/v1/future/envelopes/4").with(user(person(7)))).andExpect(status().isNoContent());
         verify(futureService).deleteGoal(7L, 3L);
         verify(futureService).deleteEnvelope(7L, 4L);
+    }
+
+    @Test
+    void updatingAGoalActsOnTheCallersOwnAndRejectsBadValuesBeforeTheService() throws Exception {
+        String base = "{\"name\":\"Viagem\",\"monthlyAmount\":100,\"dayOfMonth\":10,";
+        String valid = base + "\"targetAmount\":3000,\"targetDate\":\"2027-12-10\",\"savedAmount\":0}";
+        mvc.perform(put("/api/v1/future/goals/3").contentType(MediaType.APPLICATION_JSON).content(valid))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/v1/future/goals/3").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
+                        .content(valid))
+                .andExpect(status().isOk());
+        for (String bad : new String[]{"\"targetAmount\":0", "\"targetAmount\":100000000.01", "\"savedAmount\":-1",
+                "\"savedAmount\":1.001"}) {
+            mvc.perform(put("/api/v1/future/goals/3").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
+                            .content(base + bad + "}"))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        verify(futureService, org.mockito.Mockito.times(1)).updateGoal(org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(3L), org.mockito.ArgumentMatchers.any());
     }
 
     @Test

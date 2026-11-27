@@ -250,3 +250,10 @@ test('a positive month in the hero says what is left', async () => {
 
   expect(container.querySelector('#plan-hero').textContent).toContain('plan.hero.left');
 });
+
+test('spending no slice measures is shown, not counted as leisure', async () => {
+  answer(plan({ status: 'ACTIVE', active: true, complete: true, unclassified: 30 }));
+  await renderPage();
+
+  expect(text()).toContain('plan.slices.unclassified');
+});

@@ -1,5 +1,53 @@
 # Changelog
 
+## 27/11/2026: assistente sobre plano, método, revisão e metas (ADR 0027)
+
+### Novo
+- O "Pergunte à Wall.ia" responde "estou gastando demais?", "qual método combina comigo?", "o que preciso revisar?" e "quero juntar 3000 até junho".
+- Na pergunta de juntar dinheiro, calcula quanto separar por mês, diz se cabe na projeção e só cria a meta depois do seu toque em "Criar esta meta".
+- Os números vêm do motor; nenhum modelo de linguagem participa. Pergunta sobre investimento continua sem resposta.
+
+## 27/11/2026: Para revisar, categorias e regras (ADR 0024)
+
+### Novo
+- **Categoria escolhida por você** em cada lançamento, com a origem na tela e desfazer. Ela prevalece em Entradas e saídas, em Essenciais e Lazer do plano e no Radar.
+- **Fila "Para revisar":** lançamentos sem categoria ou só sugeridos pelo nome, com confirmar ou trocar em um toque. Aviso em Entradas e saídas e no Início.
+- **Regras** criadas a partir da correção, com prévia, escolha entre só a partir de hoje ou também os anteriores, lista e remoção.
+
+## 27/11/2026: metas completas e comparação de métodos (ADR 0025)
+
+### Novo
+- **Meta com valor-alvo, data-alvo e valor já guardado**, tudo opcional. A Wall.ia mostra o progresso, quanto falta, a data prevista no valor atual, a contribuição necessária para chegar no prazo e se ela cabe na projeção de 90 dias. O valor guardado é informado por você.
+- **Editar uma meta**, com desfazer.
+- **Comparar dois métodos** em Meu método: como funciona, quando ajuda, limitação, esforço e o efeito na sua projeção, sem gravar nada.
+
+## 27/11/2026: Patrimônio e Minha evolução (ADR 0026)
+
+### Novo
+- **Patrimônio** (menu Mais): saldos das contas, mais os investimentos que a pessoa informa, menos as dívidas conhecidas, cada parcela com origem e data, e a evolução dos valores informados. Só informativo: sem recomendação, cotação ou promessa de retorno, e nada entra no saldo disponível nem na projeção.
+- **Minha evolução** (menu Mais): objetivos de vida com onde estou, onde quero chegar, prazo, etapas, custo estimado e ligação opcional a uma meta. Sem pontuação.
+- As duas áreas entram na exportação e na exclusão da conta; o texto livre é cifrado. Migração V40.
+
+## 27/11/2026: auditorias externas, correções prioritárias
+
+### Corrigido
+- **Fatura paga antes do vencimento saía duas vezes:** o saldo já tinha o pagamento e a projeção descontava a fatura de novo no vencimento. Agora o pagamento que nomeia o cartão (parcial reduz o valor) ou que tem o valor exato de uma única fatura aberta tira a fatura da projeção e libera o limite. Na dúvida, nada é escondido.
+- **Ocultar saldo desmontava a página**, descartando rascunho, filtro e refazendo consultas.
+- No computador, o botão Perguntar ficava em cima do seletor de 90 dias do Futuro.
+- O Radar aparecia ao mesmo tempo na aba "Contas" e na folha "Mais" no celular.
+
+### Novo
+- **Primeiros passos no Início:** conectar, confirmar a renda, responder as perguntas, escolher um método e criar uma meta; some quando tudo está feito, pode ser dispensado e volta pelo menu da conta.
+
+## 26/11/2026: correções P0 das auditorias (ADR 0023)
+
+### Mudou
+- **A fatia Fixo vira Essenciais** e mede contas fixas mais mercado, saúde e transporte do mês. Lazer mede só o que o nome identifica como lazer; o resto aparece como não classificado.
+- **O objetivo principal declarado entra nas sugestões de método**, com o motivo na tela.
+
+### Corrigido
+- Transferências de mesmo valor e dia com mais de um par possível não são mais escondidas.
+
 ## 26/11/2026 (noite): revisão de usabilidade (ADR 0022)
 
 Auditoria das 17 telas em 1440 e 390 px e pesquisa de mercado com 19 produtos (`docs/produto/pesquisa-de-mercado-2026-11.md`).

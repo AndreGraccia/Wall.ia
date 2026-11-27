@@ -77,6 +77,22 @@ test('"ocultar saldo" hides the three totals too', async () => {
   expect(text()).not.toContain('870,00');
 });
 
+test('a short block appears only when the month has entries to review', async () => {
+  await renderTotals(false);
+  expect(text()).not.toContain('review.home');
+
+  HttpService.getWithAuth.mockResolvedValue({
+    month: '2026-11',
+    home: { income: 0, spending: 10, leisure: 0, investment: 0, leisureAndInvestment: 0 },
+    spending: { items: [{ id: 1, origin: 'NAME' }] },
+  });
+  act(() => root.unmount());
+  root = createRoot(container);
+  await renderTotals(false);
+  expect(text()).toContain('review.home');
+  expect(container.querySelector('a[href="/cash-flow/review"]')).not.toBeNull();
+});
+
 test('with the balance, the consolidated balance comes first and opens Carteiras', async () => {
   await act(async () =>
     root.render(

@@ -45,7 +45,7 @@ class ProfileServiceTest {
     private final FutureService future = new FutureService(mock(WalletRepository.class), mock(TransactionRepository.class),
             mock(RecurrenceDecisionRepository.class), mock(CreditCardRepository.class), loans, mock(GoalRepository.class),
             mock(EnvelopeRepository.class), manualDebts, mock(MonthPlanRepository.class), mock(UserService.class),
-            mock(com.github.yildizmy.service.market.MarketRatesService.class), clock);
+            mock(com.github.yildizmy.service.market.MarketRatesService.class), mock(CategoryResolver.class), clock);
     private final ProfileService service = new ProfileService(future, profiles, choices, manualDebts,
             mock(UserService.class), clock);
 
@@ -55,6 +55,12 @@ class ProfileServiceTest {
         choice.setCatalogVersion("2026-11-23");
         choice.setChosenAt(Instant.parse("2026-11-20T10:00:00Z"));
         return choice;
+    }
+
+    @Test
+    void everyCatalogMethodSaysHowMuchEffortItAsks() {
+        com.github.yildizmy.service.future.MethodCatalog.METHODS.forEach(method ->
+                org.junit.jupiter.api.Assertions.assertNotNull(method.effort(), method.id()));
     }
 
     @Test
@@ -112,6 +118,18 @@ class ProfileServiceTest {
         assertEquals(2, suggestions.data().debtsWithRate());
         assertEquals(List.of("DEBT_AVALANCHE", "DEBT_SNOWBALL", "ENVELOPES"),
                 suggestions.suggestions().stream().map(item -> item.method()).toList());
+    }
+
+    @Test
+    void theDeclaredMainGoalReachesTheSuggestions() {
+        FinancialProfile profile = new FinancialProfile();
+        profile.setMainGoal("ORGANIZE_MONTH");
+        when(profiles.findByUserId(7L)).thenReturn(Optional.of(profile));
+
+        var first = service.suggestions(7L).suggestions().get(0);
+
+        assertEquals("ENVELOPES", first.method());
+        assertEquals("GOAL_ORGANIZE_MONTH", first.reasons().get(0).code());
     }
 
     @Test

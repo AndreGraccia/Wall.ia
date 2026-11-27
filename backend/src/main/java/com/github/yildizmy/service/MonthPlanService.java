@@ -7,6 +7,7 @@ import com.github.yildizmy.dto.response.PlanResponses;
 import com.github.yildizmy.exception.WalletRuleException;
 import com.github.yildizmy.repository.MonthPlanRepository;
 import com.github.yildizmy.service.future.CashEvent;
+import com.github.yildizmy.service.future.Categories;
 import com.github.yildizmy.service.future.MonthFlow;
 import com.github.yildizmy.service.future.MonthPlanCalculator;
 import com.github.yildizmy.service.future.MonthPlanCalculator.Kind;
@@ -133,28 +134,26 @@ public class MonthPlanService {
                 : BigDecimal.ZERO;
         String investmentOrigin = investment.signum() > 0 ? MonthPlanCalculator.ORIGIN : null;
         return new PlanResponses.CashFlow(chosen.toString(), isCurrent, flow.income(), flow.spending(),
-                new PlanResponses.Home(flow.income().total(), flow.spending().total(), flow.everyday(), investment,
-                        investmentOrigin, flow.everyday().add(investment)),
+                new PlanResponses.Home(flow.income().total(), flow.spending().total(), flow.leisure(), investment,
+                        investmentOrigin, flow.leisure().add(investment)),
                 FutureService.bankData(context.wallets(), clock.instant()));
     }
 
     // --- internals ---------------------------------------------------------------------------
 
     /**
-     * The month's settled movements, without transfers between the person's own accounts: the local ones are dropped
-     * by {@link FutureService#movements(List, List)}, the imported pairs by {@link InsightsService#ownAccountPairs}.
+     * The month's settled movements, without transfers between the person's own accounts:
+     * {@link FutureService#movements(List, List)} drops both the local ones and the imported pairs.
      */
     static MonthFlow.Result monthFlow(FutureService.Context context, YearMonth month) {
         List<Transaction> inMonth = context.transactions().stream()
                 .filter(transaction -> transaction.getStatus() == Status.SUCCESS)
                 .filter(transaction -> YearMonth.from(transaction.getCreatedAt().atZone(FutureService.ZONE)).equals(month))
                 .toList();
-        Set<Transaction> pairs = InsightsService.ownAccountPairs(inMonth);
-        List<Transaction> kept = inMonth.stream().filter(transaction -> !pairs.contains(transaction)).toList();
         Map<Long, String> paymentTypes = new HashMap<>();
-        kept.forEach(transaction -> paymentTypes.put(transaction.getId(), transaction.getPaymentType()));
+        inMonth.forEach(transaction -> paymentTypes.put(transaction.getId(), transaction.getPaymentType()));
         List<MonthFlow.Line> lines = new ArrayList<>();
-        for (Movement movement : FutureService.movements(kept, context.wallets())) {
+        for (Movement movement : FutureService.movements(inMonth, context.wallets())) {
             lines.add(new MonthFlow.Line(movement, paymentTypes.get(movement.id())));
         }
         Map<String, String> confirmed = context.confirmed().stream()
@@ -163,7 +162,11 @@ public class MonthPlanService {
                 .map(RecurrencePattern::key)
                 .filter(key -> !context.decisions().containsKey(key))
                 .collect(Collectors.toSet());
-        return MonthFlow.of(lines, confirmed, pending, context.cardPlans());
+        Set<String> counted = context.countedRecurrences().stream()
+                .filter(item -> Categories.ESSENTIALS_SLICE.contains(item.category().name()))
+                .map(item -> item.pattern().key())
+                .collect(Collectors.toSet());
+        return MonthFlow.of(lines, confirmed, pending, counted, context.cardPlans(), context.categories());
     }
 
     private PlanResponses.MonthPlan view(FutureService.Context context, MonthPlan plan) {
@@ -190,12 +193,14 @@ public class MonthPlanService {
                         role(slice), null, null, null, null, null, null, null));
             }
             return new PlanResponses.MonthPlan(status, warnings, saved, complete, total, active, activatedAt, null, rows,
-                    BigDecimal.ZERO, goals, null);
+                    BigDecimal.ZERO, goals, null, null);
         }
 
         BigDecimal base = income.get().monthly();
-        MonthPlanCalculator.FixedUsed fixed = MonthPlanCalculator.fixedUsed(context.confirmed(), context.loanPlans());
-        BigDecimal leisure = monthFlow(context, YearMonth.from(context.today())).everyday();
+        MonthPlanCalculator.FixedUsed fixed = MonthPlanCalculator.fixedUsed(context.countedRecurrences(), context.loanPlans());
+        MonthFlow.Result flow = monthFlow(context, YearMonth.from(context.today()));
+        BigDecimal essentials = fixed.total().add(flow.essentials());
+        BigDecimal leisure = flow.leisure();
         List<BigDecimal> amounts = MonthPlanCalculator.amounts(base, slices);
         Map<Integer, BigDecimal> committed = MonthPlanCalculator.commitments(base, slices, goals).stream()
                 .collect(Collectors.toMap(MonthPlanCalculator.Commitment::position, MonthPlanCalculator.Commitment::amount));
@@ -205,12 +210,12 @@ public class MonthPlanService {
             BigDecimal amount = amounts.get(i);
             rows.add(switch (slice.kind()) {
                 case FIXED -> new PlanResponses.Slice(i, slice.kind().name(), slice.label(), slice.percent(), false,
-                        role(slice), amount, fixed.total(), MonthPlanCalculator.usedPercent(fixed.total(), amount),
-                        amount.subtract(fixed.total()), null, fixed.recurring().signum() > 0 ? ESTIMATED : CONFIRMED,
-                        "Recorrências confirmadas e parcelas de empréstimo");
+                        role(slice), amount, essentials, MonthPlanCalculator.usedPercent(essentials, amount),
+                        amount.subtract(essentials), null, fixed.recurring().signum() > 0 ? ESTIMATED : CONFIRMED,
+                        "Recorrências confirmadas, parcelas de empréstimo e essenciais do extrato do mês");
                 case LEISURE -> new PlanResponses.Slice(i, slice.kind().name(), slice.label(), slice.percent(), false,
                         role(slice), amount, leisure, MonthPlanCalculator.usedPercent(leisure, amount),
-                        amount.subtract(leisure), null, CONFIRMED, "Gastos do dia a dia no extrato do mês");
+                        amount.subtract(leisure), null, CONFIRMED, "Gastos de lazer do extrato do mês, pela sua escolha ou pelo nome");
                 default -> new PlanResponses.Slice(i, slice.kind().name(), slice.label(), slice.percent(),
                         slice.commitment(), role(slice), amount, null, null, null, committed.get(i),
                         slice.commitment() ? CONFIRMED : null, slice.commitment() ? MonthPlanCalculator.ORIGIN : null);
@@ -226,7 +231,8 @@ public class MonthPlanService {
                         .toList());
         BigDecimal monthly = active ? committed.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add) : BigDecimal.ZERO;
         return new PlanResponses.MonthPlan(status, warnings, saved, complete, total, active, activatedAt, incomeResponse,
-                rows, monthly, goals, new PlanResponses.FixedDetail(fixed.recurring(), fixed.loans()));
+                rows, monthly, goals,
+                new PlanResponses.FixedDetail(fixed.recurring(), fixed.loans(), flow.essentials()), flow.unclassified());
     }
 
     private static String role(MonthPlanCalculator.Slice slice) {

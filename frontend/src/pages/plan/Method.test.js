@@ -54,6 +54,7 @@ const methods = [
     helpsWhen: 'Quando aperta.',
     limitations: 'Não diz quanto guardar.',
     where: { tool: 'MONTH_PLAN', route: '/api/v1/plan' },
+    effort: 'MEDIUM',
     preset: [],
   },
   {
@@ -63,6 +64,7 @@ const methods = [
     helpsWhen: 'Duas dívidas.',
     limitations: 'Demora.',
     where: { tool: 'DEBT_PAYOFF', route: '/api/v1/future/debt-payoff' },
+    effort: 'MEDIUM',
     preset: [],
   },
 ];
@@ -132,4 +134,97 @@ test('choosing a method records it and marks it as yours', async () => {
   expect(text()).toContain('method.isCurrent');
   expect(text()).toContain('method.chosenNotice');
   expect(text()).toContain('method.chosen');
+});
+
+test('changing the main goal asks for the suggestions again, because the rules read it', async () => {
+  HttpService.putWithAuth.mockResolvedValue({ ...profile, mainGoal: 'LEAVE_DEBT' });
+  await renderPage();
+  HttpService.getWithAuth.mockClear();
+
+  // The preferences card starts closed.
+  const card = [...container.querySelectorAll('button, [role="button"]')].find((item) =>
+    `${item.textContent} ${item.getAttribute('aria-label')}`.includes('method.profile.title')
+  );
+  await act(async () => Simulate.click(card));
+  const select = container.querySelector('[aria-haspopup="listbox"]');
+  await act(async () => Simulate.mouseDown(select, { button: 0 }));
+  const option = [...document.querySelectorAll('[role="option"]')].find((item) =>
+    item.textContent.includes('method.profile.goals.LEAVE_DEBT')
+  );
+  await act(async () => Simulate.click(option));
+
+  expect(HttpService.getWithAuth).toHaveBeenCalledWith('/methods/suggestions');
+});
+
+const split = {
+  id: 'PERCENT_503020',
+  name: '50/30/20',
+  howItWorks: 'Três partes.',
+  helpsWhen: 'Para começar.',
+  limitations: 'É referência.',
+  effort: 'LOW',
+  where: { tool: 'MONTH_PLAN', route: '/api/v1/plan' },
+  preset: [
+    { kind: 'FIXED', label: 'Necessidades', percent: 50, commitment: false },
+    { kind: 'FUTURE', label: 'Poupança e dívidas', percent: 20, commitment: false },
+  ],
+};
+
+async function openComparison() {
+  HttpService.getWithAuth.mockImplementation((url) =>
+    Promise.resolve(
+      {
+        '/methods/suggestions': { ...suggestions, suggestions: [{ method: 'PERCENT_503020', reasons: [] }] },
+        '/methods': { methods: [split, ...methods] },
+        '/profile': profile,
+      }[url]
+    )
+  );
+  await renderPage();
+  const card = [...container.querySelectorAll('button, [role="button"]')].find((item) =>
+    `${item.textContent} ${item.getAttribute('aria-label')}`.includes('method.compare.title')
+  );
+  await act(async () => Simulate.click(card));
+}
+
+test('two methods side by side, simulating only the one with slices and saving nothing', async () => {
+  HttpService.postWithAuth.mockResolvedValue({
+    baseline: { negativeDays: 0, minBalance90: 900 },
+    scenario: { negativeDays: 3, minBalance90: -120, minDate: '2026-12-20' },
+    newMonthlyCommitment: 800,
+  });
+  await openComparison();
+
+  expect(container.querySelectorAll('th[scope="col"]')).toHaveLength(2);
+  expect(text()).toContain('method.catalog.PERCENT_503020.how');
+  expect(text()).toContain('method.catalog.PRIORITIES.how');
+  expect(text()).toContain('method.compare.efforts.LOW');
+  expect(text()).toContain('method.compare.noSlices');
+  // The hypothesis is on screen before anything is calculated.
+  expect(text()).toContain('method.compare.assumption');
+  expect(HttpService.postWithAuth).not.toHaveBeenCalled();
+
+  await act(async () => Simulate.click(buttons('method.compare.simulate')[0]));
+
+  expect(HttpService.postWithAuth).toHaveBeenCalledTimes(1);
+  expect(HttpService.postWithAuth).toHaveBeenCalledWith('/plan/fit', {
+    slices: [
+      { kind: 'FIXED', label: 'Necessidades', percent: 50, commitment: false },
+      { kind: 'FUTURE', label: 'Poupança e dívidas', percent: 20, commitment: true },
+    ],
+  });
+  expect(text()).toContain('method.compare.negativeDays{"days":3}');
+  expect(text()).toMatch(/method\.compare\.lowest\{"amount":"−R\$\s120,00"/);
+  expect(text()).toContain('method.compare.baseline');
+  expect(HttpService.putWithAuth).not.toHaveBeenCalled();
+});
+
+test('a simulation the server refuses shows why', async () => {
+  HttpService.postWithAuth.mockRejectedValue({ response: { data: { code: 'MONTH_PLAN_NEEDS_INCOME' } } });
+  await openComparison();
+
+  await act(async () => Simulate.click(buttons('method.compare.simulate')[0]));
+
+  expect(text()).toContain('MONTH_PLAN_NEEDS_INCOME');
+  expect(text()).toContain('method.compare.notSimulated');
 });

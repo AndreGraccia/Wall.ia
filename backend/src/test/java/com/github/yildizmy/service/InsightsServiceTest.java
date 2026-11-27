@@ -48,7 +48,8 @@ class InsightsServiceTest {
                 org.springframework.transaction.support.TransactionOperations.withoutTransaction());
         primary = wallet(1L);
         reserve = wallet(2L);
-        when(walletRepository.findByUserId(7L)).thenReturn(List.of(primary, reserve));
+        // Lenient: the pairing tests call the rule directly, without a user.
+        org.mockito.Mockito.lenient().when(walletRepository.findByUserId(7L)).thenReturn(List.of(primary, reserve));
     }
 
     @Test
@@ -153,6 +154,59 @@ class InsightsServiceTest {
         var report = service.generate(7L, 1, "pt-BR");
 
         assertEquals(new BigDecimal("300.00"), report.metrics().internalTransfers());
+    }
+
+    @Test
+    void moreThanOnePossiblePartnerWithoutEvidenceHidesNothing() {
+        // One Pix sent, two unrelated Pix received in the other account, same value and day: which one is the pair?
+        var moves = List.of(
+                move("Withdrawal", primary, "Pix enviado Joao", "PIX"),
+                move("Deposit", reserve, "Pix recebido Marina", "PIX"),
+                move("Deposit", reserve, "Pix recebido Carlos", "PIX"));
+
+        assertEquals(0, InsightsService.ownAccountPairs(moves).size());
+    }
+
+    @Test
+    void theSameDescriptionOnBothSidesPicksTheRealPairAndLeavesTheStrangerVisible() {
+        // The sandbox reserve move, with an unrelated Pix of the same value on the same day.
+        Transaction out = move("Withdrawal", primary, "Transferência para reserva", "TRANSFERENCIA_MESMA_INSTITUICAO");
+        Transaction in = move("Deposit", reserve, "Transferência para reserva", "TRANSFERENCIA_MESMA_INSTITUICAO");
+        Transaction stranger = move("Deposit", reserve, "Marina Souza", "PIX");
+
+        var pairs = InsightsService.ownAccountPairs(List.of(stranger, out, in));
+
+        assertEquals(2, pairs.size());
+        assertEquals(false, pairs.contains(stranger));
+    }
+
+    @Test
+    void twoIdenticalMovesWithBothSidesAreAllInternalButAnExtraSideMakesThemAmbiguous() {
+        var both = new java.util.ArrayList<>(List.of(
+                move("Withdrawal", primary, "Reserva", "PIX"), move("Withdrawal", primary, "Reserva", "PIX"),
+                move("Deposit", reserve, "Reserva", "PIX"), move("Deposit", reserve, "Reserva", "PIX")));
+        assertEquals(4, InsightsService.ownAccountPairs(both).size());
+
+        both.add(move("Deposit", reserve, "Reserva", "PIX"));
+        assertEquals(0, InsightsService.ownAccountPairs(both).size());
+    }
+
+    @Test
+    void differentPaymentTypesAndScheduledSidesDoNotPair() {
+        assertEquals(0, InsightsService.ownAccountPairs(List.of(
+                move("Withdrawal", primary, "Enviado", "PIX"),
+                move("Deposit", reserve, "Recebido", "TED"))).size());
+        Transaction scheduled = move("Deposit", reserve, "Reserva", "PIX");
+        scheduled.setStatus(Status.PENDING);
+        assertEquals(0, InsightsService.ownAccountPairs(List.of(
+                move("Withdrawal", primary, "Reserva", "PIX"), scheduled)).size());
+    }
+
+    private Transaction move(String typeName, Wallet wallet, String description, String paymentType) {
+        Transaction transaction = imported(
+                transaction("300.00", typeName, wallet, wallet, "2026-09-05T13:00:00Z", Status.SUCCESS), paymentType);
+        transaction.setDescription(description);
+        return transaction;
     }
 
     private Transaction imported(Transaction transaction, String paymentType) {

@@ -30,6 +30,8 @@ import com.github.yildizmy.service.future.CardBillPayment;
 import com.github.yildizmy.service.future.CardPlan;
 import com.github.yildizmy.service.future.CashEvent;
 import com.github.yildizmy.service.future.CashEventPlanner;
+import com.github.yildizmy.service.future.Categories;
+import com.github.yildizmy.service.future.MonthFlow;
 import com.github.yildizmy.service.future.CashEventPlanner.ConfirmedRecurrence;
 import com.github.yildizmy.service.future.DailySpending;
 import com.github.yildizmy.service.future.ExitPlan;
@@ -46,6 +48,7 @@ import com.github.yildizmy.service.future.RecurrenceDetector.Direction;
 import com.github.yildizmy.service.future.RecurrenceDetector.Movement;
 import com.github.yildizmy.service.future.RecurrenceDetector.RecurrencePattern;
 import com.github.yildizmy.service.future.ScenarioSimulator;
+import com.github.yildizmy.service.future.GoalProgress;
 import com.github.yildizmy.service.future.SpendingLimit;
 import com.github.yildizmy.service.market.MarketRatesService;
 import org.springframework.stereotype.Service;
@@ -102,6 +105,7 @@ public class FutureService {
     private final MonthPlanRepository monthPlanRepository;
     private final UserService userService;
     private final MarketRatesService marketRates;
+    private final CategoryResolver categoryResolver;
     private final Clock clock;
 
     public FutureService(
@@ -116,6 +120,7 @@ public class FutureService {
             MonthPlanRepository monthPlanRepository,
             UserService userService,
             MarketRatesService marketRates,
+            CategoryResolver categoryResolver,
             Clock clock) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
@@ -128,6 +133,7 @@ public class FutureService {
         this.monthPlanRepository = monthPlanRepository;
         this.userService = userService;
         this.marketRates = marketRates;
+        this.categoryResolver = categoryResolver;
         this.clock = clock;
     }
 
@@ -335,8 +341,12 @@ public class FutureService {
         LocalDate today = LocalDate.now(clock.withZone(ZONE));
         List<CreditCard> cardEntities = creditCardRepository.findByUserIdOrderById(userId);
         List<Loan> loanEntities = loanRepository.findByUserIdOrderById(userId);
-        List<FutureResponses.Card> cards = cardEntities.stream()
-                .map(card -> toResponse(toPlan(card), card, today))
+        // Same rule as the projection: a bill the statement shows as paid is no longer owed.
+        List<CardPlan> plans = CardBillPayment.withEarlyPayments(cardEntities.stream().map(this::toPlan).toList(),
+                bankMovements(transactionRepository.findAllByUserIdSince(userId,
+                        today.minusMonths(2).atStartOfDay(ZONE).toInstant()), walletRepository.findByUserId(userId)), today);
+        List<FutureResponses.Card> cards = java.util.stream.IntStream.range(0, plans.size())
+                .mapToObj(i -> toResponse(plans.get(i), cardEntities.get(i), today))
                 .toList();
         List<FutureResponses.Loan> loans = loanEntities.stream()
                 .map(loan -> {
@@ -420,7 +430,8 @@ public class FutureService {
     @Transactional(readOnly = true)
     public BillingRadarPriceImpact simulatePriceReversion(long userId, String key) {
         Context context = load(userId);
-        BillingRadarDetector.Signal signal = BillingRadarDetector.detect(movements(userId, context.wallets()))
+        List<Movement> history = movements(userId, context.wallets());
+        BillingRadarDetector.Signal signal = BillingRadarDetector.detect(history, categories(userId, history))
                 .stream()
                 .filter(candidate -> candidate.key().equals(key))
                 .filter(BillingRadarDetector.Signal::priceIncrease)
@@ -479,11 +490,12 @@ public class FutureService {
     }
 
     static final int MAX_GOALS = 10;
+    /** Origin of the amount already saved: declared by the person, same key the other typed values use. */
+    private static final String MANUAL_VALUE = "USER_VALUE";
 
     @Transactional(readOnly = true)
     public List<FutureResponses.Goal> goals(long userId) {
-        LocalDate today = LocalDate.now(clock.withZone(ZONE));
-        return goalRepository.findByUserIdOrderById(userId).stream().map(goal -> toResponse(goal, today)).toList();
+        return toResponses(userId, goalRepository.findByUserIdOrderById(userId));
     }
 
     @Transactional
@@ -492,12 +504,39 @@ public class FutureService {
         if (goalRepository.countByUserId(userId) >= MAX_GOALS) throw new WalletRuleException("GOAL_LIMIT");
         Goal goal = new Goal();
         goal.setUser(userService.getReferenceById(userId));
+        apply(goal, request);
+        goal.setCreatedAt(clock.instant());
+        goalRepository.save(goal);
+        return toResponses(userId, List.of(goal)).get(0);
+    }
+
+    /** Replaces the goal; only the owner's id finds it. */
+    @Transactional
+    public FutureResponses.Goal updateGoal(long userId, long goalId, FutureRequests.Goal request) {
+        Goal goal = goalRepository.findByIdAndUserId(goalId, userId)
+                .orElseThrow(() -> new WalletRuleException("GOAL_NOT_FOUND"));
+        apply(goal, request);
+        return toResponses(userId, List.of(goal)).get(0);
+    }
+
+    private void apply(Goal goal, FutureRequests.Goal request) {
+        LocalDate date = request.targetDate();
+        if (date != null) {
+            if (request.targetAmount() == null) throw new WalletRuleException("GOAL_DATE_NEEDS_TARGET");
+            LocalDate today = LocalDate.now(clock.withZone(ZONE));
+            // A date that passed is accepted: a saved goal gets there by itself, and undo has to restore it. It comes
+            // back as DATE_TOO_SOON.
+            if (date.isAfter(today.plusYears(GoalProgress.MAX_YEARS))
+                    || date.isBefore(today.minusYears(GoalProgress.MAX_YEARS))) {
+                throw new WalletRuleException("GOAL_DATE_TOO_FAR");
+            }
+        }
         goal.setName(request.name().trim());
         goal.setMonthlyAmount(request.monthlyAmount());
         goal.setDayOfMonth(request.dayOfMonth());
-        goal.setCreatedAt(clock.instant());
-        goalRepository.save(goal);
-        return toResponse(goal, LocalDate.now(clock.withZone(ZONE)));
+        goal.setTargetAmount(request.targetAmount());
+        goal.setTargetDate(date);
+        goal.setSavedAmount(request.savedAmount());
     }
 
     static final int MAX_ENVELOPES = 10;
@@ -571,10 +610,51 @@ public class FutureService {
                 .orElseThrow(() -> new WalletRuleException("GOAL_NOT_FOUND")));
     }
 
-    private FutureResponses.Goal toResponse(Goal goal, LocalDate today) {
-        LocalDate next = CashEventPlanner.goals(List.of(toPlan(goal)), today, today.plusMonths(2)).stream()
-                .map(CashEvent::date).findFirst().orElse(null);
-        return new FutureResponses.Goal(goal.getId(), goal.getName(), goal.getMonthlyAmount(), goal.getDayOfMonth(), next);
+    /** The history is read once, and only when some goal has a required contribution to check. */
+    private List<FutureResponses.Goal> toResponses(long userId, List<Goal> items) {
+        LocalDate today = LocalDate.now(clock.withZone(ZONE));
+        Context context = null;
+        List<FutureResponses.Goal> responses = new ArrayList<>();
+        for (Goal goal : items) {
+            CashEventPlanner.GoalPlan plan = toPlan(goal);
+            LocalDate next = CashEventPlanner.goals(List.of(plan), today, today.plusMonths(2)).stream()
+                    .map(CashEvent::date).findFirst().orElse(null);
+            FutureResponses.GoalProgress progress = null;
+            if (goal.getTargetAmount() != null) {
+                GoalProgress result = GoalProgress.of(plan, goal.getTargetAmount(), goal.getTargetDate(),
+                        goal.getSavedAmount(), today);
+                FutureResponses.GoalFit fit = null;
+                if (result.requiredMonthly() != null) {
+                    if (context == null) context = load(userId);
+                    fit = goalFit(context, plan, result.requiredMonthly());
+                }
+                progress = new FutureResponses.GoalProgress(result.status().name(), result.remaining(),
+                        result.savedPercent(), result.requiredMonthly(), result.contributionsUntilDate(),
+                        result.projectedDate(), fit);
+            }
+            responses.add(new FutureResponses.Goal(goal.getId(), goal.getName(), goal.getMonthlyAmount(),
+                    goal.getDayOfMonth(), next, goal.getTargetAmount(), goal.getTargetDate(), goal.getSavedAmount(),
+                    goal.getSavedAmount() == null ? null : MANUAL_VALUE, progress));
+        }
+        return responses;
+    }
+
+    /**
+     * "Ver se cabe" for one goal at another monthly amount: the horizon without the goal against the horizon with it.
+     * The whole plan is rebuilt on each side, so the month plan's Future slice still absorbs the goals (ADR 0021).
+     */
+    private FutureResponses.GoalFit goalFit(Context context, CashEventPlanner.GoalPlan goal, BigDecimal monthly) {
+        LocalDate end = context.today().plusDays(SCENARIO_HORIZON_DAYS);
+        List<CashEventPlanner.GoalPlan> others = context.goals().stream().filter(other -> other.id() != goal.id()).toList();
+        List<CashEventPlanner.GoalPlan> with = new ArrayList<>(others);
+        with.add(new CashEventPlanner.GoalPlan(goal.id(), goal.name(), monthly, goal.dayOfMonth()));
+        List<CashEvent> baseline = context.withGoals(others).plan(end);
+        FutureResponses.ScenarioSummary before = summary(ProjectionEngine.project(
+                context.today(), context.balance(), baseline, SCENARIO_HORIZON_DAYS));
+        FutureResponses.ScenarioSummary after = summary(ProjectionEngine.project(
+                context.today(), context.balance(), context.withGoals(with).plan(end), SCENARIO_HORIZON_DAYS));
+        return new FutureResponses.GoalFit(!worsens(before, after), SCENARIO_HORIZON_DAYS,
+                baseline.stream().anyMatch(CashEvent::isInflow), before, after);
     }
 
     private CashEventPlanner.GoalPlan toPlan(Goal goal) {
@@ -651,7 +731,9 @@ public class FutureService {
             case NEXT_INCOME -> answer(intent, parsed, method, null, overview, null, null, null,
                     overview.projection().events().stream().filter(event -> event.amount().signum() > 0)
                             .findFirst().orElse(null), null, null, null);
-            case UNKNOWN -> answer(intent, parsed, method, null, overview, null, null, null, null, null, null, null);
+            // Plan, method, review and savings questions get their numbers from the assistant (ADR 0027).
+            case PLAN_STATUS, METHOD, REVIEW, SAVE_GOAL, UNKNOWN ->
+                    answer(intent, parsed, method, null, overview, null, null, null, null, null, null, null);
         };
     }
 
@@ -662,9 +744,7 @@ public class FutureService {
     static String verdict(FutureResponses.ScenarioResult result, FutureResponses.SpendingLimit limit) {
         FutureResponses.ScenarioSummary before = result.baseline();
         FutureResponses.ScenarioSummary after = result.scenario();
-        if (after.negativeDays() > before.negativeDays()) return "RISK";
-        // Negative days saturate when the whole horizon is already below zero: a deeper hole is still a risk.
-        if (before.negativeDays() > 0 && after.minBalance90().compareTo(before.minBalance90()) < 0) return "RISK";
+        if (worsens(before, after)) return "RISK";
         BigDecimal weekBuffer = limit == null || limit.pace() == null
                 ? BigDecimal.ZERO
                 : limit.pace().multiply(BigDecimal.valueOf(7));
@@ -672,6 +752,12 @@ public class FutureService {
         if (limit != null && limit.reserved() != null) weekBuffer = weekBuffer.add(limit.reserved());
         if (after.negativeDays() > 0 || after.minBalance90().compareTo(weekBuffer) < 0) return "TIGHT";
         return "SAFE";
+    }
+
+    /** Negative days saturate when the whole horizon is already below zero: a deeper hole is still worse. */
+    private static boolean worsens(FutureResponses.ScenarioSummary before, FutureResponses.ScenarioSummary after) {
+        return after.negativeDays() > before.negativeDays()
+                || before.negativeDays() > 0 && after.minBalance90().compareTo(before.minBalance90()) < 0;
     }
 
     private FutureResponses.Answer answer(String intent, QuestionParser.Parsed parsed, String method, String verdict,
@@ -694,7 +780,25 @@ public class FutureService {
                 scenario == null ? null : scenario.scenario(),
                 newMonthlyCommitment,
                 cardName,
-                "WHY_NEGATIVE".equals(intent) ? overview.exitPlan() : null);
+                "WHY_NEGATIVE".equals(intent) ? overview.exitPlan() : null,
+                null);
+    }
+
+    /** A goal the person could create to reach {@code target} by {@code date}; nothing is written. */
+    @Transactional(readOnly = true)
+    public Optional<FutureResponses.GoalDraft> draftGoal(long userId, BigDecimal target, LocalDate date) {
+        Context context = load(userId);
+        int day = context.confirmed().stream()
+                .filter(item -> item.pattern().direction() == Direction.IN)
+                .map(item -> item.pattern().typicalDay())
+                .findFirst().orElse(5);
+        // The placeholder amount only counts the contribution days up to the date.
+        GoalProgress progress = GoalProgress.of(new CashEventPlanner.GoalPlan(0, "", BigDecimal.ONE, day), target, date,
+                null, context.today());
+        if (progress.requiredMonthly() == null) return Optional.empty();
+        FutureResponses.GoalFit fit = goalFit(context,
+                new CashEventPlanner.GoalPlan(0, "", progress.requiredMonthly(), day), progress.requiredMonthly());
+        return Optional.of(new FutureResponses.GoalDraft(target, date, progress.requiredMonthly(), day, fit.fits()));
     }
 
     // --- loading -----------------------------------------------------------------------------
@@ -715,6 +819,8 @@ public class FutureService {
         List<CardPlan> cardPlans = cards.stream().map(this::toPlan).toList();
         // The card bill paid from the account is the invoice's purchases, already projected as the invoice (B12).
         List<Movement> movements = CardBillPayment.withoutBillPayments(movements(transactions, wallets), cardPlans);
+        // A bill already paid before its due date left the balance: only what is still owed is projected.
+        cardPlans = CardBillPayment.withEarlyPayments(cardPlans, bankMovements(transactions, wallets), today);
         List<RecurrencePattern> patterns = RecurrenceDetector.detect(movements);
         Map<String, RecurrenceDecision> decisions = decisionRepository.findByUserId(userId).stream()
                 .collect(Collectors.toMap(RecurrenceDecision::getPatternKey, Function.identity()));
@@ -746,7 +852,8 @@ public class FutureService {
         return new Context(today, wallets, balance, patterns, decisions, confirmed,
                 cards, cardPlans, loans, loans.stream().map(this::toPlan).toList(),
                 dailyEstimate, dailyAmount, cardEstimate, cardAmount, mainCard(cardPlans, today), goals, reserved,
-                scheduled(transactions, wallets, today), transactions, monthPlan);
+                scheduled(transactions, wallets, today), transactions, monthPlan,
+                categories(userId, movements(transactions, wallets)));
     }
 
     /**
@@ -814,6 +921,11 @@ public class FutureService {
                 .orElse(null);
     }
 
+    /** The categories the person decided, by movement id. */
+    Map<Long, MonthFlow.Choice> categories(long userId, List<Movement> movements) {
+        return categoryResolver.resolve(userId, movements);
+    }
+
     /**
      * Settled movements from the user's point of view. Transfers between the user's own wallets
      * are skipped: they move money, they don't create income or expense.
@@ -824,6 +936,12 @@ public class FutureService {
         // Same cash view as the projection: the card bill is the invoice's purchases, not a monthly charge (B12).
         return CardBillPayment.withoutBillPayments(movements(transactionRepository.findAllByUserIdSince(userId,
                 today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant()), wallets), cardPlans);
+    }
+
+    private static List<Movement> bankMovements(List<Transaction> transactions, List<Wallet> wallets) {
+        return movements(transactions.stream()
+                .filter(transaction -> transaction.getSource() == TransactionSource.OPEN_FINANCE)
+                .toList(), wallets);
     }
 
     static List<Movement> movements(List<Transaction> transactions, List<Wallet> wallets) {
@@ -1133,8 +1251,29 @@ public class FutureService {
             BigDecimal reserved,
             List<CashEvent> scheduled,
             List<Transaction> transactions,
-            com.github.yildizmy.domain.entity.MonthPlan monthPlan
+            com.github.yildizmy.domain.entity.MonthPlan monthPlan,
+            Map<Long, MonthFlow.Choice> categories
     ) {
+
+        /**
+         * The confirmed recurrences the essentials slice may count: one whose latest charge the person moved to a
+         * category outside that slice (leisure, other...) leaves it, so it is not measured twice.
+         */
+        List<ConfirmedRecurrence> countedRecurrences() {
+            return confirmed.stream().filter(item -> {
+                var occurrences = item.pattern().occurrences();
+                MonthFlow.Choice latest = categories.get(occurrences.get(occurrences.size() - 1).transactionId());
+                return item.pattern().direction() != Direction.OUT || latest == null
+                        || Categories.ESSENTIALS_SLICE.contains(latest.category());
+            }).toList();
+        }
+
+        /** The same data with other goals, to check a goal without saving it. */
+        Context withGoals(List<CashEventPlanner.GoalPlan> other) {
+            return new Context(today, wallets, balance, patterns, decisions, confirmed, cards, cardPlans, loans,
+                    loanPlans, dailyEstimate, dailyAmount, cardEstimate, cardAmount, mainCard, other, reserved,
+                    scheduled, transactions, monthPlan, categories);
+        }
 
         BigDecimal goalsMonthly() {
             return goals.stream().map(CashEventPlanner.GoalPlan::monthlyAmount).reduce(BigDecimal.ZERO, BigDecimal::add);

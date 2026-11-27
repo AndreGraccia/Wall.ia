@@ -13,6 +13,7 @@ import BankDataNotice from '../../components/bank-data';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
 import { dayLabel, errorKey, monthLabel, money } from '../../utils/wallet';
+import { needsReview } from '../../components/category-ui';
 import { balanceHistory, forecastReady } from '../../utils/forecast';
 import { HIDDEN_AMOUNT, useHiddenAmounts } from '../../utils/hiddenAmounts';
 import {
@@ -24,6 +25,7 @@ import {
   RiskAlert,
   useGet,
 } from './sections';
+import Onboarding from './Onboarding';
 
 /**
  * Where the money is now and the month so far, under the number of the day (proposta de André Graccia, ADR 0021;
@@ -64,6 +66,9 @@ export function MonthTotals({ hidden, balance }) {
     ['monthLeisure', 'leisureAndInvestment', '/plan'],
   ];
   const home = state.flow?.home && { ...state.flow.home, balance };
+  const pending = [...(state.flow?.income?.items || []), ...(state.flow?.spending?.items || [])].filter(
+    needsReview
+  ).length;
   return (
     <Box component="section" aria-labelledby="dashboard-month">
       <Typography id="dashboard-month" variant="body2" color="text.secondary" component="h2" sx={{ m: 0, mb: 1 }}>
@@ -143,6 +148,16 @@ export function MonthTotals({ hidden, balance }) {
           </ButtonBase>
         ))}
       </Box>
+      {pending > 0 && (
+        <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ columnGap: 1, mt: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('review.home', { count: pending })}
+          </Typography>
+          <Button component={RouterLink} to="/cash-flow/review" size="small">
+            {t('review.open')}
+          </Button>
+        </Stack>
+      )}
     </Box>
   );
 }
@@ -201,6 +216,7 @@ export default function Dashboard() {
   const suggestions = useGet(profile.data && !profile.data.method ? '/methods/suggestions' : null);
   const chosen = (catalog.data?.methods || []).find((method) => method.id === profile.data?.method);
   const highlight = chosen ? HIGHLIGHT_BY_TOOL[chosen.where?.tool] : null;
+  const onboarding = <Onboarding userId={user?.id} sources={sources} plan={plan} profile={profile} goals={goals} />;
   const shortcuts = (
     <>
       <Button component={RouterLink} to="/ask" variant="outlined">
@@ -255,6 +271,7 @@ export default function Dashboard() {
             }
           />
         )}
+        {noData && onboarding}
 
         {overview && !noData && (
           <Stack spacing={{ xs: 4, md: 5 }}>
@@ -284,6 +301,7 @@ export default function Dashboard() {
             )}
             <MonthTotals hidden={hidden} balance={overview.balance} />
             {ready && <RiskAlert windows={projection.riskWindows} hidden={hidden} />}
+            {onboarding}
             {ready && <HorizonSummary projection={projection} hidden={hidden} />}
 
             <Box

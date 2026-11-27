@@ -6,7 +6,11 @@ import CashFlow, { lastMonths } from './CashFlow';
 import ThemeProvider from '../../theme';
 import HttpService from '../../services/HttpService';
 
-jest.mock('../../services/HttpService', () => ({ getWithAuth: jest.fn() }));
+jest.mock('../../services/HttpService', () => ({
+  getWithAuth: jest.fn(),
+  putWithAuth: jest.fn(() => Promise.resolve()),
+  deleteWithAuth: jest.fn(() => Promise.resolve()),
+}));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key, i18n: { language: 'pt' } }),
 }));
@@ -24,7 +28,7 @@ const side = (total, method, category) => ({
 });
 const month0 = lastMonths()[0];
 const spending = {
-  ...side(1620, 'PIX', 'EVERYDAY'),
+  ...side(1620, 'PIX', 'ESSENTIAL'),
   count: 2,
   byMethod: [
     { key: 'PIX', total: 1500, count: 1 },
@@ -38,7 +42,8 @@ const spending = {
       amount: 1500,
       account: 'Banco Aurora · Conta',
       method: 'PIX',
-      category: 'EVERYDAY',
+      category: 'ESSENTIAL',
+      origin: 'NAME',
     },
     {
       id: 1,
@@ -47,7 +52,7 @@ const spending = {
       amount: 120,
       account: 'Banco Aurora · Conta',
       method: 'BOLETO',
-      category: 'EVERYDAY',
+      category: 'ESSENTIAL',
     },
   ],
 };
@@ -108,7 +113,7 @@ async function renderPage(entry = '/cash-flow') {
 test('the spending tab opens first; switching to income shows the income side', async () => {
   await renderPage();
   expect(text()).toContain('1.620,00');
-  expect(text()).toContain('cashFlow.categories.EVERYDAY');
+  expect(text()).toContain('cashFlow.categories.ESSENTIAL');
   // The payment method is a grouping, not part of each row (ADR 0022).
   expect(text()).not.toContain('paymentMethods.PIX');
   expect(text()).toContain('cashFlow.realized');
@@ -149,7 +154,7 @@ test('one grouping at a time, by category first; the segmented control switches 
   await renderPage();
   const groupRows = () => [...container.querySelectorAll('[aria-label="cashFlow.filter.by"]')];
   expect(groupRows()).toHaveLength(1);
-  expect(groupRows()[0].textContent).toContain('cashFlow.categories.EVERYDAY');
+  expect(groupRows()[0].textContent).toContain('cashFlow.categories.ESSENTIAL');
 
   const method = [...container.querySelectorAll('button')].find(
     (item) => item.textContent === 'cashFlow.groupOptions.byMethod'
@@ -206,4 +211,24 @@ test('this month shows what still leaves, apart from the realized total', async 
   expect(text()).toContain('Aluguel');
   expect(text()).not.toContain('Outro mes');
   expect(text()).toContain('1.620,00');
+});
+
+test('a suggested entry is marked; picking another category saves it, reloads and can be undone', async () => {
+  await renderPage();
+  expect(text()).toContain('review.suggested');
+  expect(text()).toContain('review.pending');
+
+  const loads = HttpService.getWithAuth.mock.calls.length;
+  const select = container.querySelector('select');
+  await act(async () => Simulate.change(select, { target: { value: 'LEISURE' } }));
+
+  expect(HttpService.putWithAuth).toHaveBeenCalledWith('/categories/transactions/2', { category: 'LEISURE' });
+  expect(HttpService.getWithAuth.mock.calls.length).toBeGreaterThan(loads);
+  expect(text()).toContain('review.done');
+
+  // It had no choice before: undoing removes the choice.
+  const undo = [...container.querySelectorAll('button')].find((item) => item.textContent === 'review.undo');
+  await act(async () => Simulate.click(undo));
+  expect(HttpService.deleteWithAuth).toHaveBeenCalledWith('/categories/transactions/2');
+  expect(text()).not.toContain('review.done');
 });
