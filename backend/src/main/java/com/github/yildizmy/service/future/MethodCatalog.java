@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public final class MethodCatalog {
 
     /** Changes whenever a text or a rule of the catalog changes, so a stored choice can be read against its version. */
-    public static final String VERSION = "2026-11-26";
+    public static final String VERSION = "2026-11-26.2";
 
     private MethodCatalog() {
     }
@@ -40,10 +40,10 @@ public final class MethodCatalog {
                     "Não funciona bem quando as contas fixas passam de 50% da renda; os percentuais são uma referência, não uma lei.",
                     List.of("CONFIRMED_INCOME", "CONFIRMED_FIXED_BILLS"), PLAN, MonthPlanCalculator.PRESET_503020),
             new Method("PERCENT_BALANCED", "Equilibrado 35/20/15",
-                    "Seis fatias: 35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento "
+                    "Seis fatias: 35% essenciais, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento "
                             + "pessoal e estudo e 12,5% reserva de emergência.",
-                    "Quando a pessoa quer separar, além das contas e do lazer, uma parte para estudo e outra para a reserva.",
-                    "Seis fatias pedem renda que comporte todas; com contas fixas acima de 35% a fatia Fixo estoura.",
+                    "Quando a pessoa quer separar, além dos essenciais e do lazer, uma parte para estudo e outra para a reserva.",
+                    "Seis fatias pedem renda que comporte todas; com contas fixas e essenciais acima de 35% a fatia Essenciais estoura.",
                     List.of("CONFIRMED_INCOME", "CONFIRMED_FIXED_BILLS"), PLAN, MonthPlanCalculator.PRESET_BALANCED),
             new Method("ZERO_BASED", "Orçamento base zero",
                     "Cada real da renda recebe um destino: as fatias do plano somam exatamente 100%.",

@@ -108,34 +108,62 @@ public class InsightsService {
     /**
      * Open Finance imports each side of a move between the user's own accounts separately: a Withdrawal in one
      * wallet and a Deposit in another, same value, same day. Those pairs are neither income nor expense.
-     * Only imported entries whose Open Finance type is a move (Pix, TED, DOC, TEF, same-bank transfer) pair, so a
-     * boleto and a salary of the same value do not. Imports saved before V31 have no type and still pair.
-     * ponytail: a Pix received and an unrelated Pix sent from another own account, same value and day, still
-     * pair. Upgrade: match on the counterparty when the import keeps it.
+     * Only imported entries whose Open Finance type is a move (Pix, TED, DOC, TEF, same-bank transfer) can pair, and
+     * the two sides must have the same type (imports saved before V31 have none and fit any). A pair is hidden only
+     * with evidence: the same description on both sides, in equal numbers; or, among what is left, one single
+     * candidate on each side. Anything ambiguous stays visible.
+     * ponytail: the import keeps no counterparty, so one Pix in and one unrelated Pix out of the same value and day,
+     * with nothing else to compete, still pair. Upgrade: store the counterparty document the Accounts API sends
+     * (partieCnpjCpf, encrypted) and require it to be the person's.
      */
     static Set<Transaction> ownAccountPairs(List<Transaction> transactions) {
         Map<String, List<Transaction>> deposits = new LinkedHashMap<>();
+        Map<String, List<Transaction>> withdrawals = new LinkedHashMap<>();
         for (Transaction transaction : transactions) {
             if (!isImportedMove(transaction)) continue;
-            if ("Deposit".equals(transaction.getType().getName())) {
+            String direction = transaction.getType().getName();
+            if ("Deposit".equals(direction)) {
                 deposits.computeIfAbsent(pairKey(transaction), key -> new ArrayList<>()).add(transaction);
+            } else if ("Withdrawal".equals(direction)) {
+                withdrawals.computeIfAbsent(pairKey(transaction), key -> new ArrayList<>()).add(transaction);
             }
         }
         // Identity, not equals: entities compare by id and unsaved ones would all look the same.
         Set<Transaction> paired = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
-        for (Transaction withdrawal : transactions) {
-            if (!isImportedMove(withdrawal) || !"Withdrawal".equals(withdrawal.getType().getName())) continue;
-            List<Transaction> candidates = deposits.getOrDefault(pairKey(withdrawal), List.of());
-            candidates.stream()
-                    .filter(deposit -> !paired.contains(deposit)
-                            && !deposit.getToWallet().getId().equals(withdrawal.getFromWallet().getId()))
-                    .findFirst()
-                    .ifPresent(deposit -> {
-                        paired.add(deposit);
-                        paired.add(withdrawal);
-                    });
-        }
+        withdrawals.forEach((key, out) -> {
+            List<Transaction> in = deposits.getOrDefault(key, List.of());
+            // 1. Same description: interchangeable moves, hidden only when every one of them has its other side.
+            out.stream().collect(Collectors.groupingBy(InsightsService::label)).forEach((label, sent) -> {
+                List<Transaction> received = in.stream().filter(deposit -> label(deposit).equals(label)).toList();
+                if (!label.isEmpty() && sent.size() == received.size()
+                        && sent.stream().allMatch(one -> received.stream().allMatch(other -> canPair(one, other)))) {
+                    paired.addAll(sent);
+                    paired.addAll(received);
+                }
+            });
+            // 2. What is left pairs only when neither side has another possible partner.
+            List<Transaction> sent = out.stream().filter(one -> !paired.contains(one)).toList();
+            List<Transaction> received = in.stream().filter(one -> !paired.contains(one)).toList();
+            for (Transaction withdrawal : sent) {
+                List<Transaction> candidates = received.stream().filter(deposit -> canPair(withdrawal, deposit)).toList();
+                if (candidates.size() == 1
+                        && sent.stream().filter(other -> canPair(other, candidates.get(0))).count() == 1) {
+                    paired.add(withdrawal);
+                    paired.add(candidates.get(0));
+                }
+            }
+        });
         return paired;
+    }
+
+    private static boolean canPair(Transaction withdrawal, Transaction deposit) {
+        return !deposit.getToWallet().getId().equals(withdrawal.getFromWallet().getId())
+                && (withdrawal.getPaymentType() == null || deposit.getPaymentType() == null
+                || withdrawal.getPaymentType().equals(deposit.getPaymentType()));
+    }
+
+    private static String label(Transaction transaction) {
+        return com.github.yildizmy.service.future.RecurrenceDetector.counterpartyKey(transaction.getDescription());
     }
 
     private static final Set<String> MOVE_TYPES = Set.of("PIX", "TED", "DOC", "TEF", "TRANSFERENCIA_MESMA_INSTITUICAO");
@@ -147,7 +175,8 @@ public class InsightsService {
 
     private static String pairKey(Transaction transaction) {
         LocalDate day = LocalDate.ofInstant(transaction.getCreatedAt(), FutureService.ZONE);
-        return day + ":" + money(transaction.getAmount()).toPlainString();
+        // A scheduled (pending) side never pairs with a settled one.
+        return day + ":" + transaction.getStatus() + ":" + money(transaction.getAmount()).toPlainString();
     }
 
     private FinancialSnapshot createSnapshot(Long userId, int months) {

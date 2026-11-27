@@ -17,7 +17,7 @@ import java.util.Set;
 /**
  * Plano do mês (proposta de André Graccia, ADR 0021): the confirmed monthly income split in slices the person edits.
  * <p>
- * Fixed and leisure are measured against what happened. Any other slice becomes a monthly commitment only when the
+ * Essentials (kind FIXED: fixed bills plus everyday essentials) and leisure are measured against what happened. Any other slice becomes a monthly commitment only when the
  * person marks it; a marked slice leaves the balance the day the main income arrives ("pague-se primeiro"), so the
  * daily limit already discounts it and there is no second number.
  */
@@ -34,7 +34,7 @@ public final class MonthPlanCalculator {
     }
 
     /**
-     * FIXED is a thermometer and LEISURE a ceiling: both are measured and never committed. FUTURE holds the goals.
+     * FIXED ("Essenciais"; the stored name stays) is a thermometer and LEISURE a ceiling: both are measured and never committed. FUTURE holds the goals.
      * Every kind but CUSTOM appears at most once.
      */
     public enum Kind {
@@ -55,7 +55,7 @@ public final class MonthPlanCalculator {
 
     /** Equilibrado 35/20/15 (proposed by André Graccia, ADR 0021). Nothing is committed until the person marks it. */
     public static final List<Slice> PRESET_BALANCED = List.of(
-            slice(Kind.FIXED, "Fixo", "35.00"),
+            slice(Kind.FIXED, "Essenciais", "35.00"),
             slice(Kind.LEISURE, "Lazer", "20.00"),
             slice(Kind.INVESTMENT, "Investimento", "15.00"),
             slice(Kind.FUTURE, "Futuro", "7.50"),
@@ -194,7 +194,12 @@ public final class MonthPlanCalculator {
                 .map(CashEvent::date).filter(date -> date.isAfter(today)).findFirst();
     }
 
-    /** @param recurring confirmed rent, bills and subscriptions (estimated values); @param loans instalments the bank reports */
+    /**
+     * The fixed bills alone, per month; the essentials slice adds the month's everyday essentials on top.
+     *
+     * @param recurring confirmed rent, bills and subscriptions (estimated values)
+     * @param loans     instalments the bank reports
+     */
     public record FixedUsed(BigDecimal recurring, BigDecimal loans, BigDecimal total) {
     }
 
