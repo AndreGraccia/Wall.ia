@@ -158,9 +158,27 @@ Próximas da lista, por nota (dor x diferencial / esforço):
 1. **Painel de dívidas** com o relatório SCR do Registrato (fonte oficial e gratuita). Começar com entrada manual.
 2. **Tarifas e IOF no mês**, lidos do extrato com a lista das linhas encontradas. Depende de dado real, porque o sandbox não tem tarifa.
 3. **Planejador de quitação** (avalanche ou bola de neve), sem oferecer empréstimo para quitar. Feito para os empréstimos em 25/09 ([ADR 0013](adr/0013-planejador-de-quitacao.md)); o cartão entra quando a pessoa confirmar que está no rotativo.
-4. **Divisor da renda na chegada**: quando o salário cai, sugerir a divisão entre envelopes, sempre com confirmação.
+4. **Divisor da renda na chegada**: quando o salário cai, sugerir a divisão entre envelopes, sempre com confirmação. Feito em 23/11/2026 como Plano do mês ([ADR 0021](adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md)), com o compromisso no motor em vez de envelope.
 
 Não fazer, com motivo: adiantamento de salário e cobertura de negativo (é crédito, regra 3), sugestão de caixinha ou investimento (é venda, regra 3), poupança automática que move dinheiro sozinha (regra 1), assistente que responde com número de modelo de linguagem (regra 2).
+
+## Sétima rodada: Plano do mês e "Meu método" (23/11/2026, ADR 0021)
+
+Proposta de **André Graccia**, integrante do grupo, mais o documento de evolução do grupo. Princípio novo: **o Wall.ia não impõe um método; apresenta alternativas explicáveis.**
+
+**O divisor da renda volta, resolvido.** Na sexta rodada ele ficou de fora porque envelope não tem aporte mensal e o limite diário já mostrava o comprometido até a próxima renda: um divisor só na tela seria um segundo número. Agora cada fatia marcada do Plano do mês vira uma saída confirmada no motor, no dia da renda principal. O limite diário passa a descontar o plano e continua sendo o único número.
+
+| Ideia | De onde veio | Como ficou no Wall.ia |
+| --- | --- | --- |
+| Dividir a renda em fatias (35/20/15/7,5/10 + reserva) | André Graccia | Plano do mês com fatias editáveis; só o que a pessoa marca entra no motor |
+| Ganhos e gastos por conta e método; Início com três totais | André Graccia | Entradas e saídas por conta, método e categoria, em regime de caixa |
+| Projeção de curto e longo prazo | André Graccia | Projeção mensal de 3, 6 e 12 meses com confirmado e estimado separados |
+| Escolher um método de organização | Documento de evolução do grupo | Catálogo de 9 métodos e sugestões por regra explícita, sem score |
+| Saber quem é a pessoa | Documento de evolução do grupo | Perfil mínimo: o derivado é calculado na hora; só o declarado é gravado |
+
+Não fazer, com motivo: registro de carteira de investimentos (é patrimônio, outro produto, sem dado no sandbox e perto de recomendação, regra 3) e diário de desenvolvimento pessoal (não é dado financeiro). As duas ideias continuam no plano como fatias.
+
+**Como medir valor:** proporção de quem liga o plano depois do "ver se cabe", quantos meses ele fica ligado, dias negativos de quem tem o plano ligado contra quem não tem, e quais métodos são escolhidos depois de sugeridos.
 
 ## Nova oportunidade priorizada: Radar de cobranças (26/10/2026)
 

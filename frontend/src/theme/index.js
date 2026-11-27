@@ -20,6 +20,7 @@ export default function ThemeProvider({ children }) {
   const themeOptions = useMemo(
     () => ({
       palette,
+      // Radius by hierarchy (DESIGN.md): field and row 12, interactive card 16, panel 20, pill 999.
       shape: { borderRadius: 12 },
       typography,
       shadows: shadows(),
@@ -32,14 +33,7 @@ export default function ThemeProvider({ children }) {
   const theme = createTheme(
     baseTheme,
     {
-      components: {
-        ...componentsOverride(baseTheme),
-        MuiDialog: {
-          styleOverrides: { paper: { borderRadius: 20, backgroundColor: baseTheme.palette.background.raised } },
-        },
-        MuiTabs: { styleOverrides: { indicator: { height: 3, borderRadius: 3 } } },
-        MuiTab: { styleOverrides: { root: { textTransform: 'none', minHeight: 60 } } },
-      },
+      components: componentsOverride(baseTheme),
     },
     i18n.resolvedLanguage?.startsWith('en') ? enUS : ptBR
   );

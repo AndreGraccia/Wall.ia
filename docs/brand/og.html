@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Wall.ia OG 1200x630</title>
+<!-- Fonte da imagem de compartilhamento (frontend/public/og.png). Gerar: python frontend/scripts/build-icons.py -->
+<link rel="stylesheet" href="brand.css">
+<style>
+  body { width: 1200px; height: 630px; }
+  .top { position: absolute; left: 72px; top: 64px; font-size: 34px; }
+  .copy { position: absolute; left: 72px; top: 140px; width: 980px; }
+  .headline { font-size: 58px; }
+  .body { font-size: 26px; margin-top: 20px; max-width: 640px; }
+  .chart { position: absolute; left: 0; bottom: 0; width: 1200px; height: 230px; }
+</style>
+</head>
+<body>
+  <div class="top wordmark"><span>Wall</span><span class="dot"></span><span>ia</span></div>
+  <div class="copy">
+    <h1 class="headline">Veja quanto dá para gastar até o próximo salário.</h1>
+    <p class="body">Saldo projetado dia a dia, com o confirmado separado do estimado.</p>
+  </div>
+  <svg class="chart" viewBox="0 0 1200 250" aria-hidden="true">
+    <path class="hole" d="M662 150 L690 196 L790 210 L806 150 Z"/>
+    <line class="zero" x1="0" x2="1200" y1="150" y2="150"/>
+    <text class="tick" x="1128" y="138" text-anchor="end">R$ 0</text>
+    <path class="past" d="M-10 80 L120 104 L210 70 L300 96 L390 62 L470 84"/>
+    <path class="ahead" d="M470 84 L560 102 L640 122 L690 196 L790 210 L830 66 L960 90 L1080 72 L1210 96"/>
+    <circle class="today" cx="470" cy="84" r="13"/>
+    <text class="tick" x="470" y="46" text-anchor="middle">hoje</text>
+    <text class="tick negative" x="740" y="240" text-anchor="middle">-R$ 707,72</text>
+  </svg>
+</body>
+</html>

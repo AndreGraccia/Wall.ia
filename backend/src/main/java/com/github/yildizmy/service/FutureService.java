@@ -2,6 +2,7 @@ package com.github.yildizmy.service;
 
 import com.github.yildizmy.domain.entity.CreditCard;
 import com.github.yildizmy.domain.entity.Loan;
+import com.github.yildizmy.domain.entity.ManualDebt;
 import com.github.yildizmy.domain.entity.RecurrenceDecision;
 import com.github.yildizmy.domain.entity.Transaction;
 import com.github.yildizmy.domain.entity.Wallet;
@@ -18,10 +19,14 @@ import com.github.yildizmy.repository.GoalRepository;
 import com.github.yildizmy.domain.entity.Envelope;
 import com.github.yildizmy.domain.entity.Goal;
 import com.github.yildizmy.repository.LoanRepository;
+import com.github.yildizmy.repository.ManualDebtRepository;
+import com.github.yildizmy.repository.MonthPlanRepository;
 import com.github.yildizmy.repository.RecurrenceDecisionRepository;
 import com.github.yildizmy.repository.TransactionRepository;
 import com.github.yildizmy.repository.WalletRepository;
+import com.github.yildizmy.service.future.BankDataFreshness;
 import com.github.yildizmy.service.future.BillingRadarDetector;
+import com.github.yildizmy.service.future.CardBillPayment;
 import com.github.yildizmy.service.future.CardPlan;
 import com.github.yildizmy.service.future.CashEvent;
 import com.github.yildizmy.service.future.CashEventPlanner;
@@ -30,6 +35,7 @@ import com.github.yildizmy.service.future.DailySpending;
 import com.github.yildizmy.service.future.ExitPlan;
 import com.github.yildizmy.service.future.LoanCost;
 import com.github.yildizmy.service.future.LoanPlan;
+import com.github.yildizmy.service.future.MonthPlanCalculator;
 import com.github.yildizmy.service.future.OverdraftCost;
 import com.github.yildizmy.service.future.ProjectionEngine;
 import com.github.yildizmy.service.future.PriceReversionScenario;
@@ -92,6 +98,8 @@ public class FutureService {
     private final LoanRepository loanRepository;
     private final GoalRepository goalRepository;
     private final EnvelopeRepository envelopeRepository;
+    private final ManualDebtRepository manualDebtRepository;
+    private final MonthPlanRepository monthPlanRepository;
     private final UserService userService;
     private final MarketRatesService marketRates;
     private final Clock clock;
@@ -104,6 +112,8 @@ public class FutureService {
             LoanRepository loanRepository,
             GoalRepository goalRepository,
             EnvelopeRepository envelopeRepository,
+            ManualDebtRepository manualDebtRepository,
+            MonthPlanRepository monthPlanRepository,
             UserService userService,
             MarketRatesService marketRates,
             Clock clock) {
@@ -114,6 +124,8 @@ public class FutureService {
         this.loanRepository = loanRepository;
         this.goalRepository = goalRepository;
         this.envelopeRepository = envelopeRepository;
+        this.manualDebtRepository = manualDebtRepository;
+        this.monthPlanRepository = monthPlanRepository;
         this.userService = userService;
         this.marketRates = marketRates;
         this.clock = clock;
@@ -152,8 +164,7 @@ public class FutureService {
                         context.loans().size(),
                         context.confirmed().size(),
                         (int) pending,
-                        bankDataAsOf(context.wallets()),
-                        bankDataStale(bankDataAsOf(context.wallets()), clock.instant())
+                        bankData(context.wallets(), clock.instant())
                 ),
                 spendingQuestion(context, DAILY_SPENDING_KEY, context.dailyEstimate(), context.dailyAmount()),
                 context.cardPlans().isEmpty() ? null
@@ -304,6 +315,16 @@ public class FutureService {
                     loan.getInstallmentAmount(),
                     loan.getAnnualRate()));
         }
+        // Typed by the person (B14): same order, its own CET, and the origin travels with it to the screen.
+        for (ManualDebt debt : manualDebtRepository.findByUserIdOrderById(userId)) {
+            debts.add(new com.github.yildizmy.service.future.DebtPayoff.Debt(
+                    "pix-" + debt.getId(),
+                    "Pix no crédito - " + debt.getLabel(),
+                    debt.getOutstandingBalance(),
+                    debt.getInstallmentAmount(),
+                    LoanCost.annualFromMonthly(debt.getMonthlyCet()),
+                    MANUAL));
+        }
         return new FutureResponses.DebtPayoff(
                 com.github.yildizmy.service.future.DebtPayoff.compare(debts, extra.setScale(2, java.math.RoundingMode.HALF_UP)),
                 withoutRate);
@@ -312,10 +333,12 @@ public class FutureService {
     @Transactional(readOnly = true)
     public FutureResponses.Commitments commitments(long userId) {
         LocalDate today = LocalDate.now(clock.withZone(ZONE));
-        List<FutureResponses.Card> cards = creditCardRepository.findByUserIdOrderById(userId).stream()
+        List<CreditCard> cardEntities = creditCardRepository.findByUserIdOrderById(userId);
+        List<Loan> loanEntities = loanRepository.findByUserIdOrderById(userId);
+        List<FutureResponses.Card> cards = cardEntities.stream()
                 .map(card -> toResponse(toPlan(card), card, today))
                 .toList();
-        List<FutureResponses.Loan> loans = loanRepository.findByUserIdOrderById(userId).stream()
+        List<FutureResponses.Loan> loans = loanEntities.stream()
                 .map(loan -> {
                     LoanPlan plan = toPlan(loan);
                     List<LocalDate> dues = plan.dueDates();
@@ -330,6 +353,7 @@ public class FutureService {
                             loan.getInstallmentsPaid(),
                             plan.remainingInstallments(),
                             loan.getNextDueDate(),
+                            plan.upcomingDueDate(today),
                             dues.isEmpty() ? null : dues.get(dues.size() - 1),
                             loan.getAnnualRate(),
                             loan.getLastSyncedAt(),
@@ -341,7 +365,13 @@ public class FutureService {
                     );
                 })
                 .toList();
-        return new FutureResponses.Commitments(cards, loans);
+        // Commitments shows cards and loans, so their own sync dates are what can be late here.
+        List<BankDataFreshness.Source> synced = new ArrayList<>();
+        cardEntities.forEach(card -> synced.add(new BankDataFreshness.Source(card.getInstitution(), card.getLastSyncedAt())));
+        loanEntities.forEach(loan -> synced.add(new BankDataFreshness.Source(loan.getInstitution(), loan.getLastSyncedAt())));
+        List<FutureResponses.ManualDebt> manual = manualDebtRepository.findByUserIdOrderById(userId).stream()
+                .map(FutureService::toResponse).toList();
+        return new FutureResponses.Commitments(cards, loans, manual, BankDataFreshness.of(synced, clock.instant()));
     }
 
     @Transactional(readOnly = true)
@@ -471,6 +501,37 @@ public class FutureService {
     }
 
     static final int MAX_ENVELOPES = 10;
+    static final int MAX_MANUAL_DEBTS = 10;
+    /** Origin of a number typed by the person; ESTIMATED because nobody checked it with the institution. */
+    static final String MANUAL = "MANUAL";
+
+    /** "Pix no crédito" typed by the person (B14, ADR 0020): enters the payoff plan, never the projection. */
+    @Transactional
+    public FutureResponses.ManualDebt createManualDebt(long userId, FutureRequests.ManualDebt request) {
+        userService.lockForUpdate(userId);
+        if (manualDebtRepository.countByUserId(userId) >= MAX_MANUAL_DEBTS) throw new WalletRuleException("MANUAL_DEBT_LIMIT");
+        ManualDebt debt = new ManualDebt();
+        debt.setUser(userService.getReferenceById(userId));
+        debt.setKind(request.kind());
+        debt.setLabel(request.label().trim());
+        debt.setOutstandingBalance(request.outstandingBalance());
+        debt.setInstallmentAmount(request.installmentAmount());
+        debt.setMonthlyCet(request.monthlyCet());
+        debt.setCreatedAt(clock.instant());
+        return toResponse(manualDebtRepository.save(debt));
+    }
+
+    @Transactional
+    public void deleteManualDebt(long userId, long debtId) {
+        manualDebtRepository.delete(manualDebtRepository.findByIdAndUserId(debtId, userId)
+                .orElseThrow(() -> new WalletRuleException("MANUAL_DEBT_NOT_FOUND")));
+    }
+
+    private static FutureResponses.ManualDebt toResponse(ManualDebt debt) {
+        return new FutureResponses.ManualDebt(debt.getId(), debt.getKind(), debt.getLabel(), debt.getOutstandingBalance(),
+                debt.getInstallmentAmount(), debt.getMonthlyCet(), LoanCost.annualFromMonthly(debt.getMonthlyCet()),
+                MANUAL, CashEvent.Certainty.ESTIMATED.name(), debt.getCreatedAt());
+    }
 
     @Transactional(readOnly = true)
     public FutureResponses.Envelopes envelopes(long userId) {
@@ -518,6 +579,41 @@ public class FutureService {
 
     private CashEventPlanner.GoalPlan toPlan(Goal goal) {
         return new CashEventPlanner.GoalPlan(goal.getId(), goal.getName(), goal.getMonthlyAmount(), goal.getDayOfMonth());
+    }
+
+    /**
+     * "Ver se cabe" for the month plan (ADR 0021): the next 90 days as they are and with {@code slices} as the active
+     * plan (an active plan is replaced, not added); only the slices marked as commitment enter. Nothing is saved.
+     * Same answer shape as the goal check (SAVINGS scenario).
+     */
+    @Transactional(readOnly = true)
+    public FutureResponses.ScenarioResult monthPlanFit(long userId, List<MonthPlanCalculator.Slice> slices) {
+        String invalid = MonthPlanCalculator.validate(slices);
+        if (invalid != null) throw new WalletRuleException(invalid);
+        Context context = load(userId);
+        MonthPlanCalculator.Income income = MonthPlanCalculator.income(context.confirmed())
+                .orElseThrow(() -> new WalletRuleException("MONTH_PLAN_NEEDS_INCOME"));
+        LocalDate end = context.today().plusDays(SCENARIO_HORIZON_DAYS);
+        List<CashEvent> baseline = context.plan(end);
+        List<MonthPlanCalculator.Commitment> commitments =
+                MonthPlanCalculator.commitments(income.monthly(), slices, context.goalsMonthly());
+        List<CashEvent> withPlan = new ArrayList<>(baseline.stream().filter(event -> event.kind() != CashEvent.Kind.PLAN).toList());
+        withPlan.addAll(MonthPlanCalculator.events(commitments, income.main(), context.today(), end));
+        OverdraftCost.Rate overdraftRate = marketRates.overdraftRate(userId);
+        ProjectionEngine.Projection before = ProjectionEngine.project(context.today(), context.balance(), baseline, SCENARIO_HORIZON_DAYS);
+        ProjectionEngine.Projection after = ProjectionEngine.project(context.today(), context.balance(), withPlan, SCENARIO_HORIZON_DAYS);
+        return new FutureResponses.ScenarioResult(summary(before), summary(after),
+                MonthPlanCalculator.sum(commitments), 0, null,
+                toResponse(before, SCENARIO_HORIZON_DAYS, overdraftRate), toResponse(after, SCENARIO_HORIZON_DAYS, overdraftRate));
+    }
+
+    /** The stored slices, in order; empty when the person never saved a plan. */
+    static List<MonthPlanCalculator.Slice> slices(com.github.yildizmy.domain.entity.MonthPlan plan) {
+        if (plan == null) return List.of();
+        return plan.getSlices().stream()
+                .map(row -> new MonthPlanCalculator.Slice(MonthPlanCalculator.Kind.valueOf(row.getKind()), row.getLabel(),
+                        row.getPercent(), row.isCommitment()))
+                .toList();
     }
 
     /** How far "Pergunte à Wall.ia" looks for risks and the next income. */
@@ -603,6 +699,11 @@ public class FutureService {
 
     // --- loading -----------------------------------------------------------------------------
 
+    /** The same data every Futuro calculation reads; for the month plan and cash-flow services (ADR 0021). */
+    Context context(long userId) {
+        return load(userId);
+    }
+
     private Context load(long userId) {
         LocalDate today = LocalDate.now(clock.withZone(ZONE));
         List<Wallet> wallets = walletRepository.findByUserId(userId);
@@ -610,7 +711,10 @@ public class FutureService {
         // Recurrences look back up to a year; everyday spending 90 days. Older history changes nothing here.
         List<Transaction> transactions = transactionRepository.findAllByUserIdSince(userId,
                 today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant());
-        List<Movement> movements = movements(transactions, wallets);
+        List<CreditCard> cards = creditCardRepository.findByUserIdOrderById(userId);
+        List<CardPlan> cardPlans = cards.stream().map(this::toPlan).toList();
+        // The card bill paid from the account is the invoice's purchases, already projected as the invoice (B12).
+        List<Movement> movements = CardBillPayment.withoutBillPayments(movements(transactions, wallets), cardPlans);
         List<RecurrencePattern> patterns = RecurrenceDetector.detect(movements);
         Map<String, RecurrenceDecision> decisions = decisionRepository.findByUserId(userId).stream()
                 .collect(Collectors.toMap(RecurrenceDecision::getPatternKey, Function.identity()));
@@ -621,7 +725,6 @@ public class FutureService {
                 })
                 .map(pattern -> new ConfirmedRecurrence(pattern, Category.valueOf(decisions.get(pattern.key()).getCategory())))
                 .toList();
-        List<CreditCard> cards = creditCardRepository.findByUserIdOrderById(userId);
         List<Loan> loans = loanRepository.findByUserIdOrderById(userId);
 
         // Bills already projected (confirmed) or still being asked about (pending) are not everyday spending.
@@ -634,36 +737,28 @@ public class FutureService {
                 .collect(Collectors.toSet());
         Optional<DailySpending.Estimate> dailyEstimate = DailySpending.estimate(today, movements, fixedKeys);
         BigDecimal dailyAmount = applied(decisions.get(DAILY_SPENDING_KEY), dailyEstimate);
-        List<CardPlan> cardPlans = cards.stream().map(this::toPlan).toList();
         Optional<DailySpending.Estimate> cardEstimate = DailySpending.estimateCard(today, cardPlans);
         BigDecimal cardAmount = applied(decisions.get(CARD_SPENDING_KEY), cardEstimate);
         List<CashEventPlanner.GoalPlan> goals = goalRepository.findByUserIdOrderById(userId).stream().map(this::toPlan).toList();
         BigDecimal reserved = envelopeRepository.findByUserIdOrderById(userId).stream()
                 .map(Envelope::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        com.github.yildizmy.domain.entity.MonthPlan monthPlan = monthPlanRepository.findByUserId(userId).orElse(null);
         return new Context(today, wallets, balance, patterns, decisions, confirmed,
                 cards, cardPlans, loans, loans.stream().map(this::toPlan).toList(),
                 dailyEstimate, dailyAmount, cardEstimate, cardAmount, mainCard(cardPlans, today), goals, reserved,
-                scheduled(transactions, wallets, today));
+                scheduled(transactions, wallets, today), transactions, monthPlan);
     }
 
     /**
      * Entries the bank itself scheduled (Open Finance LANCAMENTO_FUTURO, imported as PENDING): confirmed future
      * events with the bank's own date and value.
      */
-    /** The daily sync runs at 7h30; 36 hours without one means at least one run failed for this person (B50). */
-    public static final java.time.Duration BANK_DATA_STALE_AFTER = java.time.Duration.ofHours(36);
-
-    static java.time.Instant bankDataAsOf(List<Wallet> wallets) {
-        return wallets.stream()
+    /** Freshness of the Open Finance accounts, by the one rule every screen uses (B50, ADR 0020). */
+    public static BankDataFreshness.Status bankData(List<Wallet> wallets, java.time.Instant now) {
+        return BankDataFreshness.of(wallets.stream()
                 .filter(wallet -> wallet.getSource() == com.github.yildizmy.domain.enums.WalletSource.OPEN_FINANCE)
-                .map(Wallet::getLastSyncedAt)
-                .filter(java.util.Objects::nonNull)
-                .min(Comparator.naturalOrder())
-                .orElse(null);
-    }
-
-    static boolean bankDataStale(java.time.Instant asOf, java.time.Instant now) {
-        return asOf != null && asOf.plus(BANK_DATA_STALE_AFTER).isBefore(now);
+                .map(wallet -> new BankDataFreshness.Source(wallet.getInstitutionName(), wallet.getLastSyncedAt()))
+                .toList(), now);
     }
 
     static List<CashEvent> scheduled(List<Transaction> transactions, List<Wallet> wallets, LocalDate today) {
@@ -725,16 +820,20 @@ public class FutureService {
      */
     List<Movement> movements(long userId, List<Wallet> wallets) {
         LocalDate today = LocalDate.now(clock.withZone(ZONE));
-        return movements(transactionRepository.findAllByUserIdSince(userId,
-                today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant()), wallets);
+        List<CardPlan> cardPlans = creditCardRepository.findByUserIdOrderById(userId).stream().map(this::toPlan).toList();
+        // Same cash view as the projection: the card bill is the invoice's purchases, not a monthly charge (B12).
+        return CardBillPayment.withoutBillPayments(movements(transactionRepository.findAllByUserIdSince(userId,
+                today.minusMonths(HISTORY_MONTHS).atStartOfDay(ZONE).toInstant()), wallets), cardPlans);
     }
 
     static List<Movement> movements(List<Transaction> transactions, List<Wallet> wallets) {
         Set<Long> own = wallets.stream().map(Wallet::getId).collect(Collectors.toSet());
         Map<Long, Wallet> byId = wallets.stream().collect(Collectors.toMap(Wallet::getId, Function.identity()));
         List<Movement> movements = new ArrayList<>();
+        // Open Finance imports each side of a move between own accounts on its own; the pair is not cash flow.
+        Set<Transaction> ownMoves = InsightsService.ownAccountPairs(transactions);
         for (Transaction transaction : transactions) {
-            if (transaction.getStatus() != Status.SUCCESS) continue;
+            if (transaction.getStatus() != Status.SUCCESS || ownMoves.contains(transaction)) continue;
             Long from = transaction.getFromWallet().getId();
             Long to = transaction.getToWallet().getId();
             long typeId = transaction.getType().getId();
@@ -980,6 +1079,7 @@ public class FutureService {
         static String origin(String text) {
             if (text == null) return null;
             if (text.equals("Meta")) return "GOAL";
+            if (text.equals(MonthPlanCalculator.ORIGIN)) return "MONTH_PLAN";
             if (text.equals("Valor informado")) return "USER_VALUE";
             return AVERAGE.matcher(text).matches() ? "AVERAGE_DAYS" : null;
         }
@@ -1013,7 +1113,7 @@ public class FutureService {
         );
     }
 
-    private record Context(
+    record Context(
             LocalDate today,
             List<Wallet> wallets,
             BigDecimal balance,
@@ -1031,8 +1131,29 @@ public class FutureService {
             CardPlan mainCard,
             List<CashEventPlanner.GoalPlan> goals,
             BigDecimal reserved,
-            List<CashEvent> scheduled
+            List<CashEvent> scheduled,
+            List<Transaction> transactions,
+            com.github.yildizmy.domain.entity.MonthPlan monthPlan
     ) {
+
+        BigDecimal goalsMonthly() {
+            return goals.stream().map(CashEventPlanner.GoalPlan::monthlyAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        /** The active plan's monthly commitments; empty when the plan is off or there is no confirmed income. */
+        List<MonthPlanCalculator.Commitment> planCommitments() {
+            if (monthPlan == null || !monthPlan.isActive()) return List.of();
+            return MonthPlanCalculator.income(confirmed)
+                    .map(income -> MonthPlanCalculator.commitments(income.monthly(), slices(monthPlan), goalsMonthly()))
+                    .orElse(List.of());
+        }
+
+        private List<CashEvent> planEvents(LocalDate end) {
+            List<MonthPlanCalculator.Commitment> commitments = planCommitments();
+            if (commitments.isEmpty()) return List.of();
+            return MonthPlanCalculator.events(commitments,
+                    MonthPlanCalculator.income(confirmed).orElseThrow().main(), today, end);
+        }
 
         /** Everything the user confirmed, everyday spending on the account and on the card included. */
         List<CashEvent> plan(LocalDate end) {
@@ -1054,12 +1175,13 @@ public class FutureService {
             return events;
         }
 
-        /** Bills, invoices, instalments and the user's goals. */
+        /** Bills, invoices, instalments, the user's goals and the active month plan (ADR 0021). */
         List<CashEvent> planFixed(LocalDate end) {
             List<CashEvent> events = new ArrayList<>(withScheduled(
                     CashEventPlanner.plan(today, end, confirmed, cardPlans, loanPlans),
                     scheduled.stream().filter(event -> !event.date().isAfter(end)).toList()));
             events.addAll(CashEventPlanner.goals(goals, today, end));
+            events.addAll(planEvents(end));
             return events;
         }
     }

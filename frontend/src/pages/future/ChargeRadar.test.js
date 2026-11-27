@@ -1,5 +1,6 @@
 import { act, Simulate } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import ChargeRadar from './ChargeRadar';
 import ThemeProvider from '../../theme';
 import HttpService from '../../services/HttpService';
@@ -55,9 +56,11 @@ afterEach(() => {
 async function renderPage() {
   await act(async () => {
     root.render(
-      <ThemeProvider>
-        <ChargeRadar />
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider>
+          <ChargeRadar />
+        </ThemeProvider>
+      </MemoryRouter>
     );
   });
 }
@@ -112,6 +115,8 @@ test('stores the user response and refreshes the radar instead of changing the i
   });
   expect(text()).toContain('future.chargeRadar.emptyTitle');
   expect(text()).toContain('future.chargeRadar.decisionSaved.NOT_ANOMALOUS');
+  // Nothing left to review: one line, without the section title or the explanation.
+  expect(text()).not.toContain('future.chargeRadar.description');
 });
 
 test('shows a retry action when the alert service is temporarily unavailable', async () => {

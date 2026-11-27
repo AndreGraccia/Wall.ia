@@ -20,7 +20,11 @@ public class TransactionResponse {
     private UUID referenceNumber;
     private Status status;
     private TransactionSource source;
+    /** Open Finance {@code type} (PIX, TED, BOLETO...); null for local entries and imports before V31. */
+    private String paymentType;
     private WalletResponse fromWallet;
     private WalletResponse toWallet;
     private TypeResponse type;
+    /** One side of a move between the user's own accounts imported as two entries; neither income nor expense. */
+    private boolean ownAccountMove;
 }

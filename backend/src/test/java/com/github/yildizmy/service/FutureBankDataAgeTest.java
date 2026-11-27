@@ -12,37 +12,39 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** The wallets side of B50: only Open Finance accounts count, and they bring their institution. */
 class FutureBankDataAgeTest {
 
     private static final Instant NOW = Instant.parse("2026-09-25T12:00:00Z");
 
-    private static Wallet wallet(WalletSource source, String syncedAt) {
+    private static Wallet wallet(WalletSource source, String institution, String syncedAt) {
         Wallet wallet = new Wallet();
         wallet.setSource(source);
+        wallet.setInstitutionName(institution);
         wallet.setLastSyncedAt(syncedAt == null ? null : Instant.parse(syncedAt));
         return wallet;
     }
 
     @Test
-    void theOldestBankAccountSaysHowOldTheBankDataIs() {
-        List<Wallet> wallets = List.of(
-                wallet(WalletSource.OPEN_FINANCE, "2026-09-25T10:30:00Z"),
-                wallet(WalletSource.OPEN_FINANCE, "2026-09-24T10:30:00Z"),
-                wallet(WalletSource.LOCAL, null));
+    void theOldestBankAccountSaysHowOldTheBankDataIsAndFromWhichInstitution() {
+        var status = FutureService.bankData(List.of(
+                wallet(WalletSource.OPEN_FINANCE, "Banco Aurora", "2026-09-25T10:30:00Z"),
+                wallet(WalletSource.OPEN_FINANCE, "Banco Boreal", "2026-09-24T10:30:00Z"),
+                wallet(WalletSource.LOCAL, null, null)), NOW);
 
-        assertEquals(Instant.parse("2026-09-24T10:30:00Z"), FutureService.bankDataAsOf(wallets));
-        assertFalse(FutureService.bankDataStale(FutureService.bankDataAsOf(wallets), NOW), "26 hours: one daily sync late at most");
+        assertEquals(Instant.parse("2026-09-24T10:30:00Z"), status.asOf());
+        assertEquals("Banco Boreal", status.institution());
+        assertFalse(status.stale(), "26 hours: one daily sync late at most");
     }
 
     @Test
-    void moreThan36HoursMeansAtLeastOneDailySyncFailed() {
-        assertTrue(FutureService.bankDataStale(Instant.parse("2026-09-23T23:59:00Z"), NOW));
-        assertFalse(FutureService.bankDataStale(Instant.parse("2026-09-24T00:01:00Z"), NOW));
+    void anOpenFinanceAccountNeverSyncedIsLate() {
+        // Before B50 was centralised the Future said "not late" here and the Radar said "late".
+        assertTrue(FutureService.bankData(List.of(wallet(WalletSource.OPEN_FINANCE, "Banco Aurora", null)), NOW).stale());
     }
 
     @Test
     void withoutBankAccountsThereIsNoBankDataToBeOld() {
-        assertNull(FutureService.bankDataAsOf(List.of(wallet(WalletSource.LOCAL, null))));
-        assertFalse(FutureService.bankDataStale(null, NOW));
+        assertNull(FutureService.bankData(List.of(wallet(WalletSource.LOCAL, null, null)), NOW));
     }
 }

@@ -14,7 +14,16 @@ import com.github.yildizmy.exception.NoSuchElementFoundException;
 import com.github.yildizmy.domain.entity.Wallet;
 import com.github.yildizmy.repository.WalletRepository;
 import com.github.yildizmy.validator.IbanValidator;
+import com.github.yildizmy.domain.entity.User;
+import com.github.yildizmy.security.UserDetailsImpl;
+import com.github.yildizmy.security.WalletAccess;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Spy;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -62,6 +71,24 @@ class WalletServiceTest {
 
     @Mock
     private MessageSourceConfig messageConfig;
+
+    // Real ownership logic; it only reads the security context, the repositories are never touched.
+    @Spy
+    private WalletAccess walletAccess = new WalletAccess(null, null);
+
+    private static final long OWNER_ID = 7L;
+
+    @BeforeEach
+    void authenticateOwner() {
+        var owner = new UserDetailsImpl(OWNER_ID, "owner", "x", "A", "B", java.util.List.of());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(owner, null, owner.getAuthorities()));
+    }
+
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void findById_shouldReturnWalletResponse() {
@@ -275,6 +302,36 @@ class WalletServiceTest {
     }
 
     @Test
+    void transferAndWithdraw_refuseWalletOfAnotherUserEvenWithoutControllerCheck() {
+        var foreign = createTestWallet(1L, "FROM123", "Someone else's", BigDecimal.valueOf(1000));
+        foreign.getUser().setId(99L);
+        var mine = createTestWallet(2L, "TO123", "Mine", BigDecimal.ZERO);
+        when(walletRepository.lockByIbans(anyList())).thenReturn(java.util.List.of(foreign, mine));
+
+        assertThrows(AccessDeniedException.class,
+                () -> walletService.transferFunds(createTestTransactionRequest("FROM123", "TO123", BigDecimal.TEN)));
+        assertThrows(AccessDeniedException.class,
+                () -> walletService.withdrawFunds(createTestTransactionRequest("FROM123", null, BigDecimal.TEN)));
+
+        assertEquals(BigDecimal.valueOf(1000), foreign.getBalance());
+        assertEquals(BigDecimal.ZERO, mine.getBalance());
+        verify(walletRepository, never()).save(any());
+        verifyNoInteractions(transactionService);
+    }
+
+    @Test
+    void transfer_refusesWhenNobodyIsAuthenticated() {
+        SecurityContextHolder.clearContext();
+        var from = createTestWallet(1L, "FROM123", "From", BigDecimal.valueOf(1000));
+        var to = createTestWallet(2L, "TO123", "To", BigDecimal.ZERO);
+        when(walletRepository.lockByIbans(anyList())).thenReturn(java.util.List.of(from, to));
+
+        assertThrows(AccessDeniedException.class,
+                () -> walletService.transferFunds(createTestTransactionRequest("FROM123", "TO123", BigDecimal.TEN)));
+        verifyNoInteractions(transactionService);
+    }
+
+    @Test
     void operations_rejectInvalidAmountsBeforeTouchingBalances() {
         for (var amount : java.util.List.of(new BigDecimal("-1"), BigDecimal.ZERO, new BigDecimal("0.001"), new BigDecimal("10000000000"))) {
             var request = createTestTransactionRequest("FROM", "TO", amount);
@@ -381,6 +438,9 @@ class WalletServiceTest {
         wallet.setIban(iban);
         wallet.setName(name);
         wallet.setBalance(balance);
+        var owner = new User();
+        owner.setId(OWNER_ID);
+        wallet.setUser(owner);
         return wallet;
     }
 

@@ -1,0 +1,40 @@
+/* Wall.ia "Grafite": tokens das peças de marca fora do app (imagem OG). Fonte única dos valores:
+   DESIGN.md e frontend/src/theme/palette.js. A Geist vem do pacote @fontsource do frontend
+   (rode `npm ci` em frontend/ antes); sem ele a peça cai para a fonte do sistema. */
+@font-face {
+  font-family: 'Geist Variable';
+  font-weight: 100 900;
+  src: url(../../frontend/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2) format('woff2-variations');
+}
+
+:root {
+  --bg: #08090C;
+  --surface: #0F1116;
+  --line: #222631;
+  --zero: #616B7F;
+  --text: #F3F5F9;
+  --text-2: #A4ABBA;
+  --future: #8FA3FF;
+  --negative: #FF7B7B;
+  --hole: rgba(255, 123, 123, 0.16);
+  --font: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: var(--font); font-variant-numeric: tabular-nums; }
+body { overflow: hidden; -webkit-font-smoothing: antialiased; position: relative; }
+
+/* "Wall.ia" com o ponto em `future`, como components/brand. */
+.wordmark { font-weight: 600; letter-spacing: -0.03em; line-height: 1; display: inline-flex; align-items: baseline; }
+.wordmark .dot { width: 0.34em; height: 0.34em; margin: 0 0.06em; border-radius: 50%; background: var(--future); }
+.headline { font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; }
+.body { color: var(--text-2); line-height: 1.45; }
+
+/* Vocabulário do gráfico: zero, até hoje (sólido), projeção (tracejada), buraco, hoje. */
+.zero { stroke: var(--zero); stroke-width: 1.5; }
+.past { fill: none; stroke: var(--text); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.ahead { fill: none; stroke: var(--future); stroke-width: 4; stroke-dasharray: 12 10; stroke-linecap: round; stroke-linejoin: round; }
+.hole { fill: var(--hole); }
+.today { fill: var(--future); stroke: var(--bg); stroke-width: 5; }
+.tick { fill: var(--text-2); font-size: 20px; font-weight: 500; }
+.tick.negative { fill: var(--negative); }

@@ -60,6 +60,16 @@ public class AccountExportService {
             new Section("goals", "SELECT id, name, monthly_amount, day_of_month, created_at FROM goal "
                     + "WHERE user_id = ? ORDER BY id", 1),
             new Section("envelopes", "SELECT id, name, amount, created_at FROM envelope WHERE user_id = ? ORDER BY id", 1),
+            new Section("manualDebts", "SELECT id, kind, label, outstanding_balance, installment_amount, monthly_cet, "
+                    + "created_at FROM manual_debt WHERE user_id = ? ORDER BY id", 1),
+            new Section("monthPlan", "SELECT active, activated_at, updated_at FROM month_plan WHERE user_id = ?", 1),
+            new Section("monthPlanSlices", "SELECT s.position, s.kind, s.label, s.percent, s.commitment "
+                    + "FROM month_plan_slice s JOIN month_plan p ON p.id = s.month_plan_id WHERE p.user_id = ? "
+                    + "ORDER BY s.position", 1),
+            new Section("financialProfile", "SELECT preference, main_goal, updated_at FROM financial_profile "
+                    + "WHERE user_id = ?", 1),
+            new Section("methodChoices", "SELECT method, catalog_version, chosen_at FROM method_choice "
+                    + "WHERE user_id = ? ORDER BY chosen_at, id", 1),
             new Section("answers", "SELECT pattern_key, status, category, amount, decided_at FROM recurrence_decision "
                     + "WHERE user_id = ? ORDER BY id", 1),
             new Section("alerts", "SELECT enabled, last_window_start, last_sent_at, updated_at FROM future_alert "

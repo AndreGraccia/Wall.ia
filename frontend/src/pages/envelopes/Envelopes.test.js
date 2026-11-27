@@ -68,8 +68,21 @@ test('envelopes show what is left without a destination and warn when they excee
   await render(<Envelopes />);
 
   expect(text()).toContain('IPVA');
-  expect(text()).toMatch(/-R\$\s200,00/);
+  expect(text()).toMatch(/\u2212R\$\s200,00/);
   expect(text()).toMatch(/envelopes\.unbacked:R\$\s200,00/);
+});
+
+test('with no envelope the page is one sentence and the form, without the three numbers', async () => {
+  HttpService.getWithAuth.mockResolvedValue({ items: [], balance: 2555, reserved: 0, unbacked: 0 });
+  await render(<Envelopes />);
+
+  expect(text()).toContain('envelopes.empty');
+  expect(container.querySelector('form')).not.toBeNull();
+  expect(text()).not.toContain('envelopes.balance');
+  expect(text()).not.toContain('envelopes.free');
+  expect(text()).not.toMatch(/R\$\s2\.555/);
+  // The explanation waits behind "Why?".
+  expect(button('envelopes.why').getAttribute('aria-expanded')).toBe('false');
 });
 
 test('a new envelope is sent in reais and an amount above the API ceiling is blocked on screen', async () => {
@@ -179,9 +192,11 @@ test('the daily limit card separates what the bank lacks, what keeping the envel
     />
   );
 
-  expect(text()).toMatch(/future\.limit\.short:R\$\s504,87/);
+  // The hero reads "Faltam / R$ 504,87 / até 05/10, mesmo sem gastar nada".
+  expect(text()).toContain('future.hero.shortLead');
+  expect(text()).toMatch(/future\.hero\.shortLead\s*R\$\s504,87/);
   expect(text()).toMatch(/future\.limit\.keepEnvelopes:R\$\s804,87/);
-  expect(text()).toMatch(/future\.limit\.shortPaceLowest:-R\$\s792,67/);
+  expect(text()).toMatch(/future\.limit\.shortPaceLowest:\u2212R\$\s792,67/);
   expect(text()).toContain('future.limit.bestWay');
   expect(button('future.limit.seeWayOut')).toBeDefined();
 });

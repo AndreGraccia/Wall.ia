@@ -35,7 +35,8 @@ class FutureGoalsTest {
     private final FutureService service = new FutureService(
             mock(WalletRepository.class), mock(TransactionRepository.class), mock(RecurrenceDecisionRepository.class),
             mock(CreditCardRepository.class), mock(LoanRepository.class), goals,
-            mock(com.github.yildizmy.repository.EnvelopeRepository.class), mock(UserService.class),
+            mock(com.github.yildizmy.repository.EnvelopeRepository.class),
+            mock(com.github.yildizmy.repository.ManualDebtRepository.class), mock(com.github.yildizmy.repository.MonthPlanRepository.class), mock(UserService.class),
             mock(com.github.yildizmy.service.market.MarketRatesService.class),
             Clock.fixed(Instant.parse("2026-01-30T15:00:00Z"), ZoneOffset.UTC));
 

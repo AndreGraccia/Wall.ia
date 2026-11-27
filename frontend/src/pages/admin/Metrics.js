@@ -3,20 +3,12 @@ import {
   Alert,
   Box,
   Button,
-  Card,
   Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -26,7 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { useSnackbar } from 'notistack';
 import HttpService from '../../services/HttpService';
 import { StatBlock } from '../../components/future-ui';
-import { PageHeading, PageSkeleton, SectionCard } from '../../components/wallet-ui';
+import { ListRow } from '../../components/detail-ui';
+import { PageHeading, PageSkeleton } from '../../components/wallet-ui';
 import { errorKey, money } from '../../utils/wallet';
 
 const PIX = ['PIX_PREPARE', 'PIX_CONFIRM'];
@@ -89,7 +82,6 @@ export default function Metrics() {
       <Container maxWidth="lg">
         <PageHeading
           title={t('metrics.heading')}
-          description={t('metrics.description')}
           action={
             <ToggleButtonGroup
               exclusive
@@ -119,8 +111,8 @@ export default function Metrics() {
           </Alert>
         )}
         {star && (
-          <Stack spacing={3} aria-busy={state.loading}>
-            <Card sx={{ p: { xs: 3, md: 4 } }}>
+          <Stack spacing={{ xs: 5, md: 6 }} aria-busy={state.loading}>
+            <Box>
               <StatBlock
                 label={t('metrics.northStar')}
                 value={
@@ -128,91 +120,87 @@ export default function Metrics() {
                     ? t('common.noData')
                     : Number(star.avoidedPerActiveUserMonth).toLocaleString(lang)
                 }
-                help={t('metrics.northStarHelp')}
+                tooltip={t('metrics.northStarHelp')}
                 emphasis
               />
-              {/* The gap lives on a Box: an mt on the Grid would replace its negative spacing margin. */}
-              <Box sx={{ mt: 1 }}>
-                <Grid container spacing={3}>
-                  {[
-                    ['activeUsers', star.activeUsers],
-                    ['gradedUsers', star.gradedUsers],
-                    ['avoided', star.avoided],
-                    ['missed', star.missed],
-                    [
-                      'meanError',
-                      star.meanAbsoluteError == null ? t('common.noData') : money(star.meanAbsoluteError, lang),
-                    ],
-                  ].map(([key, value]) => (
-                    <Grid item xs={6} md={2.4} key={key}>
-                      <StatBlock
-                        label={t(`metrics.${key}`)}
-                        value={String(value)}
-                        negative={key === 'missed' && value > 0}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, minmax(0, 1fr))' },
+                  gap: { xs: 3, md: 4 },
+                  mt: 4,
+                  pt: 3,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                {[
+                  ['activeUsers', star.activeUsers],
+                  ['gradedUsers', star.gradedUsers],
+                  ['avoided', star.avoided],
+                  ['missed', star.missed],
+                  [
+                    'meanError',
+                    star.meanAbsoluteError == null ? t('common.noData') : money(star.meanAbsoluteError, lang),
+                  ],
+                ].map(([key, value]) => (
+                  <StatBlock
+                    compact
+                    key={key}
+                    label={t(`metrics.${key}`)}
+                    value={String(value)}
+                    negative={key === 'missed' && value > 0}
+                  />
+                ))}
               </Box>
-            </Card>
-
-            {/* Box keeps Stack's margin reset off the Grid's negative margins. */}
-            <Box>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <SectionCard title={t('metrics.pixTitle')}>
-                    <Box sx={{ px: 3, pb: 3 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('metrics.pixHelp')}
-                      </Typography>
-                      <Box sx={{ mt: 1 }}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={6}>
-                            <StatBlock label={t('metrics.pixPrepare')} value={String(pix('PIX_PREPARE'))} />
-                          </Grid>
-                          <Grid item xs={6}>
-                            <StatBlock label={t('metrics.pixConfirm')} value={String(pix('PIX_CONFIRM'))} />
-                          </Grid>
-                        </Grid>
-                      </Box>
-                    </Box>
-                  </SectionCard>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <SectionCard title={t('metrics.askTitle')}>
-                    <Typography variant="body2" color="text.secondary" sx={{ px: 3 }}>
-                      {asked
-                        ? t('metrics.askUnknown', { percent: Math.round((unknown / asked) * 100), total: asked })
-                        : t('metrics.askNone')}
-                    </Typography>
-                    <TableContainer sx={{ px: 1, pb: 1, overflowX: 'auto' }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('metrics.intent')}</TableCell>
-                            <TableCell align="right">{t('metrics.count')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {questions.map((row) => (
-                            <TableRow key={row.intent}>
-                              <TableCell>{t(`metrics.intents.${row.intent}`, { defaultValue: row.intent })}</TableCell>
-                              <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                                {row.count}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </SectionCard>
-                </Grid>
-              </Grid>
             </Box>
 
-            <Box>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+                gap: { xs: 5, md: 6 },
+                alignItems: 'start',
+              }}
+            >
+              <Box component="section" aria-labelledby="metrics-ask">
+                <Typography id="metrics-ask" variant="h6" component="h2">
+                  {t('metrics.askTitle')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+                  {asked
+                    ? t('metrics.askUnknown', { percent: Math.round((unknown / asked) * 100), total: asked })
+                    : t('metrics.askNone')}
+                </Typography>
+                {questions.length > 0 && (
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                    {questions.map((row) => (
+                      <ListRow
+                        key={row.intent}
+                        title={t(`metrics.intents.${row.intent}`, { defaultValue: row.intent })}
+                        value={row.count.toLocaleString(lang)}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </Box>
+              <Box component="section" aria-labelledby="metrics-pix">
+                <Typography id="metrics-pix" variant="h6" component="h2">
+                  {t('metrics.pixTitle')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+                  {t('metrics.pixHelp')}
+                </Typography>
+                <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                  <ListRow title={t('metrics.pixPrepare')} value={pix('PIX_PREPARE').toLocaleString(lang)} />
+                  <ListRow title={t('metrics.pixConfirm')} value={pix('PIX_CONFIRM').toLocaleString(lang)} />
+                </Box>
+              </Box>
+            </Box>
+
+            <Box sx={{ pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
               {/* Heavy: it syncs every account. A text button and a confirmation keep it off the path of reading. */}
-              <Button onClick={() => setConfirmSync(true)} disabled={busy}>
+              <Button onClick={() => setConfirmSync(true)} disabled={busy} variant="outlined">
                 {t('metrics.runSync')}
               </Button>
               <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>

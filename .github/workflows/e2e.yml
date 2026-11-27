@@ -4,9 +4,13 @@ name: E2E
 # Dockerfiles as production. Separate from CI so a slow or flaky browser run never hides a unit test result.
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -16,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Throwaway secrets for this run
         run: |
@@ -32,7 +36,7 @@ jobs:
       - name: Stack up (production compose, waits for healthy services)
         run: docker compose --env-file .env.properties -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait --wait-timeout 300
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
 

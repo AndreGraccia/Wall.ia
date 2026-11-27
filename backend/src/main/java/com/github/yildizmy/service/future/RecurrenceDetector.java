@@ -34,8 +34,8 @@ public final class RecurrenceDetector {
     // ponytail: keyword heuristics for the suggestion only; the user's answer is what counts.
     private static final Pattern RENT = Pattern.compile("aluguel|imobiliari|condominio");
     // Card bills and loan instalments already come from card/loan data; counting them here would double them.
-    private static final Pattern COVERED_ELSEWHERE = Pattern.compile(
-            "fatura|pagamento (do |de )?cartao|cartao de credito|emprestimo|financiamento|consorcio");
+    // The card side of it lives in CardBillPayment, the one place that knows what a bill payment looks like (B12).
+    private static final Pattern LOANS = Pattern.compile("emprestimo|financiamento|consorcio");
     private static final Pattern NOISE = Pattern.compile("[^a-z0-9 ]");
 
     private RecurrenceDetector() {
@@ -116,7 +116,7 @@ public final class RecurrenceDetector {
     static List<Integer> circularDays(List<Integer> days) {
         List<Integer> sorted = days.stream().sorted().toList();
         if (sorted.get(sorted.size() - 1) - sorted.get(0) <= 15) return sorted;
-        return days.stream().map(day -> day < 15 ? day + 31 : day).sorted().toList();
+        return days.stream().mapToInt(Integer::intValue).map(day -> day < 15 ? day + 31 : day).sorted().boxed().toList();
     }
 
     private static Category suggest(RecurrencePattern pattern, List<RecurrencePattern> all) {
@@ -138,7 +138,8 @@ public final class RecurrenceDetector {
 
     /** Card bills and loan instalments: projected from card and loan data, never from the account history. */
     static boolean coveredElsewhere(String counterparty) {
-        return COVERED_ELSEWHERE.matcher(normalize(counterparty)).find();
+        String normalized = normalize(counterparty);
+        return CardBillPayment.describedAsBill(normalized) || LOANS.matcher(normalized).find();
     }
 
     static String keyOf(Movement movement) {

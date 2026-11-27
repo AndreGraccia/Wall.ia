@@ -13,7 +13,7 @@ const EMPTY = { name: '', amount: '', day: '' };
  * Monthly goals the user sets. Each one leaves the spendable balance on its day, so the daily limit
  * already answers "how much can I spend without giving up the goal?".
  */
-export default function Goals({ onChanged }) {
+export default function Goals({ onChanged, collapsible }) {
   const { t, i18n } = useTranslation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const lang = i18n.language;
@@ -137,7 +137,7 @@ export default function Goals({ onChanged }) {
   };
 
   return (
-    <SectionCard title={t('future.goals.title')}>
+    <SectionCard title={t('future.goals.title')} collapsible={collapsible}>
       <Typography variant="body2" color="text.secondary" sx={{ px: 3, pb: 2 }}>
         {t('future.goals.help')}
       </Typography>
@@ -264,7 +264,7 @@ export default function Goals({ onChanged }) {
     </SectionCard>
   );
 }
-Goals.propTypes = { onChanged: PropTypes.func.isRequired };
+Goals.propTypes = { onChanged: PropTypes.func.isRequired, collapsible: PropTypes.bool };
 
 /** Fits = no new negative day in 90 days. The numbers come from the engine, the sentence only reads them. */
 function FitAnswer({ result }) {

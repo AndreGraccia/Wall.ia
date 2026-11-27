@@ -1,0 +1,79 @@
+# Blueprint do Render: só a API (Docker). Banco no Neon, frontend na Vercel. Passo a passo em docs/deploy-producao.md.
+# Nenhum segredo aqui: tudo que tem "sync: false" o Render pede na criação do Blueprint e guarda no painel.
+services:
+  - type: web
+    name: wallia-api
+    runtime: docker
+    plan: free
+    # Mais perto do Brasil entre as regiões do Render. Crie o banco do Neon também na AWS us-east-1.
+    region: virginia
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    # Readiness inclui o banco: o deploy só troca a versão quando a nova responde e alcança o Neon.
+    healthCheckPath: /actuator/health/readiness
+    envVars:
+      # Banco (Neon). URL JDBC sem usuário e senha, com sslmode=require.
+      # Ex.: jdbc:postgresql://ep-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      # Poucas conexões: 512 MB de RAM no plano free e limite de conexões no Neon free.
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE
+        value: "5"
+
+      # Segredos da aplicação. Gere cada um com: openssl rand -base64 64 (jwt) e openssl rand -base64 32 (dados).
+      - key: JWT_SECRET
+        sync: false
+      # Obrigatória em produção (ADR 0014). Perder esta chave torna as descrições ilegíveis: guarde num cofre.
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+
+      # Endereço público do frontend na Vercel (ex.: https://wallia.vercel.app). O navegador manda esse Origin
+      # pelo rewrite e o CORS do Spring recusa POST de qualquer outro.
+      - key: FRONTEND_ORIGIN
+        sync: false
+
+      # SMTP do código de cadastro. O plano free do Render bloqueia saída nas portas 25, 465 e 587:
+      # use a porta alternativa do provedor com STARTTLS (Brevo 2525, Resend 2587).
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_AUTH
+        value: "true"
+      - key: MAIL_STARTTLS
+        value: "true"
+
+      # Web Push (opcional; vazio desliga). Gere o par uma vez e não troque.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+
+      # Gemini (opcional; sem chave os relatórios usam a análise local).
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # A URL onrender.com é pública: só health fica exposto do actuator, e sem documentação da API.
+      - key: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+        value: health
+      - key: SPRINGDOC_API_DOCS_ENABLED
+        value: "false"
+      - key: SPRINGDOC_SWAGGER_UI_ENABLED
+        value: "false"
+      - key: LOGGING_STRUCTURED_FORMAT_CONSOLE
+        value: ecs
+      # 512 MB no plano free: sem isso a JVM usa só 25% da RAM para o heap.
+      - key: JAVA_TOOL_OPTIONS
+        value: "-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k"

@@ -34,6 +34,8 @@ Os números, as fontes e as projeções de negócio (três cenários de 36 meses
 - **Como cancelar assinaturas:** passos, mensagem pronta e o canal oficial de reclamação, sem comissão.
 - **Alertas**, opcionais: um aviso por janela negativa nova, por e-mail e por notificação no navegador (Web Push próprio, sem SDK), mesmo com a Wall.ia fechada. A notificação mostra só a data.
 - **Sincronização diária** automática às 7h30, para que alertas e placar usem o saldo do dia.
+- **Dado atrasado:** toda tela com dados do Open Finance (Futuro, Início, Radar, Compromissos e Análises) diz de qual instituição e de quando é o dado, e avisa antes dos números quando a última sincronização passou de 36 horas.
+- O pagamento da fatura do cartão não entra na média do dia a dia: as compras já estão na fatura projetada, e contar as duas seria contar duas vezes.
 - Saldo agora, quanto já tem destino (separando confirmado de estimado) e margem livre.
 - Saldo projetado dia a dia em 30, 60 ou 90 dias, com o menor saldo marcado.
 - Alerta de janela negativa ("entre 03/10 e 04/10 seu saldo pode ficar em -R$ 324,87") e "ver por quê", que lista as contas que causam o buraco e a entrada que o fecha, com o custo estimado do cheque especial no período: juros pela taxa média do seu banco publicada pelo Banco Central (ou a mediana dos bancos), nunca acima do teto legal de 8% ao mês, mais IOF, com a fonte e a data da taxa.
@@ -64,6 +66,17 @@ Os números, as fontes e as projeções de negócio (três cenários de 36 meses
 - Pagamento mínimo da fatura, com o aviso de que o resto vai para o rotativo e a taxa do rotativo no Banco Central.
 - Taxa do contrato comparada com a mediana do crédito pessoal no Banco Central, e CDI, Selic e IPCA do dia.
 - **Quanto este dinheiro custa:** quanto da próxima parcela é juro e quanto de juros ainda falta pagar até o fim.
+- **Quitar mais rápido:** compara só pagar as parcelas com maior juro primeiro e menor saldo primeiro, sem oferecer crédito ([ADR 0013](docs/adr/0013-planejador-de-quitacao.md)).
+- **Pix no crédito:** o Open Finance não informa, então a pessoa digita saldo, parcela e CET ao mês. Entra na ordem de quitação marcado como "informado por você" e estimado, nunca na projeção do saldo ([ADR 0020](docs/adr/0020-dado-atrasado-pix-no-credito-e-fatura.md)).
+
+**Início, Plano do mês e Meu método**
+
+- Início: o número do dia, saldo de hoje, ganhos e gastos do mês, o próximo período negativo explicado, 30/60/90 dias, planejado x realizado, metas e reservas e o método escolhido.
+
+- Plano do mês: a renda confirmada dividida em fatias editáveis; só as que a pessoa marca saem do saldo, no dia do salário, e o limite diário já desconta. "Ver se cabe" antes de ligar.
+- Entradas e saídas do mês por conta, forma de pagamento e categoria, com a lista de lançamentos filtrável e o que ainda vai sair; projeção mensal de 3, 6 e 12 meses.
+- Ocultar saldo em todas as telas, pelo olho no topo.
+- Catálogo de métodos de organização com sugestões por regra explícita, sem impor nenhum ([ADR 0021](docs/adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md)).
 
 **Base da carteira**
 
@@ -330,6 +343,12 @@ docker compose --env-file .env.properties -f docker-compose.yml -f docker-compos
 ```
 
 Esse comando inicia PostgreSQL, Mailpit, backend e frontend. Não mantenha as versões locais nas portas `3001` e `8082` enquanto executar a pilha completa em containers.
+
+## Deploy em produção
+
+Frontend na Vercel, API no Render (Docker) e PostgreSQL no Neon, nos planos gratuitos. O passo a passo, as variáveis, o rollback e os limites de cada plano (como o sono da API no Render) estão em [`docs/deploy-producao.md`](docs/deploy-producao.md). Arquivos de configuração: `render.yaml`, `frontend/vercel.json` e `.env.production.example`.
+
+Para um servidor próprio com Docker Compose, veja [`docs/operacao.md`](docs/operacao.md).
 
 ## Encerrando a aplicação
 

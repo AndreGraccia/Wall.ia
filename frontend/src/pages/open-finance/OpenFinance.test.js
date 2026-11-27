@@ -142,6 +142,37 @@ test('a consent left waiting can be declined from the page', async () => {
   expect(refresh).not.toHaveBeenCalled();
 });
 
+test('connected, the page shows the accounts, the last sync and Sync first; the journey and the permissions fold away', async () => {
+  useWallets.mockReturnValue({
+    refresh,
+    wallets: [
+      { id: 1, name: 'Conta corrente', institutionName: 'Banco Sandbox', balance: 2739.4, source: 'OPEN_FINANCE' },
+      { id: 2, name: 'Carteira manual', balance: 50, source: 'MANUAL' },
+    ],
+  });
+  HttpService.getWithAuth.mockResolvedValue(
+    status({
+      status: 'AUTHORISED',
+      accountCount: 1,
+      expiresAt: '2027-02-24T10:00:00Z',
+      lastSyncedAt: '2026-11-24T10:30:00Z',
+    })
+  );
+  await renderPage();
+
+  expect(text()).toContain('openFinance.connected.until');
+  expect(text()).toContain('Conta corrente');
+  expect(text()).not.toContain('Carteira manual');
+  expect(text()).toContain('openFinance.connected.lastSync');
+  // No step list once connected; the long list of data sits behind "What we share".
+  expect(document.querySelector('ol[aria-label="openFinance.steps.label"]')).toBeNull();
+  expect(text()).not.toContain('openFinance.permissionsTitle');
+  expect(button('openFinance.connected.shared').getAttribute('aria-expanded')).toBe('false');
+  // Sync is the main action and comes before revoke, which is the last button on the page.
+  const labels = [...document.querySelectorAll('button')].map((item) => item.textContent);
+  expect(labels.indexOf('openFinance.sync')).toBeLessThan(labels.indexOf('openFinance.revoke.open'));
+});
+
 test('a rejected consent says why and offers to connect again', async () => {
   HttpService.getWithAuth.mockResolvedValue(status({ status: 'REJECTED', rejectionReason: 'CONSENT_EXPIRED' }));
   await renderPage();

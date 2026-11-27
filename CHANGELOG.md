@@ -1,5 +1,170 @@
 # Changelog
 
+## 26/11/2026 (noite): revisão de usabilidade (ADR 0022)
+
+Auditoria das 17 telas em 1440 e 390 px e pesquisa de mercado com 19 produtos (`docs/produto/pesquisa-de-mercado-2026-11.md`).
+
+### Mudou
+- **Navegação pela pergunta do dia.** Menu em Visão (Início, Futuro, Plano do mês), Dinheiro (Entradas e saídas, Extrato, Envelopes), Compromissos (Cartões e dívidas, Radar) e Mais (Análise, Carteiras, Open Finance). "Dívidas" virou "Compromissos": o Radar lista aluguel e streaming, que não são dívida. Barra do celular: Início, Futuro, Plano, Contas, Mais.
+- **"Perguntar" é uma ação no topo de todas as telas**, não um destino.
+- **O número do dia diz a premissa:** "Gaste até R$ 15,37 por dia até 04/12 e nenhum dia fica negativo." Quando o ritmo atual leva ao negativo, uma linha diz quando: "No ritmo atual (R$ 27,40 por dia), o saldo fica negativo em 02/12."
+- **Futuro:** os três números fecham a conta do limite (saldo agora + entra antes da renda − já tem destino = sobra ÷ dias). O eixo do gráfico acompanha os dados, e o trecho negativo aparece com pelo menos 8 px. A janela de 30 dias mostra 7 dias de passado. "Precisão da previsão" vira um item próprio.
+- **Selo "Confirmado" sai.** Confirmado é o normal; só "Estimado" e "Simulado" têm selo.
+- **Plano do mês abre em modo leitura.** O topo diz "Este mês faltam R$ X no plano" ou "sobram". "Próximos meses" vem logo abaixo, mês negativo diz "Falta" (antes dizia "Sobra" com valor negativo) e o editor abre em "Editar fatias". "Desativar plano" e "Ver métodos" ficam no menu "⋯". "Virar compromisso" virou "Tirar do saldo no dia da renda".
+- **Meu método:** cada sugestão é uma linha que se escolhe inteira, e há um único "Usar este método".
+- **Aviso de dados atrasados em uma linha** ("Dados de 24/11, 07:30 · Atualizar · Por quê?"). Antes ocupava 180 px no celular, acima do número do dia.
+- **Listas:** a linha inteira abre o detalhe, não só a seta. No toque, botões, links e seletores têm 44 px.
+- **Extrato:** linhas de 56 px, total líquido em cada mês, a transferência entre suas contas numa linha neutra só, e a forma de pagamento no detalhe.
+- **Entradas e saídas:** um agrupamento por vez (categoria, forma de pagamento ou conta) e o mês com setas, no lugar do campo de seleção.
+- **Cartões e dívidas:** o topo diz "Em dezembro saem R$ 1.560,48 em dívidas" com a fatura e a parcela. O Pix no crédito fica recolhido e as taxas do Banco Central passam para dentro de "Taxa, CET e custo".
+- **Radar:** os contadores viram uma linha, e "nenhuma cobrança fora do padrão" também. Só o valor anualizado fica em âmbar.
+- **Análise:** o relatório é gerado ao abrir e ao trocar o período, sem o botão "Gerar relatório".
+- **Open Finance conectado:** mostra contas, última sincronização e "Sincronizar dados" primeiro, e o passo a passo só aparece sem conexão.
+- **Envelopes vazio:** uma frase e o formulário, sem três números zerados.
+- **Perguntar e Privacidade** alinhadas como as outras telas. Pergunta vazia aponta o campo, e o login ficou sem asteriscos.
+
+### Corrigido
+- **Parcela vencida aparecia como "próxima".** Agora mostra a próxima de verdade e diz "Venceu em 25/11, ainda não vimos o pagamento."
+- **O Radar contava compra de mercado como cobrança recorrente.** No usuário de teste, o total caiu de R$ 3.179,18 para R$ 2.995,48 por mês. O critério: gasto do dia a dia cujo valor varia mais de 25% não entra; luz e aluguel continuam.
+- **Ocultar saldo** só escondia os valores de Entradas e saídas depois de recarregar a página.
+- A transferência entre contas próprias importada do Open Finance aparecia como entrada e saída no Extrato.
+
+## 26/11/2026: Início completo, lançamentos em Entradas e saídas e ocultar saldo em todo o app
+
+### Novo
+- **Início.** Além do número do dia e dos totais do mês: saldo de hoje; o primeiro período em que o saldo pode ficar negativo, com as saídas que causam isso, a certeza e a origem de cada uma; o menor saldo e o saldo final em 30, 60 e 90 dias; o plano do mês com planejado e realizado por fatia; metas, envelopes e a reserva do plano; e o seu método, que decide qual bloco vem primeiro e diz por quê. Planejado nunca aparece como dinheiro já gasto ou investido.
+- **Entradas e saídas.** A lista de lançamentos do mês, com data, conta, forma de pagamento e categoria. Clicar numa conta, forma ou categoria filtra a lista. Na aba de saídas do mês atual, "Ainda vai sair" mostra contas, fatura e parcelas previstas até o fim do mês, separadas do que já saiu.
+- **Plano do mês.** Cada ponto de partida explica o que faz. No base zero, o que falta distribuir aparece em reais.
+
+### Mudou
+- **Ocultar saldo vale para todas as telas.** O olho saiu do Início e foi para o topo, ao lado da conta.
+- **O método 35/20/15 com reserva se chama "Equilibrado 35/20/15".** Os métodos se chamam pelo que fazem, como o 50/30/20. Quem já tinha escolhido continua com ele (migração V37).
+
+### Corrigido
+- No Futuro e no Início, a fatia do plano aparecia como `PLAN_INVESTMENT` na lista de compromissos.
+- **Lazer e investimento somava o investimento planejado como se já tivesse saído.** Com o plano ativo, o total incluía a fatia de investimento sem dizer. Agora a linha de baixo separa o gasto do planejado ("R$ 637,85 gasto + R$ 731,25 planejado").
+- O alerta do Início ("o saldo pode chegar a −R$ 84,19") parecia contradizer o limite diário logo acima ("sem nenhum dia negativo"). Os dois estavam certos: o limite supõe gastar só ele, e o alerta usa o ritmo de gastos de sempre. A frase agora começa com "No seu ritmo de gastos".
+- O resultado do "ver se cabe" continuava na tela depois de ativar o plano, comparando com o saldo de antes.
+
+### Testes
+- O E2E (`journey.cjs`) passa também por Início, Plano do mês, Meu método e Entradas e saídas, em 375 e 1280 px.
+
+### Segurança e qualidade
+- GitHub Actions fixadas pelo commit da versão, não pela tag, e `min-release-age=7` no npm do frontend: o npm 11 só instala versões publicadas há uma semana (KAN-34).
+- SpotBugs: `FieldCipher` não pode mais ser estendida, e a ordenação de dias em `RecurrenceDetector` deixou de reembrulhar números. Os 9 avisos de `
+` em formato ficam: são corpo de e-mail e texto para o Gemini, onde `%n` misturaria fins de linha no Windows (KAN-33).
+
+## 25/11/2026: CI
+
+- CI e E2E rodavam duas vezes por commit de PR; agora uma, com o run anterior cancelado. Frontend do CI no Node 22.
+
+## 24/11/2026: telas do Plano do mês, Meu método e Entradas e saídas
+
+### Novo
+- As telas do contrato de 23/11: Plano do mês com "ver se cabe", Meu método com sugestões e motivo, Entradas e saídas e os três totais no Início.
+- Ocultar saldo de volta no Início, lembrado no navegador.
+
+### Corrigido
+- **Radar de cobranças contava o pagamento da fatura e a transferência para a reserva como assinaturas.** No usuário de teste, o total mensal caiu de R$ 4.427,18 para R$ 3.179,18. A mesma correção vale para o Futuro.
+- Valor negativo quebrava a linha entre o sinal e o "R$" no celular; agora usa o sinal de menos tipográfico.
+
+## 23/11/2026: Plano do mês, entradas e saídas e "Meu método" (proposta de André Graccia)
+
+Ideia de André Graccia, integrante do grupo, e documento de evolução do grupo. Decisões em [ADR 0021](docs/adr/0021-plano-do-mes-entradas-e-saidas-e-meu-metodo.md). Migrações V35 e V36. Telas em 24/11.
+
+### Novo
+- **Plano do mês.** A renda mensal confirmada dividida em até 12 fatias com nome próprio. A divisão do André (35% fixo, 20% lazer, 15% investimento, 7,5% futuro, 10% desenvolvimento pessoal e estudo, 12,5% reserva de emergência) é um dos presets. O Fixo mostra quanto das contas fixas confirmadas cabe na fatia; o Lazer mostra o gasto do dia a dia do mês contra o teto. Uma fatia só sai do saldo quando você marca "virar compromisso" e liga o plano: aí ela sai no dia em que o salário entra, e o limite diário já desconta. Antes de ligar, "ver se cabe" mostra os próximos 90 dias com e sem o plano, sem gravar nada. Um rascunho que não soma 100% fica salvo como incompleto e não liga.
+- **Entradas e saídas.** Ganhos e gastos de um mês (o atual ou um dos 12 anteriores) por conta, por forma de pagamento e por categoria, com os três totais do Início: ganhos, gastos e lazer + investimento. Transferência entre suas próprias contas não conta.
+- **Projeção mensal.** Entradas, saídas, plano e sobra de cada mês, para 3, 6 ou 12 meses, separando o que é confirmado do que é estimado.
+- **Meu método.** Nove métodos de organizar o dinheiro (50/30/20, equilibrado 35/20/15, base zero, pague-se primeiro, prioridades, limite até a próxima entrada, envelopes, quitação avalanche e bola de neve), cada um com como funciona, quando ajuda, limitações e onde roda no Wall.ia. O Wall.ia sugere dois ou três com o motivo e os números usados, sem nota e sem impor nenhum.
+- **Perfil.** Preferência (simples ou detalhado) e objetivo principal, se você quiser dizer, e o histórico dos métodos escolhidos. Entra na exportação e sai na exclusão da conta.
+
+### Fora desta versão
+- Registro de investimentos e diário de desenvolvimento pessoal: o Wall.ia cuida do fluxo de caixa. Das duas ideias ficaram as fatias Investimento e Desenvolvimento pessoal e estudo no plano.
+- Meta com valor-alvo e data-alvo, e assistente com modelo de linguagem preparando ações (B56, B57).
+
+## 19/11/2026: achados da inspeção da V2 (A3, checkpoint 3)
+
+Bug Hunt e SonarQube na V2, com os mesmos métodos usados no e-wallet.
+
+### Corrigido
+- **Pergunta de investimento virava simulação de compra.** "Qual ação devo comprar na bolsa?" casava com "comprar" e o motor pedia o valor. Agora investimento cai em "ainda não sei" antes de qualquer outra intenção; "comprar uma bolsa de 300" continua sendo compra (caso de teste CT-V19).
+- **Taxa a partir de `double`.** `LoanCost.monthlyRate` e `OfbResponses.annualRatePercent` usavam `new BigDecimal(double)`, que carrega a expansão binária; agora `BigDecimal.valueOf` (Sonar S2111).
+- **Invariante explícita no alerta.** `FutureAlertService` só envia com janela negativa; a garantia estava implícita entre dois métodos (Sonar S2259).
+
+### Revisado sem mudança
+- `FieldCipher` (S3077): o `volatile` publica um record imutável com `Map.copyOf`. `EmailVerificationService.maskEmail` (S2259): o nulo retorna antes do `substring`.
+- Seis hotspots revisados como seguros: CSRF numa API stateless com JWT; SQL com nome de tabela de constante; regex sobre entrada limitada a 300 caracteres ou sobre configuração; aleatório só no atraso entre tentativas.
+
+## 20/11/2026: identidade visual "Grafite" (substitui a Farol)
+
+A Farol foi recusada na revisão visual com o app rodando: cores, layout e hierarquia, tipografia e acabamento. A direção nova está em [`docs/brand/DESIGN.md`](docs/brand/DESIGN.md).
+
+### Mudou
+- **Cor:** quase preto em camadas (`#08090C`, `#0F1116`, `#161920`), ação branca e cor só com significado: projetado/estimado `#8FA3FF`, positivo `#4FD1A1`, negativo `#FF7B7B`, atenção `#F2B85B`. Contraste conferido por `npm run test:contrast` (47 pares).
+- **Tipografia:** uma família, Geist, com algarismos tabulares; saem Bricolage, Inter e JetBrains Mono.
+- **Hierarquia:** cada tela abre com uma frase-resposta e um número; o gráfico do saldo é o protagonista do Futuro; explicações longas vão para "Por quê?". Listas em linhas com divisória no lugar de cartões.
+- **Shell:** menu agrupado (Visão, Dinheiro, Dívidas, Mais) e barra inferior no celular; login sem ilustração de personagem.
+- **Marca:** logotipo "Wall.ia" com o ponto da cor de projeção; favicon e `og.png` refeitos.
+
+## 19/11/2026: identidade visual "Farol" (aposentada em 20/11, ver Grafite)
+
+### Mudou
+- **Nova identidade.** Sai o preto com verde-limão (ink/volt/horizon); entra o mar à noite com a luz do farol. Fundo azul-esverdeado `#0A1519`, ação em `#FFD25E`, estimado em `#A3B5FF`, positivo `#5ED6A2`, negativo `#FF8590`. Conceito, regras e aplicações em [docs/brand/wallia-brand.md](docs/brand/wallia-brand.md), que o `palette.js` já citava e não existia.
+- **Símbolo novo:** um W desenhado como a linha do saldo, sólido até hoje (o ponto de luz) e tracejado depois, com o vale passando abaixo da linha d'água: o buraco entre a fatura e o salário. Favicon, PNG, ICO e `logo.png` regenerados a partir do SVG.
+- **Tipografia:** Bricolage Grotesque (tamanho óptico) no lugar da Space Grotesk nos títulos e botões; Inter com algarismos tabulares em todo o corpo. O `overline` deixou de ser caixa-alta espaçada.
+- **Certeza também no itálico:** os chips Estimado e Simulado ficam em itálico, além da cor e do estilo da borda.
+- Tokens de marca renomeados para o que significam (`brand.lamp`, `brand.fog`, `brand.waterline`).
+- Login com a ilustração da linha d'água; `index.html` com descrição nova, Open Graph e `og.png` 1200×630; `theme_color` do manifest atualizado.
+
+### Novo
+- `npm run test:contrast`: lê os hex do `palette.js` e confere 53 pares de texto, borda, foco e linha de gráfico (WCAG 2.2). Falha com código 1 se um par cair; provado trocando `muted` por um tom escuro (4 falhas).
+- Peças de LinkedIn editáveis em `docs/brand/comunicacao/` (removidas em 20/11 com a Farol) (2 posts 1200×1200 e capa 1584×396), com texto do produto e números só do README. `frontend/scripts/build-icons.py` agora gera ícones, OG e peças com Chrome/Edge headless.
+
+### Limites
+- O produto continua só no tema escuro; não existia tema claro.
+- `og:image` usa `%PUBLIC_URL%`: para os cartões de compartilhamento funcionarem, o build de produção precisa de `PUBLIC_URL` absoluta.
+
+## 19/11/2026: dado atrasado em toda tela, Pix no crédito e fatura contada uma vez (B50, B14, B12 parcial)
+
+Decisões em [ADR 0020](docs/adr/0020-dado-atrasado-pix-no-credito-e-fatura.md). Migração V34.
+
+### Novo
+- **Dado atrasado em toda tela com Open Finance (B50).** Futuro, Início, Radar de cobranças, Compromissos e Análises dizem de qual instituição e de quando é o dado. Quando a última sincronização passa de 36 horas, um alerta aparece antes dos números, com o botão para atualizar.
+- **Pix no crédito na quitação (B14).** Em Compromissos, a pessoa informa saldo, parcela e CET ao mês do Pix pago com o limite do cartão. Ele entra na ordem de quitação ao lado dos empréstimos, marcado como "informado por você" e estimado. Não entra na projeção do saldo, porque as parcelas costumam vir na fatura. A seção aparece mesmo sem banco conectado. Entra na exportação e na exclusão da conta.
+
+### Corrigido
+- **Pagamento de fatura contado duas vezes (B12, parcial).** Um pagamento de fatura descrito sem a palavra "fatura" (por exemplo "NU PAGAMENTOS SA" ou "PAGTO CARTAO") entrava na média dos gastos do dia a dia, e as mesmas compras já estavam na fatura projetada. Agora o pagamento é reconhecido também pelo valor igual ao total da fatura, até 10 dias do vencimento.
+- **Futuro e Radar discordavam sobre dado atrasado.** Conta Open Finance que nunca sincronizou era atrasada no Radar e em dia no Futuro. Agora é atrasada nas duas.
+
+- **Exclusão da conta deixava as decisões do Radar.** `charge_alert_decision` (V33) não estava na limpeza: a conta é pseudonimizada, então o `ON DELETE CASCADE` nunca dispara. Um teste lê as migrações e falha se qualquer tabela com `user_id` ficar de fora.
+
+### Limites
+- Pagamento parcial da fatura (só o mínimo) com descrição neutra ainda não é reconhecido.
+- A Wall.ia não detecta Pix no crédito sozinha; o sandbox não tem o produto.
+
+## 19/11/2026: preparação para produção (Vercel + Render + Neon)
+
+### Novo
+- `render.yaml` (Blueprint): API em Docker no plano free, health check em `/actuator/health/readiness`, segredos com `sync: false`. Na URL pública do Render o actuator expõe só `health` e o Swagger fica desligado.
+- `frontend/vercel.json`: rewrite de `/api/*` para a API (mesma origem, sem CORS), fallback da SPA e os cabeçalhos do `nginx.conf`, mais HSTS. `frontend/.env.production` fixa `REACT_APP_API_URL=/api/v1` no build.
+- `server.port` lê `PORT` (Render) antes de `backend_port`; o Compose continua com `SERVER_PORT=8080`.
+- `.env.production.example` com cada variável da API, sem valores.
+- [`docs/deploy-producao.md`](docs/deploy-producao.md): Neon, Blueprint, Vercel, SMTP, IP do cliente, limites dos planos gratuitos e rollback.
+
+### Corrigido
+- **Posse da carteira também no serviço.** `transferFunds` e `withdrawFunds` confiavam só no `@PreAuthorize` do controller. Agora o serviço recusa com 403 uma carteira de origem de outro usuário, ou sem ninguém autenticado, antes de mexer em saldo. Os dois testes novos falham sem a checagem.
+
+### Limites
+- O plano free do Render bloqueia SMTP nas portas 25, 465 e 587: o e-mail do cadastro precisa da porta alternativa do provedor (Brevo 2525, Resend 2587).
+- Pela Vercel, os limites por endereço (cadastro e login) veem o IP do servidor de borda da Vercel, não o do usuário. Continua impossível forjar o IP com `X-Forwarded-For`; o limite por usuário não muda.
+- A API dorme após 15 minutos sem uso e os jobs agendados não rodam enquanto ela dorme.
+
+### Verificado
+- Backend: 383 testes, 0 falhas, 20 pulados (Testcontainers sem Docker na máquina).
+- Frontend: 74 testes, lint sem erros, `CI=true npm run build` ok, com `/api/v1` no bundle e nenhum `localhost:8082`.
+- Deploy real não foi feito: Render, Neon e Vercel ficam com o dono.
+
 ## 26/10/2026: Radar de cobranças (integrado; validação de mercado pendente)
 
 ### Novo

@@ -1,71 +1,165 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Avatar,
-  BottomNavigation,
-  BottomNavigationAction,
   Box,
-  Button,
+  ButtonBase,
   Chip,
-  ClickAwayListener,
   Container,
   Divider,
+  Drawer,
   IconButton,
+  ListSubheader,
+  Menu,
+  MenuItem,
   Stack,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { enqueueSnackbar } from 'notistack';
 import { WalletProvider } from '../../context/WalletContext';
-import LanguageSelector from '../../components/language-selector';
 import { PageSkeleton, WalletIcon } from '../../components/wallet-ui';
 import { WalliaLogo } from '../../components/brand';
 import { forgetThisBrowser } from '../../utils/push';
 import AuthService from '../../services/AuthService';
 import HttpService from '../../services/HttpService';
 import { errorKey } from '../../utils/wallet';
+import { useHiddenAmounts } from '../../utils/hiddenAmounts';
+
+// Shell layout (docs/brand/DESIGN.md): side menu from 1024 px, bottom bar below it.
+const DESKTOP = '@media (min-width:1024px)';
+const SIDEBAR = 232;
+
+function groupsFor(user) {
+  return [
+    {
+      key: 'overview',
+      items: [
+        { path: '/', label: 'navigation.dashboard', icon: 'home' },
+        { path: '/future', label: 'navigation.future', icon: 'future' },
+        { path: '/plan', label: 'navigation.plan', icon: 'plan' },
+      ],
+    },
+    {
+      key: 'money',
+      items: [
+        { path: '/cash-flow', label: 'navigation.cashFlow', icon: 'flow' },
+        { path: '/transactions', label: 'navigation.transactions', icon: 'history' },
+        { path: '/envelopes', label: 'navigation.envelopes', icon: 'envelope' },
+      ],
+    },
+    {
+      key: 'debts',
+      items: [
+        { path: '/commitments', label: 'navigation.commitments', icon: 'card' },
+        { path: '/billing-radar', label: 'navigation.billingRadar', icon: 'shield' },
+      ],
+    },
+    {
+      key: 'more',
+      items: [
+        { path: '/insights', label: 'navigation.insights', icon: 'insights' },
+        { path: '/wallets', label: 'navigation.wallets', icon: 'wallet' },
+        { path: '/open-finance', label: 'navigation.openFinance', icon: 'bank' },
+        // Aggregates for the team; the route itself also checks the role.
+        ...(user?.roles?.includes('ROLE_ADMIN')
+          ? [{ path: '/admin/metrics', label: 'navigation.metrics', icon: 'insights' }]
+          : []),
+      ],
+    },
+  ];
+}
+
+const isActive = (path, pathname) => (path === '/' ? pathname === '/' : pathname.startsWith(path));
+
+function NavItem({ item, active, onClick }) {
+  const { t } = useTranslation();
+  return (
+    <ButtonBase
+      component={RouterLink}
+      to={item.path}
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      sx={{
+        width: '100%',
+        minHeight: 40,
+        px: 1.5,
+        gap: 1.5,
+        justifyContent: 'flex-start',
+        borderRadius: '12px',
+        typography: 'subtitle2',
+        color: active ? 'text.primary' : 'text.secondary',
+        bgcolor: active ? 'background.neutral' : 'transparent',
+        transition: 'background-color 150ms, color 150ms',
+        '&:hover': { color: 'text.primary', bgcolor: active ? 'background.neutral' : 'action.hover' },
+      }}
+    >
+      <WalletIcon name={item.icon} sx={{ fontSize: 18 }} />
+      {t(item.label)}
+    </ButtonBase>
+  );
+}
+NavItem.propTypes = { item: PropTypes.object.isRequired, active: PropTypes.bool, onClick: PropTypes.func };
+
+function NavGroups({ groups, pathname, onNavigate }) {
+  const { t } = useTranslation();
+  return groups.map((group) => (
+    <Box key={group.key} component="nav" aria-label={t(`navigation.groups.${group.key}`)} sx={{ mb: 2.5 }}>
+      <Typography variant="caption" color="text.disabled" component="p" sx={{ px: 1.5, mb: 0.5, fontWeight: 500 }}>
+        {t(`navigation.groups.${group.key}`)}
+      </Typography>
+      <Stack spacing={0.25}>
+        {group.items.map((item) => (
+          <NavItem key={item.path} item={item} active={isActive(item.path, pathname)} onClick={onNavigate} />
+        ))}
+      </Stack>
+    </Box>
+  ));
+}
+
+/** "Ambiente simulado", once, at the foot of the menu; the explanation lives in the tooltip. */
+function DemoSeal() {
+  const { t } = useTranslation();
+  return (
+    <Tooltip title={t('app.demoNotice')}>
+      <Chip
+        size="small"
+        variant="outlined"
+        label={t('app.demo')}
+        tabIndex={0}
+        sx={{
+          alignSelf: 'flex-start',
+          '&:focus-visible': { outline: '2px solid', outlineColor: 'secondary.main', outlineOffset: 2 },
+        }}
+      />
+    </Tooltip>
+  );
+}
 
 export default function DashboardLayout() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const english = i18n.resolvedLanguage?.startsWith('en');
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const user = AuthService.getCurrentUser();
-  const [accountOpen, setAccountOpen] = useState(false);
-  const accountButton = useRef(null);
-  // Esc closes the panel from anywhere (focus may be on the avatar, not inside it) and returns focus.
-  useEffect(() => {
-    if (!accountOpen) return undefined;
-    const onKey = (event) => {
-      if (event.key !== 'Escape') return;
-      setAccountOpen(false);
-      accountButton.current?.focus();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [accountOpen]);
-  // `mobile` items fit the bottom bar (5 max); the rest live in the account panel on small screens.
-  const items = [
-    { path: '/', label: 'navigation.dashboard', icon: 'home', mobile: true },
-    { path: '/future', label: 'navigation.future', icon: 'future', mobile: true },
-    { path: '/ask', label: 'navigation.ask', icon: 'ask' },
-    { path: '/wallets', label: 'navigation.wallets', icon: 'wallet', mobile: true },
-    { path: '/commitments', label: 'navigation.commitments', icon: 'card' },
-    { path: '/billing-radar', label: 'navigation.billingRadar', icon: 'insights' },
-    { path: '/envelopes', label: 'navigation.envelopes', icon: 'envelope', mobile: true },
-    { path: '/transactions', label: 'navigation.transactions', icon: 'history', mobile: true },
-    { path: '/insights', label: 'navigation.insights', icon: 'insights' },
-    { path: '/open-finance', label: 'navigation.openFinance', icon: 'bank' },
-    // Aggregates for the team; the route itself also checks the role.
-    ...(user?.roles?.includes('ROLE_ADMIN')
-      ? [{ path: '/admin/metrics', label: 'navigation.metrics', icon: 'insights' }]
-      : []),
+  const [accountAnchor, setAccountAnchor] = useState(null);
+  const [hidden, toggleHidden] = useHiddenAmounts();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const groups = groupsFor(user);
+  // Phone: five destinations, the daily questions (ADR 0022); "Mais" opens a sheet with everything else.
+  // "Perguntar" is an action in the top bar, on every screen, not a place.
+  const bottom = [
+    { path: '/', label: 'navigation.dashboard', icon: 'home' },
+    { path: '/future', label: 'navigation.future', icon: 'future' },
+    // Short labels: five columns of 78 px at 390 px cannot fit "Plano do mês" next to "Compromissos".
+    { path: '/plan', label: 'navigation.planShort', icon: 'plan' },
+    { path: '/commitments', label: 'navigation.debtsShort', icon: 'card', also: ['/billing-radar'] },
   ];
-  const mobileItems = items.filter((item) => item.mobile);
-  const current =
-    items.find((item) => (item.path === '/' ? pathname === '/' : pathname.startsWith(item.path)))?.path || false;
-  const mobileCurrent = mobileItems.some((item) => item.path === current) ? current : false;
+  const bottomActive = (item) => [item.path, ...(item.also || [])].some((path) => isActive(path, pathname));
+  const inMore = !bottom.some(bottomActive);
+
   const logout = async () => {
     // Needs the session token, so it runs before the logout; never more than 2s of waiting.
     await Promise.race([forgetThisBrowser(), new Promise((resolve) => setTimeout(resolve, 2000))]);
@@ -82,158 +176,136 @@ export default function DashboardLayout() {
     }
     await logout();
   };
+  const closeAccount = () => setAccountAnchor(null);
+
   return (
     <WalletProvider>
-      <Box sx={{ minHeight: '100vh', display: 'flex' }}>
+      <Box sx={{ minHeight: '100vh' }}>
         <Box
           component="aside"
           sx={{
-            width: 240,
+            display: 'none',
+            [DESKTOP]: { display: 'flex' },
+            width: SIDEBAR,
             position: 'fixed',
             inset: '0 auto 0 0',
+            flexDirection: 'column',
             bgcolor: 'background.paper',
             borderRight: '1px solid',
             borderColor: 'divider',
-            p: 2.5,
-            display: { xs: 'none', lg: 'flex' },
-            flexDirection: 'column',
+            px: 1.5,
+            py: 3,
+            overflowY: 'auto',
           }}
         >
-          <Box component={RouterLink} to="/" aria-label="Wall.ia" sx={{ px: 1, py: 2, mb: 4, textDecoration: 'none' }}>
-            <WalliaLogo size={34} />
+          <Box component={RouterLink} to="/" sx={{ px: 1.5, mb: 4, textDecoration: 'none', alignSelf: 'flex-start' }}>
+            <WalliaLogo size={22} />
           </Box>
-          <Stack component="nav" spacing={0.75} aria-label={t('app.navigation')}>
-            {items.map((item) => (
-              <Button
-                key={item.path}
-                component={RouterLink}
-                to={item.path}
-                aria-current={current === item.path ? 'page' : undefined}
-                startIcon={<WalletIcon name={item.icon} />}
-                sx={{
-                  justifyContent: 'flex-start',
-                  px: 2,
-                  gap: 1,
-                  color: current === item.path ? 'text.primary' : 'text.secondary',
-                  bgcolor: current === item.path ? 'background.neutral' : 'transparent',
-                  boxShadow: (theme) =>
-                    current === item.path ? `inset 3px 0 0 ${theme.palette.primary.main}` : 'none',
-                }}
-              >
-                {t(item.label)}
-              </Button>
-            ))}
-          </Stack>
+          <NavGroups groups={groups} pathname={pathname} />
           <Box sx={{ flexGrow: 1 }} />
-          <Chip label={t('app.demo')} size="small" sx={{ alignSelf: 'flex-start', mb: 1.5 }} />
-          <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, mb: 2 }}>
-            {t('app.demoNotice')}
-          </Typography>
-          <Button
-            component={RouterLink}
-            to="/about"
-            startIcon={<WalletIcon name="info" />}
-            sx={{ justifyContent: 'flex-start', color: 'text.secondary' }}
-          >
-            {t('app.about')}
-          </Button>
+          <Box sx={{ px: 1.5, pt: 2 }}>
+            <DemoSeal />
+          </Box>
         </Box>
-        <Box sx={{ flex: 1, minWidth: 0, ml: { lg: '240px' } }}>
-          <Box
+
+        <Box sx={{ position: 'relative', minWidth: 0, [DESKTOP]: { ml: `${SIDEBAR}px` } }}>
+          {/* No bar background: on desktop the account button shares the page title's line. */}
+          <Container
             component="header"
+            maxWidth="lg"
             sx={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 1100,
-              bgcolor: (theme) => alpha(theme.palette.background.default, 0.86),
-              backdropFilter: 'blur(20px)',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
+              height: 64,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              [DESKTOP]: {
+                position: 'absolute',
+                top: 24,
+                left: 0,
+                right: 0,
+                height: 72,
+                justifyContent: 'flex-end',
+                pointerEvents: 'none',
+                '& > *': { pointerEvents: 'auto' },
+              },
             }}
           >
-            <Container maxWidth="lg">
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ minHeight: 76 }}>
-                {/* At 375 px logo + chip + language + avatar do not fit: the chip gives way (ellipsis). */}
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                  <Box sx={{ display: { lg: 'none' }, flexShrink: 0 }}>
-                    <WalliaLogo size={28} />
-                  </Box>
-                  <Chip size="small" label={t('app.demo')} sx={{ bgcolor: 'background.neutral', minWidth: 0 }} />
-                </Stack>
-                <Stack direction="row" spacing={{ xs: 0.5, sm: 1.5 }} alignItems="center" sx={{ flexShrink: 0 }}>
-                  <LanguageSelector />
-                  <Tooltip title={t('common.account')}>
-                    <IconButton
-                      ref={accountButton}
-                      onClick={() => setAccountOpen(!accountOpen)}
-                      aria-label={t('common.account')}
-                      aria-expanded={accountOpen}
-                      aria-controls="account-panel"
-                    >
-                      <Avatar
-                        sx={{
-                          width: 34,
-                          height: 34,
-                          bgcolor: 'background.raised',
-                          color: 'text.primary',
-                          fontSize: 14,
-                        }}
-                      >
-                        {user?.firstName?.[0] || 'U'}
-                      </Avatar>
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </Stack>
-              {accountOpen && (
-                <ClickAwayListener
-                  onClickAway={(event) => {
-                    // The avatar toggles on its own; closing here too would reopen it on the same click.
-                    if (!accountButton.current?.contains(event.target)) setAccountOpen(false);
-                  }}
-                >
-                  <Stack
-                    id="account-panel"
-                    direction={{ xs: 'column', sm: 'row' }}
-                    alignItems={{ sm: 'center' }}
-                    flexWrap="wrap"
-                    sx={{ pb: 2, gap: 1 }}
-                  >
-                    <Typography variant="body2" sx={{ flex: 1, flexBasis: { sm: '100%', lg: 0 } }}>
-                      {user?.firstName} {user?.lastName}
-                    </Typography>
-                    {items
-                      .filter((item) => !item.mobile)
-                      .map((item) => (
-                        <Button
-                          key={item.path}
-                          component={RouterLink}
-                          to={item.path}
-                          onClick={() => setAccountOpen(false)}
-                          startIcon={<WalletIcon name={item.icon} />}
-                          sx={{ display: { lg: 'none' } }}
-                        >
-                          {t(item.label)}
-                        </Button>
-                      ))}
-                    <Button component={RouterLink} to="/about" onClick={() => setAccountOpen(false)}>
-                      {t('app.about')}
-                    </Button>
-                    <Button component={RouterLink} to="/privacy" onClick={() => setAccountOpen(false)}>
-                      {t('app.privacy')}
-                    </Button>
-                    <Button onClick={logout} startIcon={<WalletIcon name="logout" />}>
-                      {t('actions.logout')}
-                    </Button>
-                    <Button color="inherit" onClick={logoutEverywhere}>
-                      {t('actions.logoutEverywhere')}
-                    </Button>
-                  </Stack>
-                </ClickAwayListener>
+            <Box component={RouterLink} to="/" sx={{ textDecoration: 'none', [DESKTOP]: { display: 'none' } }}>
+              <WalliaLogo size={20} />
+            </Box>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto' }}>
+              {!isActive('/ask', pathname) && (
+                <Tooltip title={t('app.askAction')}>
+                  <IconButton component={RouterLink} to="/ask" aria-label={t('app.askAction')}>
+                    <WalletIcon name="ask" sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
               )}
-            </Container>
-          </Box>
-          <Box component="main" sx={{ pt: { xs: 3, md: 5 }, pb: { xs: 14, lg: 6 } }}>
+              <Tooltip title={t(hidden ? 'app.showBalance' : 'app.hideBalance')}>
+                <IconButton
+                  onClick={toggleHidden}
+                  aria-label={t(hidden ? 'app.showBalance' : 'app.hideBalance')}
+                  aria-pressed={hidden}
+                >
+                  <WalletIcon name={hidden ? 'eyeOff' : 'eye'} sx={{ fontSize: 20 }} />
+                </IconButton>
+              </Tooltip>
+              <IconButton
+                onClick={(event) => setAccountAnchor(event.currentTarget)}
+                aria-label={t('common.account')}
+                aria-haspopup="menu"
+                aria-expanded={Boolean(accountAnchor)}
+                aria-controls={accountAnchor ? 'account-menu' : undefined}
+                sx={{ p: 0.5 }}
+              >
+                <Avatar
+                  sx={{ width: 32, height: 32, bgcolor: 'background.neutral', color: 'text.primary', fontSize: 14 }}
+                >
+                  {user?.firstName?.[0] || 'U'}
+                </Avatar>
+              </IconButton>
+            </Stack>
+          </Container>
+          <Menu
+            id="account-menu"
+            anchorEl={accountAnchor}
+            open={Boolean(accountAnchor)}
+            onClose={closeAccount}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            MenuListProps={{ sx: { minWidth: 240, py: 1 } }}
+          >
+            <ListSubheader sx={{ bgcolor: 'transparent', lineHeight: 1.4, py: 1, color: 'text.primary' }}>
+              {user?.firstName} {user?.lastName}
+            </ListSubheader>
+            {/* A menu item, not the PT/EN toggle: inside a menu, Tab closes it, so only items are reachable. */}
+            <MenuItem
+              lang={english ? 'pt-BR' : 'en'}
+              onClick={() => {
+                i18n.changeLanguage(english ? 'pt' : 'en');
+                closeAccount();
+              }}
+            >
+              {english ? 'Português' : 'English'}
+            </MenuItem>
+            <Divider />
+            <MenuItem component={RouterLink} to="/about" onClick={closeAccount}>
+              {t('app.about')}
+            </MenuItem>
+            <MenuItem component={RouterLink} to="/privacy" onClick={closeAccount}>
+              {t('app.privacy')}
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={logout}>{t('actions.logout')}</MenuItem>
+            <MenuItem onClick={logoutEverywhere} sx={{ color: 'text.secondary' }}>
+              {t('actions.logoutEverywhere')}
+            </MenuItem>
+          </Menu>
+
+          <Box
+            component="main"
+            sx={{ pt: 1, pb: 'calc(96px + env(safe-area-inset-bottom))', [DESKTOP]: { pt: 3, pb: 8 } }}
+          >
             <Suspense
               fallback={
                 <Container maxWidth="lg">
@@ -241,39 +313,112 @@ export default function DashboardLayout() {
                 </Container>
               }
             >
-              <Outlet />
+              {/* money() reads the preference while rendering, and a page does not re-render by itself when the eye
+                  toggles. ponytail: remounting the page refetches it and drops an unsaved draft; move money() to a
+                  context hook if toggling mid-edit ever matters. */}
+              <Box key={hidden ? 'hidden' : 'shown'}>
+                <Outlet />
+              </Box>
             </Suspense>
           </Box>
         </Box>
+
         <Box
+          component="nav"
+          aria-label={t('app.navigation')}
           sx={{
-            display: { lg: 'none' },
+            [DESKTOP]: { display: 'none' },
             position: 'fixed',
             bottom: 0,
             right: 0,
             left: 0,
             zIndex: 1200,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
             pb: 'env(safe-area-inset-bottom)',
-            bgcolor: (theme) => alpha(theme.palette.background.paper, 0.95),
-            backdropFilter: 'blur(20px)',
+            bgcolor: 'background.paper',
+            borderTop: '1px solid',
+            borderColor: 'divider',
           }}
         >
-          <Divider />
-          <BottomNavigation showLabels value={mobileCurrent} sx={{ height: 70, bgcolor: 'transparent' }}>
-            {mobileItems.map((item) => (
-              <BottomNavigationAction
-                key={item.path}
-                component={RouterLink}
-                to={item.path}
-                value={item.path}
-                label={t(item.label)}
-                icon={<WalletIcon name={item.icon} />}
-                sx={{ minWidth: 0, px: 0.5, '& .MuiBottomNavigationAction-label': { fontSize: '0.7rem' } }}
-              />
-            ))}
-          </BottomNavigation>
+          {bottom.map((item) => (
+            <BottomItem
+              key={item.path}
+              component={RouterLink}
+              to={item.path}
+              icon={item.icon}
+              label={t(item.label)}
+              active={bottomActive(item)}
+            />
+          ))}
+          <BottomItem
+            icon="menu"
+            label={t('navigation.more')}
+            active={inMore}
+            onClick={() => setMoreOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+          />
         </Box>
+        <Drawer
+          anchor="bottom"
+          open={moreOpen}
+          onClose={() => setMoreOpen(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: '20px 20px 0 0',
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              px: 1.5,
+              pt: 1,
+              pb: 'calc(16px + env(safe-area-inset-bottom))',
+              maxHeight: '85vh',
+            },
+          }}
+        >
+          <Box aria-hidden sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: 'divider', mx: 'auto', mb: 2 }} />
+          <NavGroups
+            groups={groups
+              .map((group) => ({
+                ...group,
+                items: group.items.filter((item) => !bottom.some((entry) => entry.path === item.path)),
+              }))
+              .filter((group) => group.items.length)}
+            pathname={pathname}
+            onNavigate={() => setMoreOpen(false)}
+          />
+          <Box sx={{ px: 1.5 }}>
+            <DemoSeal />
+          </Box>
+        </Drawer>
       </Box>
     </WalletProvider>
   );
 }
+
+function BottomItem({ icon, label, active, ...props }) {
+  return (
+    <ButtonBase
+      {...props}
+      aria-current={active && props.to ? 'page' : undefined}
+      sx={{
+        minHeight: 60,
+        flexDirection: 'column',
+        gap: 0.5,
+        typography: 'caption',
+        fontWeight: 500,
+        color: active ? 'text.primary' : 'text.secondary',
+        '& svg': { fontSize: 20 },
+      }}
+    >
+      <WalletIcon name={icon} />
+      {label}
+    </ButtonBase>
+  );
+}
+BottomItem.propTypes = {
+  icon: PropTypes.string.isRequired,
+  label: PropTypes.string.isRequired,
+  active: PropTypes.bool,
+  to: PropTypes.string,
+};

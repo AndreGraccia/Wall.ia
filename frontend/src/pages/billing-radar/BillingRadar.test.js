@@ -49,8 +49,7 @@ test('renders the price-change alert with transaction evidence', async () => {
   HttpService.getWithAuth.mockResolvedValue({
     generatedAt: '2026-10-26T10:00:00Z',
     dataThrough: '2026-10-26',
-    bankDataAsOf: '2026-10-26T09:00:00Z',
-    bankDataStale: false,
+    bankData: { institution: 'Banco Aurora', asOf: '2026-10-26T09:00:00Z', stale: false, staleAfterHours: 36 },
     accounts: 1,
     recurringCount: 1,
     priceIncreaseCount: 1,
@@ -86,6 +85,11 @@ test('renders the price-change alert with transaction evidence', async () => {
   expect(pageText()).toContain('billingRadar.evidence');
   expect(pageText()).toContain('Conta principal');
   expect(container.querySelector('a[href="/transactions"]')).not.toBeNull();
+  // The evidence is folded behind the chevron of the line, and the chevron says whether it is open.
+  const fold = container.querySelector('button[aria-label="billingRadar.evidenceFor"]');
+  expect(fold.getAttribute('aria-expanded')).toBe('false');
+  await act(async () => fold.click());
+  expect(fold.getAttribute('aria-expanded')).toBe('true');
   expect(pageText()).toContain('billingRadar.simulatePriceReversion');
 
   HttpService.postWithAuth.mockResolvedValue({
@@ -117,9 +121,42 @@ test('renders the price-change alert with transaction evidence', async () => {
   expect(pageText()).toContain('billingRadar.impactDifference');
 });
 
+test('a charge expected before today is not called "next"', async () => {
+  HttpService.getWithAuth.mockResolvedValue({
+    dataThrough: '2026-11-26',
+    bankData: null,
+    recurringCount: 1,
+    priceIncreaseCount: 0,
+    possibleDuplicateCount: 0,
+    projectedMonthlyTotal: 612.48,
+    items: [
+      {
+        key: 'out:parcela',
+        counterparty: 'Parcela empréstimo pessoal',
+        recurring: true,
+        priceIncrease: false,
+        possibleDuplicate: false,
+        confidence: 'HIGH',
+        latestAmount: 612.48,
+        lastChargeDate: '2026-10-25',
+        nextExpectedDate: '2026-11-24',
+        occurrences: 3,
+        evidence: [],
+      },
+    ],
+  });
+  await renderPage();
+
+  expect(pageText()).toContain('billingRadar.expectedNotSeen');
+  expect(pageText()).not.toContain('billingRadar.nextChargeShort');
+  // The counters are one line of metadata under the total, not three big numbers.
+  expect(pageText()).toContain('billingRadar.summary.recurringMeta:1');
+  expect(pageText()).not.toContain('billingRadar.summary.increasesMeta');
+});
+
 test('explains that more history is needed and offers Open Finance', async () => {
   HttpService.getWithAuth.mockResolvedValue({
-    bankDataStale: false,
+    bankData: null,
     recurringCount: 0,
     priceIncreaseCount: 0,
     possibleDuplicateCount: 0,
@@ -135,7 +172,7 @@ test('explains that more history is needed and offers Open Finance', async () =>
 
 test('warns when bank data is stale before the signal list', async () => {
   HttpService.getWithAuth.mockResolvedValue({
-    bankDataStale: true,
+    bankData: { institution: 'Banco Aurora', asOf: '2026-10-20T09:00:00Z', stale: true, staleAfterHours: 36 },
     recurringCount: 0,
     priceIncreaseCount: 0,
     possibleDuplicateCount: 0,
@@ -144,6 +181,6 @@ test('warns when bank data is stale before the signal list', async () => {
   });
   await renderPage();
 
-  expect(pageText()).toContain('billingRadar.staleTitle');
-  expect(pageText().indexOf('billingRadar.staleTitle')).toBeLessThan(pageText().indexOf('billingRadar.emptyTitle'));
+  expect(pageText()).toContain('bankData.staleTitle');
+  expect(pageText().indexOf('bankData.staleTitle')).toBeLessThan(pageText().indexOf('billingRadar.emptyTitle'));
 });

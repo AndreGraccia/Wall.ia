@@ -15,7 +15,11 @@ jest.mock('../../context/WalletContext', () => ({ useWallets: jest.fn() }));
 jest.mock('notistack', () => ({ useSnackbar: () => ({ enqueueSnackbar: jest.fn(), closeSnackbar: jest.fn() }) }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => (options?.days ? `${key}:${options.days}` : key),
+    t: (key, options) => {
+      if (options?.amount) return `${key}:${options.amount}`;
+      if (options?.pace) return `${key}:${options.pace}:${options.date}`;
+      return options?.days ? `${key}:${options.days}` : key;
+    },
     i18n: { language: 'pt' },
   }),
 }));
@@ -122,6 +126,8 @@ test('everyday spending without history can still be declined, and "yes" is not 
     )
   );
   await renderPage();
+  // Pending questions fold into one row ("1 pergunta melhora a projeção") once something is confirmed.
+  await act(async () => Simulate.click(button('future.questionsPending')));
 
   expect(button('future.daily.no')).toBeDefined();
   expect(button('future.daily.yes')).toBeUndefined();
@@ -146,7 +152,7 @@ test('a failure in /recurrences keeps the projection and shows the error only in
   expect(text()).not.toContain('future.questionsError');
 });
 
-test('on a phone the tools fold behind one row each and the answer stays open', async () => {
+test('the tools fold behind one row each and the answer stays open', async () => {
   const original = window.matchMedia;
   window.matchMedia = (query) => ({
     matches: query.includes('max-width'),
@@ -161,9 +167,9 @@ test('on a phone the tools fold behind one row each and the answer stays open', 
     await renderPage();
 
     expect(text()).toContain('4.242,00');
-    const simulator = button('future.simulatorTitle+');
+    const simulator = button('future.simulatorTitle');
     expect(simulator.getAttribute('aria-expanded')).toBe('false');
-    expect(button('future.goals.title+')).toBeDefined();
+    expect(button('future.goals.title')).toBeDefined();
     expect(container.querySelector('input')).toBeNull();
 
     await act(async () => Simulate.click(simulator));
@@ -175,18 +181,95 @@ test('on a phone the tools fold behind one row each and the answer stays open', 
 });
 
 test('bank data older than a daily sync warns before the numbers and points to Open Finance', async () => {
-  answer(() => Promise.resolve(overview({ sources: { bankDataAsOf: '2026-09-20T10:30:00Z', bankDataStale: true } })));
+  answer(() =>
+    Promise.resolve(
+      overview({
+        sources: {
+          bankData: { institution: 'Banco Aurora', asOf: '2026-09-20T10:30:00Z', stale: true, staleAfterHours: 36 },
+        },
+      })
+    )
+  );
   await renderPage();
 
-  expect(text()).toContain('future.bankDataStaleTitle');
-  expect(text().indexOf('future.bankDataStaleTitle')).toBeLessThan(text().indexOf('future.balanceNow'));
+  expect(text()).toContain('bankData.staleTitle');
+  expect(text().indexOf('bankData.staleTitle')).toBeLessThan(text().indexOf('future.balanceNow'));
   expect(container.querySelector('a[href="/open-finance"]')).not.toBeNull();
 });
 
 test('fresh bank data only says when it is from', async () => {
-  answer(() => Promise.resolve(overview({ sources: { bankDataAsOf: '2026-09-25T10:30:00Z', bankDataStale: false } })));
+  answer(() =>
+    Promise.resolve(
+      overview({
+        sources: {
+          bankData: { institution: 'Banco Aurora', asOf: '2026-09-25T10:30:00Z', stale: false, staleAfterHours: 36 },
+        },
+      })
+    )
+  );
   await renderPage();
 
-  expect(text()).toContain('future.bankDataAsOf');
-  expect(text()).not.toContain('future.bankDataStaleTitle');
+  expect(text()).toContain('bankData.asOf');
+  expect(text()).not.toContain('bankData.staleTitle');
+});
+
+// The audit case (26/11): the hero said "R$ 15,37 per day, no day negative" while the projection went below zero.
+function auditOverview({ withRisk = true } = {}) {
+  const base = overview({ balance: 2555.61 });
+  return {
+    ...base,
+    projection: {
+      ...base.projection,
+      days: [
+        { date: '2026-11-26', balance: 2555.61 },
+        { date: '2026-12-26', balance: 2564.24 },
+      ],
+      events: [
+        { date: '2026-12-01', amount: -1500, category: 'RENT', certainty: 'ESTIMATED', reference: 'r' },
+        { date: '2026-12-02', amount: -948, category: 'CARD_INVOICE', certainty: 'CONFIRMED', reference: 'c' },
+        { date: '2026-12-04', amount: 4200, category: 'SALARY', certainty: 'ESTIMATED', reference: 's' },
+      ],
+      riskWindows: withRisk
+        ? [{ start: '2026-12-02', end: '2026-12-03', lowestBalance: -84.19, lowestDate: '2026-12-03', causes: [] }]
+        : [],
+    },
+    spendingLimit: {
+      safeDaily: 15.37,
+      until: '2026-12-04',
+      untilIncome: true,
+      days: 7,
+      bindingDate: '2026-12-03',
+      pace: 27.4,
+      margin: -12.03,
+      shortfall: 0,
+      reserved: 0,
+    },
+  };
+}
+
+const cents = (value) => Math.round(Number(value.replace(/[^\d,-]/g, '').replace(',', '.')) * 100);
+
+test('the three numbers under the hero add up to the amount shown', async () => {
+  answer(() => Promise.resolve(auditOverview()));
+  await renderPage();
+
+  // StatBlock values: the compact number of each column, in reading order.
+  const values = [...container.querySelectorAll('p.MuiTypography-h4')].map((node) =>
+    node.textContent.replace(/\s/g, ' ')
+  );
+  expect(values.slice(0, 3)).toEqual(['R$ 2.555,61', '+ R$ 0,00', '− R$ 2.448,00']);
+  const [balance, incoming, committed] = values.slice(0, 3).map(cents);
+  const shown = text().match(/future\.leftOver:(R\$\s[\d.,]+)/)[1];
+  expect(balance + incoming - committed).toBe(cents(shown));
+  expect(text()).not.toContain('future.free');
+});
+
+test('with a negative window before the income, the hero says what the usual pace does; without, it does not', async () => {
+  answer(() => Promise.resolve(auditOverview()));
+  await renderPage();
+  expect(text().replace(/\s/g, ' ')).toContain('future.hero.paceWarning:R$ 27,40:02/12');
+
+  answer(() => Promise.resolve(auditOverview({ withRisk: false })));
+  await act(async () => Simulate.click(button('future.horizonShort:60')));
+  expect(text()).not.toContain('future.hero.paceWarning');
 });

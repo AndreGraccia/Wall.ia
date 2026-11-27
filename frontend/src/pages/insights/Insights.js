@@ -1,28 +1,82 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
   Button,
-  Card,
   Chip,
   Container,
-  Grid,
   Link,
   MenuItem,
+  Skeleton,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
-import { alpha } from '@mui/material/styles';
 import { Helmet } from 'react-helmet-async';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { PageHeading, WalletIcon } from '../../components/wallet-ui';
+import { Link as RouterLink } from 'react-router-dom';
+import { PageHeading, SectionCard, visuallyHidden } from '../../components/wallet-ui';
+import { StatBlock } from '../../components/future-ui';
 import HttpService from '../../services/HttpService';
+import BankDataNotice from '../../components/bank-data';
 import { dateTime, errorKey, monthLabel, money, projectRegularDeposits } from '../../utils/wallet';
 
 const PERIODS = [1, 3, 6, 12];
+// ponytail: reports already seen in this session, by period and language. The API allows a few AI reports an hour
+// per person; going back to a period, or to this page, must not spend one. Lost on reload, which is fine.
+const reports = new Map();
+
+/** The report's shape while it loads: headline, four numbers in columns, the months as rows. */
+function ReportSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <Stack spacing={{ xs: 5, md: 6 }} role="status" aria-busy="true" aria-label={t('common.loading')}>
+      <Box>
+        <Skeleton width="min(560px, 90%)" height={40} />
+        <Skeleton width="min(680px, 95%)" />
+        <Skeleton width="min(480px, 70%)" />
+      </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+          gap: { xs: 3, md: 4 },
+          pt: 3,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        {[0, 1, 2, 3].map((index) => (
+          <Box key={index}>
+            <Skeleton width="60%" />
+            <Skeleton width="80%" height={32} />
+          </Box>
+        ))}
+      </Box>
+      <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+        {[0, 1, 2].map((index) => (
+          <Stack
+            key={index}
+            direction="row"
+            alignItems="center"
+            spacing={2}
+            sx={{ minHeight: 56, borderBottom: '1px solid', borderColor: 'divider' }}
+          >
+            <Skeleton width={48} />
+            <Box sx={{ flex: 1 }}>
+              <Skeleton height={10} width="70%" />
+              <Skeleton height={10} width="55%" />
+            </Box>
+            <Skeleton width={96} />
+          </Stack>
+        ))}
+      </Box>
+    </Stack>
+  );
+}
 
 function CitationLinks({ ids, references }) {
   if (!ids?.length) return null;
@@ -57,8 +111,10 @@ export default function Insights() {
   const { t, i18n } = useTranslation();
   const [months, setMonths] = useState(3);
   const [report, setReport] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const language = i18n.resolvedLanguage?.startsWith('en') ? 'en' : 'pt-BR';
   const [monthlyContribution, setMonthlyContribution] = useState('');
   const [years, setYears] = useState(5);
   const [annualRate, setAnnualRate] = useState('8');
@@ -73,26 +129,42 @@ export default function Insights() {
     [annualRate, monthlyContribution, years]
   );
 
-  const generate = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await HttpService.postWithAuth('/insights/reports', {
-        months,
-        language: i18n.resolvedLanguage?.startsWith('en') ? 'en' : 'pt-BR',
-      });
+  // The report is the page: it is generated on arrival and again for each period, no button in between.
+  useEffect(() => {
+    const key = `${months}|${language}`;
+    const show = (response) => {
       setReport(response);
       const monthlyAverage = Number(response.metrics.outflow) / Math.max(response.periodMonths, 1);
       setMonthlyContribution((monthlyAverage * 0.1).toFixed(2));
-    } catch (failure) {
-      setError(errorKey(failure));
-    } finally {
+    };
+    setError(null);
+    if (reports.has(key)) {
+      show(reports.get(key));
       setBusy(false);
+      return undefined;
     }
-  };
+    let current = true;
+    setBusy(true);
+    HttpService.postWithAuth('/insights/reports', { months, language })
+      .then((response) => {
+        reports.set(key, response);
+        if (current) show(response);
+      })
+      .catch((failure) => current && setError(errorKey(failure)))
+      .finally(() => current && setBusy(false));
+    // A quicker click on another period wins: the older answer must not land on top of it.
+    return () => {
+      current = false;
+    };
+  }, [months, language, attempt]);
 
-  // "2026-09" is a calendar month: built as a local date so UTC-3 does not turn it into August.
-  const formatMonth = (value) => monthLabel(value, i18n.language, { month: 'short', year: '2-digit' });
+  // "2026-09" is a calendar month: built as a local date so UTC-3 does not turn it into August. "Set/26" fits a phone.
+  const formatMonth = (value) =>
+    `${monthLabel(value, i18n.language, { month: 'short' })
+      .replace('.', '')
+      .replace(/^./, (letter) => letter.toLocaleUpperCase())}/${value.slice(2, 4)}`;
+
+  const lang = i18n.language;
 
   return (
     <>
@@ -100,186 +172,220 @@ export default function Insights() {
         <title>{t('insights.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <PageHeading title={t('insights.heading')} description={t('insights.description')} />
-
-        <Card sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-            <TextField
-              select
-              label={t('insights.period')}
+        <PageHeading
+          title={t('insights.heading')}
+          action={
+            <ToggleButtonGroup
+              exclusive
               value={months}
-              onChange={(event) => setMonths(Number(event.target.value))}
-              sx={{ minWidth: 190 }}
+              onChange={(_, value) => {
+                if (value) setMonths(value);
+              }}
+              aria-label={t('insights.period')}
             >
               {PERIODS.map((period) => (
-                <MenuItem key={period} value={period}>
-                  {t('insights.months', { count: period })}
-                </MenuItem>
+                <ToggleButton key={period} value={period} aria-label={t('insights.months', { count: period })}>
+                  {t('insights.monthsShort', { count: period })}
+                </ToggleButton>
               ))}
-            </TextField>
-            <LoadingButton
-              loading={busy}
-              onClick={generate}
-              variant="contained"
-              startIcon={<WalletIcon name="insights" />}
-            >
-              {report ? t('insights.refresh') : t('insights.generate')}
-            </LoadingButton>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: { sm: 'auto !important' } }}>
-              <WalletIcon name="shield" sx={{ color: 'success.main', fontSize: 20 }} />
-              <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 330 }}>
-                {t('insights.aggregateOnly')}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Card>
+            </ToggleButtonGroup>
+          }
+        />
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} action={<Button onClick={generate}>{t('app.retry')}</Button>}>
+          <Alert
+            severity="error"
+            sx={{ mb: 3 }}
+            action={
+              <Button color="inherit" onClick={() => setAttempt((value) => value + 1)} disabled={busy}>
+                {t('app.retry')}
+              </Button>
+            }
+          >
             {t(error)}
           </Alert>
         )}
 
-        {!report && !error && (
-          <Card sx={{ p: { xs: 4, sm: 7 }, textAlign: 'center' }}>
+        {!report && busy && <ReportSkeleton />}
+
+        {/* Nothing moved in the period: one sentence and the way out, no report built on zeros. */}
+        {report && !busy && report.metrics.transactionCount === 0 && (
+          <Box sx={{ py: 6, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography sx={{ maxWidth: 520 }}>{t('insights.emptyNoData')}</Typography>
+            <Button component={RouterLink} to="/open-finance" variant="contained" sx={{ mt: 2 }}>
+              {t('openFinance.connectShort')}
+            </Button>
+          </Box>
+        )}
+
+        {report && report.metrics.transactionCount > 0 && (
+          <Stack
+            spacing={{ xs: 5, md: 6 }}
+            aria-busy={busy}
+            sx={{ opacity: busy ? 0.6 : 1, transition: 'opacity 150ms' }}
+          >
+            {/* (1) The answer, then where it came from. */}
+            <Box>
+              {/* The totals are only as fresh as the bank data under them (B50). */}
+              <BankDataNotice bankData={report.bankData} sx={{ mb: 2 }} />
+              <Typography variant="h4" component="h2" sx={{ maxWidth: 760 }}>
+                {report.headline}
+              </Typography>
+              <Typography color="text.secondary" sx={{ mt: 1.5, maxWidth: 680 }}>
+                {report.summary}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+                {t(`insights.provider.${report.provider}`)},{' '}
+                {t('insights.generatedAt', { date: dateTime(report.generatedAt, lang) }).toLocaleLowerCase()}.{' '}
+                {t('insights.aggregateOnly')}
+              </Typography>
+            </Box>
+
+            {/* (2) Four numbers in columns, no boxes. */}
             <Box
               sx={{
-                width: 64,
-                height: 64,
-                borderRadius: '20px',
                 display: 'grid',
-                placeItems: 'center',
-                mx: 'auto',
-                mb: 2.5,
-                color: 'primary.main',
-                bgcolor: 'background.raised',
-                border: '1px solid',
+                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+                gap: { xs: 3, md: 4 },
+                pt: 3,
+                borderTop: '1px solid',
                 borderColor: 'divider',
               }}
             >
-              <WalletIcon name="insights" sx={{ fontSize: 30 }} />
+              <StatBlock compact label={t('insights.metrics.inflow')} value={money(report.metrics.inflow, lang)} />
+              <StatBlock compact label={t('insights.metrics.outflow')} value={money(report.metrics.outflow, lang)} />
+              <StatBlock
+                compact
+                emphasis
+                label={t('insights.metrics.netFlow')}
+                value={money(report.metrics.netFlow, lang)}
+                negative={Number(report.metrics.netFlow) < 0}
+              />
+              <StatBlock
+                compact
+                label={t('insights.metrics.transactionCount')}
+                value={String(report.metrics.transactionCount)}
+              />
             </Box>
-            <Typography variant="h5">{t('insights.emptyTitle')}</Typography>
-            <Typography color="text.secondary" sx={{ mt: 1, mx: 'auto', maxWidth: 560 }}>
-              {t('insights.emptyDescription')}
-            </Typography>
-          </Card>
-        )}
 
-        {report && (
-          <Stack spacing={3}>
-            <Card
+            {/* (3) Month by month: one row each, the bars share one scale, the net on the right. */}
+            <Box component="section" aria-labelledby="insights-flow">
+              <Stack
+                direction="row"
+                alignItems="baseline"
+                justifyContent="space-between"
+                flexWrap="wrap"
+                sx={{ gap: 2, mb: 1 }}
+              >
+                <Typography id="insights-flow" variant="h6" component="h2">
+                  {t('insights.cashFlow')}
+                </Typography>
+                <Stack direction="row" spacing={2} aria-hidden="true">
+                  {[
+                    ['success.main', 'insights.metrics.inflow'],
+                    ['text.secondary', 'insights.metrics.outflow'],
+                  ].map(([color, label]) => (
+                    <Stack key={label} direction="row" spacing={0.75} alignItems="center">
+                      <Box sx={{ width: 12, height: 4, borderRadius: 2, bgcolor: color }} />
+                      <Typography variant="caption" color="text.secondary">
+                        {t(label)}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Stack>
+              <Box
+                component="ul"
+                sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}
+              >
+                {report.monthlyFlow.map((flow) => {
+                  const net = Number(flow.inflow) - Number(flow.outflow);
+                  return (
+                    <Box
+                      component="li"
+                      key={flow.month}
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '56px minmax(0, 1fr) auto', sm: '72px minmax(0, 1fr) 140px' },
+                        alignItems: 'center',
+                        columnGap: 2,
+                        minHeight: 56,
+                        py: 1,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Typography variant="body2">{formatMonth(flow.month)}</Typography>
+                      {/* The bars repeat what the screen reader hears in the sentence below them. */}
+                      <Box>
+                        <Stack spacing={0.5} aria-hidden="true">
+                          {[
+                            [flow.inflow, 'success.main'],
+                            [flow.outflow, 'text.secondary'],
+                          ].map(([value, color]) => (
+                            <Box
+                              key={color}
+                              sx={{
+                                height: 6,
+                                minWidth: 2,
+                                width: `${(Number(value) / maxFlow) * 100}%`,
+                                bgcolor: color,
+                                borderRadius: 3,
+                              }}
+                            />
+                          ))}
+                        </Stack>
+                        <Box sx={visuallyHidden}>
+                          {t('insights.flowRow', {
+                            inflow: money(flow.inflow, lang),
+                            outflow: money(flow.outflow, lang),
+                          })}
+                        </Box>
+                      </Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          fontVariantNumeric: 'tabular-nums',
+                          color: net < 0 ? 'error.main' : 'text.primary',
+                        }}
+                      >
+                        {net > 0 ? '+ ' : ''}
+                        {money(net, lang)}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+
+            {/* (4) What to look at and what to do, side by side on a wide screen. */}
+            <Box
               sx={{
-                p: { xs: 3, md: 4 },
-                background: (theme) =>
-                  `radial-gradient(120% 120% at 100% 0%, ${alpha(
-                    theme.palette.brand.horizon,
-                    0.14
-                  )} 0%, transparent 50%), ${theme.palette.background.paper}`,
+                display: 'grid',
+                gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+                gap: 5,
               }}
             >
-              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={2}>
-                <Box>
-                  <Chip
-                    size="small"
-                    label={t(`insights.provider.${report.provider}`)}
-                    sx={{ mb: 2, bgcolor: 'background.raised' }}
-                  />
-                  <Typography variant="h4">{report.headline}</Typography>
-                  <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 700 }}>
-                    {report.summary}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                  {t('insights.generatedAt', {
-                    date: dateTime(report.generatedAt, i18n.language),
-                  })}
-                </Typography>
-              </Stack>
-            </Card>
-
-            <Grid container spacing={2}>
               {[
-                ['inflow', report.metrics.inflow, 'success.main'],
-                ['outflow', report.metrics.outflow, 'text.primary'],
-                [
-                  'netFlow',
-                  report.metrics.netFlow,
-                  Number(report.metrics.netFlow) >= 0 ? 'success.main' : 'error.main',
-                ],
-                ['transactionCount', report.metrics.transactionCount, 'text.primary'],
-              ].map(([key, value, color]) => (
-                <Grid item xs={6} md={3} key={key}>
-                  <Card sx={{ p: 2.5, height: '100%' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {t(`insights.metrics.${key}`)}
-                    </Typography>
-                    <Typography variant="h5" sx={{ mt: 1, color, overflowWrap: 'anywhere' }}>
-                      {key === 'transactionCount' ? value : money(value, i18n.language)}
-                    </Typography>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={7}>
-                <Card sx={{ p: 3, height: '100%' }}>
-                  <Typography variant="h6">{t('insights.cashFlow')}</Typography>
-                  <Stack spacing={2.5} sx={{ mt: 3 }}>
-                    {report.monthlyFlow.map((flow) => (
-                      <Box key={flow.month}>
-                        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.75 }}>
-                          <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                            {formatMonth(flow.month)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {money(flow.inflow, i18n.language)} / {money(flow.outflow, i18n.language)}
-                          </Typography>
-                        </Stack>
-                        <Stack spacing={0.5}>
-                          <Box
-                            sx={{
-                              height: 7,
-                              width: `${(Number(flow.inflow) / maxFlow) * 100}%`,
-                              bgcolor: 'success.main',
-                              borderRadius: 4,
-                            }}
-                          />
-                          <Box
-                            sx={{
-                              height: 7,
-                              width: `${(Number(flow.outflow) / maxFlow) * 100}%`,
-                              bgcolor: 'warning.main',
-                              borderRadius: 4,
-                            }}
-                          />
-                        </Stack>
-                      </Box>
-                    ))}
-                  </Stack>
-                  <Stack direction="row" spacing={2} sx={{ mt: 2.5 }}>
-                    {[
-                      ['success.main', 'insights.metrics.inflow'],
-                      ['warning.main', 'insights.metrics.outflow'],
-                    ].map(([color, label]) => (
-                      <Stack key={label} direction="row" spacing={0.75} alignItems="center">
-                        {/* Same colour as the bars above: the swatch is the legend. */}
-                        <Box aria-hidden="true" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {t(label)}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={5}>
-                <Card sx={{ p: 3, height: '100%' }}>
-                  <Typography variant="h6">{t('insights.observations')}</Typography>
-                  <Stack spacing={2.5} sx={{ mt: 2.5 }}>
-                    {report.observations.map((item, index) => (
-                      <Box key={`${item.title}-${index}`}>
+                ['observations', report.observations],
+                ['actions', report.recommendedActions],
+              ].map(([key, items]) => (
+                <Box component="section" key={key} aria-labelledby={`insights-${key}`}>
+                  <Typography id={`insights-${key}`} variant="h6" component="h2" sx={{ mb: 1 }}>
+                    {t(`insights.${key}`)}
+                  </Typography>
+                  <Box
+                    component="ul"
+                    sx={{ m: 0, p: 0, listStyle: 'none', borderTop: '1px solid', borderColor: 'divider' }}
+                  >
+                    {items.map((item, index) => (
+                      <Box
+                        component="li"
+                        key={`${item.title}-${index}`}
+                        sx={{ py: 2, borderBottom: '1px solid', borderColor: 'divider' }}
+                      >
                         <Typography variant="subtitle2">{item.title}</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                           {item.body}
@@ -287,54 +393,47 @@ export default function Insights() {
                         <CitationLinks ids={item.citationIds} references={report.references} />
                       </Box>
                     ))}
-                  </Stack>
-                </Card>
-              </Grid>
-            </Grid>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
 
-            <Card sx={{ p: 3 }}>
-              <Typography variant="h6">{t('insights.actions')}</Typography>
-              <Grid container spacing={2} sx={{ mt: 0.5 }}>
-                {report.recommendedActions.map((item, index) => (
-                  <Grid item xs={12} md={6} key={`${item.title}-${index}`}>
-                    <Box sx={{ p: 2.5, height: '100%', borderRadius: '18px', bgcolor: 'background.neutral' }}>
-                      <Typography variant="subtitle2">{item.title}</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                        {item.body}
-                      </Typography>
-                      <CitationLinks ids={item.citationIds} references={report.references} />
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </Card>
-
-            <Card sx={{ p: { xs: 3, md: 4 } }}>
-              <Grid container spacing={4} alignItems="center">
-                <Grid item xs={12} md={6}>
-                  <Typography variant="overline" color="primary.main">
-                    {t('insights.opportunity.eyebrow')}
-                  </Typography>
-                  <Typography variant="h4" sx={{ mt: 0.5 }}>
-                    {t('insights.opportunity.title')}
-                  </Typography>
-                  <Typography color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-                    {t('insights.opportunity.description')}
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
+            {/* (5) The simulator is a tool: folded, with its answer as the summary. */}
+            <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+              <SectionCard
+                collapsible
+                title={t('insights.opportunity.title')}
+                summary={money(opportunity.futureValue, lang)}
+              >
+                <Box
+                  sx={{
+                    px: { xs: 2.5, sm: 3 },
+                    pb: 3,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+                    gap: 4,
+                  }}
+                >
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                      {t('insights.opportunity.description')}
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' },
+                        gap: 2,
+                      }}
+                    >
                       <TextField
-                        fullWidth
                         type="number"
                         label={t('insights.opportunity.monthlyAmount')}
                         value={monthlyContribution}
                         onChange={(event) => setMonthlyContribution(event.target.value)}
                         inputProps={{ min: 0, max: 1000000, step: '0.01' }}
+                        sx={{ gridColumn: { xs: 'span 2', sm: 'auto' } }}
                       />
-                    </Grid>
-                    <Grid item xs={6} sm={4}>
                       <TextField
-                        fullWidth
                         select
                         label={t('insights.opportunity.term')}
                         value={years}
@@ -346,87 +445,77 @@ export default function Insights() {
                           </MenuItem>
                         ))}
                       </TextField>
-                    </Grid>
-                    <Grid item xs={6} sm={4}>
                       <TextField
-                        fullWidth
                         type="number"
                         label={t('insights.opportunity.annualRate')}
                         value={annualRate}
                         onChange={(event) => setAnnualRate(event.target.value)}
                         inputProps={{ min: 0, max: 100, step: '0.1' }}
                       />
-                    </Grid>
-                  </Grid>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-                    {t('insights.opportunity.suggestion')}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Box sx={{ p: { xs: 3, sm: 4 }, borderRadius: '20px', bgcolor: 'background.neutral' }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('insights.opportunity.estimatedValue')}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+                      {t('insights.opportunity.suggestion')}
                     </Typography>
-                    <Typography variant="h3" sx={{ mt: 1, color: 'secondary.main', overflowWrap: 'anywhere' }}>
-                      {money(opportunity.futureValue, i18n.language)}
-                    </Typography>
-                    <Stack direction="row" spacing={3} sx={{ mt: 3 }}>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('insights.opportunity.contributed')}
-                        </Typography>
-                        <Typography variant="subtitle2">{money(opportunity.contributed, i18n.language)}</Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('insights.opportunity.earnings')}
-                        </Typography>
-                        <Typography variant="subtitle2">{money(opportunity.earnings, i18n.language)}</Typography>
-                      </Box>
-                    </Stack>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
-                      {t('insights.opportunity.disclaimer')}
-                    </Typography>
-                    <Link
-                      href="https://www3.bcb.gov.br/CALCIDADAO/publico/exibirMetodologiaAplicacaoDepositosRegulares.do?method=exibirMetodologiaAplicacaoDepositosRegulares"
-                      target="_blank"
-                      rel="noreferrer"
-                      variant="caption"
-                      sx={{ display: 'inline-block', mt: 1 }}
-                    >
-                      {t('insights.opportunity.methodology')}
-                    </Link>
                   </Box>
-                </Grid>
-              </Grid>
-            </Card>
+                  <Box>
+                    <StatBlock
+                      label={t('insights.opportunity.estimatedValue')}
+                      value={
+                        <Box component="span" sx={{ color: 'secondary.main' }}>
+                          {money(opportunity.futureValue, lang)}
+                        </Box>
+                      }
+                    />
+                    <Stack direction="row" spacing={4} sx={{ mt: 2 }}>
+                      <StatBlock
+                        compact
+                        label={t('insights.opportunity.contributed')}
+                        value={money(opportunity.contributed, lang)}
+                      />
+                      <StatBlock
+                        compact
+                        label={t('insights.opportunity.earnings')}
+                        value={money(opportunity.earnings, lang)}
+                      />
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+                      {t('insights.opportunity.disclaimer')}{' '}
+                      <Link
+                        href="https://www3.bcb.gov.br/CALCIDADAO/publico/exibirMetodologiaAplicacaoDepositosRegulares.do?method=exibirMetodologiaAplicacaoDepositosRegulares"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t('insights.opportunity.methodology')}
+                      </Link>
+                    </Typography>
+                  </Box>
+                </Box>
+              </SectionCard>
+            </Box>
 
-            <Card sx={{ p: 3 }}>
-              <Stack direction="row" spacing={1.25} alignItems="center">
-                <WalletIcon name="book" />
-                <Typography variant="h6">{t('insights.references')}</Typography>
-              </Stack>
-              <Stack spacing={2} sx={{ mt: 2.5 }}>
-                {report.references.map((reference, index) => (
-                  <Box id={`reference-${reference.id}`} key={reference.id}>
-                    <Link href={reference.url} target="_blank" rel="noreferrer" underline="hover" fontWeight={600}>
-                      [{index + 1}] {reference.title}
+            {/* (6) Sources and the fine print, small and last. */}
+            <Box component="section" aria-labelledby="insights-references">
+              <Typography id="insights-references" variant="subtitle1" component="h2" sx={{ mb: 1.5 }}>
+                {t('insights.references')}
+              </Typography>
+              <Box component="ol" sx={{ m: 0, pl: 3, display: 'grid', gap: 1.5, maxWidth: 760 }}>
+                {report.references.map((reference) => (
+                  <Typography component="li" variant="body2" id={`reference-${reference.id}`} key={reference.id}>
+                    <Link href={reference.url} target="_blank" rel="noreferrer" underline="hover">
+                      {reference.title}
                     </Link>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography component="span" variant="body2" color="text.secondary">
+                      {' '}
                       {reference.author}
                       {reference.year ? `, ${reference.year}` : ''}. {reference.relevance}
                     </Typography>
-                  </Box>
+                  </Typography>
                 ))}
-              </Stack>
-            </Card>
-
-            <Alert severity="info">
-              <Typography variant="body2">{report.disclaimer}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {report.privacyNotice}
+              </Box>
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 3, maxWidth: 760 }}>
+                {report.disclaimer} {report.privacyNotice}
               </Typography>
-            </Alert>
+            </Box>
           </Stack>
         )}
       </Container>

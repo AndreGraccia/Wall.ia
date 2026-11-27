@@ -43,6 +43,11 @@ class QuestionParserTest {
             "Qual o limite do meu cartão?                         | UNKNOWN      |         | 1   | true",
             "What is my lowest balance?                           | UNKNOWN      |         | 1   | false",
             "Qual a previsão do tempo?                            | UNKNOWN      |         | 1   | false",
+            // Investment is outside what the engine answers: "comprar" must not turn it into a purchase (CT-V19, A3).
+            "Qual ação devo comprar na bolsa?                     | UNKNOWN      |         | 1   | false",
+            "Vale a pena investir no Tesouro Direto?              | UNKNOWN      |         | 1   | false",
+            "Should I buy bitcoin?                                | UNKNOWN      |         | 1   | false",
+            "Posso comprar uma bolsa de 300?                      | PURCHASE     | 300.00  | 1   | false",
     })
     void understandsTheQuestionsTheEngineCanAnswer(String question, Intent intent, BigDecimal amount,
                                                    int installments, boolean card) {

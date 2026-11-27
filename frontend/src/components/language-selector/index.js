@@ -25,11 +25,12 @@ export default function LanguageSelector() {
             px: 1.25,
             borderRadius: '999px',
             color: selected ? 'text.primary' : 'text.secondary',
-            bgcolor: selected ? 'background.raised' : 'transparent',
+            bgcolor: selected ? 'background.neutral' : 'transparent',
 
             '&:hover': {
               color: 'text.primary',
-              bgcolor: selected ? 'background.raised' : 'action.hover',
+              bgcolor: selected ? 'background.neutral' : 'action.hover',
+              textDecoration: 'none',
             },
           }}
         >
@@ -48,9 +49,8 @@ export default function LanguageSelector() {
         display: 'flex',
         alignItems: 'center',
         borderRadius: '999px',
-        bgcolor: 'background.neutral',
-        border: '1px solid',
-        borderColor: 'divider',
+        bgcolor: 'background.default',
+        width: 'fit-content',
       }}
     >
       {renderButton('pt', 'PT', t('language.portuguese'))}

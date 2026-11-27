@@ -281,13 +281,13 @@ DailySpendingQuestion.propTypes = {
   onAnswered: PropTypes.func.isRequired,
 };
 
-export default function Questions({ recurrences, dailySpending, cardSpending, onAnswered }) {
+export default function Questions({ recurrences, dailySpending, cardSpending, onAnswered, collapsible, title }) {
   const { t } = useTranslation();
   const pending = recurrences.filter((item) => item.status === 'PENDING');
   const answered = recurrences.filter((item) => item.status !== 'PENDING');
   const [showAnswered, setShowAnswered] = useState(false);
   return (
-    <SectionCard title={t('future.questionsTitle')}>
+    <SectionCard title={title || t('future.questionsTitle')} collapsible={collapsible}>
       <Typography variant="body2" color="text.secondary" sx={{ px: 3, pb: 2 }}>
         {pending.length || dailySpending?.status === 'PENDING' || cardSpending?.status === 'PENDING'
           ? t('future.questionsHelp')
@@ -321,6 +321,8 @@ export default function Questions({ recurrences, dailySpending, cardSpending, on
   );
 }
 Questions.propTypes = {
+  collapsible: PropTypes.bool,
+  title: PropTypes.string,
   recurrences: PropTypes.array.isRequired,
   dailySpending: PropTypes.object,
   cardSpending: PropTypes.object,

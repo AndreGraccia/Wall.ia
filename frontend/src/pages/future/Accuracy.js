@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Button,
@@ -22,7 +23,7 @@ import { dayLabel, money } from '../../utils/wallet';
  * "How right was Wall.ia?" Old forecasts graded against the real balance, misses included. No finance
  * app publishes its own error; showing it is what earns trust in the numbers above.
  */
-export default function Accuracy() {
+export default function Accuracy({ collapsible }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [data, setData] = useState(null);
@@ -41,16 +42,18 @@ export default function Accuracy() {
 
   if (!data?.since) return null;
 
-  // Nothing graded yet: a card with no number would only make the page longer. One line says when it starts.
+  // Nothing graded yet: one line says when it starts, folded like the other tools so it never floats alone.
   if (!data.comparisons) {
     if (!data.firstComparisonOn) return null;
     return (
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 1 }}>
-        {t('future.accuracy.waiting', {
-          since: dayLabel(data.since, lang),
-          first: dayLabel(data.firstComparisonOn, lang),
-        })}
-      </Typography>
+      <SectionCard title={t('future.accuracy.title')} collapsible={collapsible}>
+        <Typography variant="body2" color="text.secondary" component="p" sx={{ px: 3, pb: 3 }}>
+          {t('future.accuracy.waiting', {
+            since: dayLabel(data.since, lang),
+            first: dayLabel(data.firstComparisonOn, lang),
+          })}
+        </Typography>
+      </SectionCard>
     );
   }
 
@@ -62,7 +65,7 @@ export default function Accuracy() {
     });
 
   return (
-    <SectionCard title={t('future.accuracy.title')}>
+    <SectionCard title={t('future.accuracy.title')} collapsible={collapsible}>
       <Box sx={{ px: 3, pb: 2 }}>
         <Grid container spacing={3}>
           <Grid item xs={12} sm={4}>
@@ -134,3 +137,4 @@ export default function Accuracy() {
     </SectionCard>
   );
 }
+Accuracy.propTypes = { collapsible: PropTypes.bool };

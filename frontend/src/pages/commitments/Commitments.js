@@ -1,105 +1,135 @@
 import { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link as RouterLink } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Chip,
-  Collapse,
-  Container,
-  Grid,
-  LinearProgress,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Chip, Container, LinearProgress, Stack, Tooltip, Typography } from '@mui/material';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import HttpService from '../../services/HttpService';
 import { StatBlock } from '../../components/future-ui';
-import { EmptyState, PageHeading, PageSkeleton, SectionCard } from '../../components/wallet-ui';
-import { dayLabel, errorKey, money, monthLabel, percent, subtractMoney } from '../../utils/wallet';
+import { Disclosure, ListRow } from '../../components/detail-ui';
+import { EmptyState, PageHeading, PageSkeleton } from '../../components/wallet-ui';
+import { dayLabel, errorKey, money, monthLabel, percent, subtractMoney, toCents } from '../../utils/wallet';
 import DebtPayoff from './DebtPayoff';
+import BankDataNotice from '../../components/bank-data';
 
+// The bills that matter now; the instalments of later months fold away.
+const SHOWN_INVOICES = 3;
 const FULL_DATE = { day: '2-digit', month: 'short', year: 'numeric' };
+const sum = (values) => values.reduce((total, value) => total + toCents(value), 0) / 100;
+// ponytail: first letter only; CSS capitalize would also give "Outubro De 2026".
+const capital = (text) => text.replace(/^./, (c) => c.toUpperCase());
+// The bill to pay next: the closed one waiting for its due date, else the first one that will close.
+const billToPay = (card) => card.invoices.find((invoice) => invoice.status === 'CLOSED') || card.invoices[0];
+
+/**
+ * What leaves for debts in the first month that has something due: the bill to pay of each card and the
+ * instalment of each loan whose upcoming due date (the backend's, never one already past) falls in that month.
+ * One horizon for the hero instead of three numbers that each meant a different period.
+ */
+export function monthDebts(cards, loans) {
+  const parts = [
+    ...cards
+      .map(billToPay)
+      .filter((bill) => bill?.dueDate && Number(bill.total) > 0)
+      .map((bill) => ({ kind: 'bill', amount: bill.total, date: bill.dueDate })),
+    ...loans
+      .filter((loan) => loan.upcomingDueDate)
+      .map((loan) => ({ kind: 'loan', amount: loan.installmentAmount, date: loan.upcomingDueDate })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+  if (!parts.length) return null;
+  const month = parts[0].date.slice(0, 7);
+  const inMonth = parts.filter((part) => part.date.startsWith(month));
+  return { month, total: sum(inMonth.map((part) => part.amount)), parts: inMonth };
+}
+
+/** The bank keeps an instalment's date until it sees the payment: a date behind the upcoming one is unpaid to us. */
+export const overdue = (loan) =>
+  Boolean(loan.installmentsRemaining > 0 && loan.nextDueDate && loan.upcomingDueDate !== loan.nextDueDate);
+
+/** Numbers in columns, no boxes (DESIGN.md), on a divider. */
+function Columns({ children, sx }) {
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+        gap: { xs: 3, md: 4 },
+        ...sx,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+Columns.propTypes = { children: PropTypes.node, sx: PropTypes.object };
+
+/** A thin bar with its number beside it: how much of a whole is used or paid. */
+function Meter({ value, label }) {
+  return (
+    <LinearProgress
+      variant="determinate"
+      value={Math.max(0, Math.min(100, value))}
+      aria-label={label}
+      sx={{ height: 4, borderRadius: 999, bgcolor: 'background.neutral' }}
+    />
+  );
+}
+Meter.propTypes = { value: PropTypes.number.isRequired, label: PropTypes.string.isRequired };
 
 function Invoice({ invoice }) {
   const { t, i18n } = useTranslation();
-  const [open, setOpen] = useState(false);
   const lang = i18n.language;
   return (
-    <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 3, py: 2 }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="subtitle2">
-              {/* ponytail: first letter only; CSS capitalize would also give "Outubro De 2026". */}
-              {monthLabel(invoice.month, lang).replace(/^./, (c) => c.toUpperCase())}
-            </Typography>
-            <Tooltip title={t(`commitments.invoiceStatusHelp.${invoice.status}`)}>
-              <Chip
-                size="small"
-                label={t(`commitments.invoiceStatus.${invoice.status}`)}
-                color={invoice.status === 'CLOSED' ? 'warning' : 'default'}
-                variant={invoice.status === 'FUTURE' ? 'outlined' : 'filled'}
-              />
-            </Tooltip>
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            {t('commitments.dueOn', { date: dayLabel(invoice.dueDate, lang) })} ·{' '}
-            {t('commitments.closesOn', { date: dayLabel(invoice.closingDate, lang) })}
-          </Typography>
-        </Box>
-        <Typography variant="subtitle1" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-          {money(invoice.total, lang)}
-        </Typography>
-      </Stack>
-      <Button
-        size="small"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        sx={{ mx: 2, mb: 1, color: 'text.secondary' }}
-      >
-        {t(open ? 'commitments.hideItems' : 'commitments.showItems')}
-      </Button>
-      <Collapse in={open} unmountOnExit>
-        <Box sx={{ px: 3, pb: 2 }}>
-          {invoice.lines.map((line, index) => (
-            <Stack
-              // Two "UBER *TRIP" on the same day are two lines, not one.
-              key={`${line.description}-${line.purchaseDate}-${index}`}
-              direction="row"
-              spacing={2}
-              alignItems="center"
-              sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}
-            >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" noWrap>
-                  {line.description}
+    <ListRow
+      title={capital(monthLabel(invoice.month, lang))}
+      meta={`${t('commitments.dueOn', { date: dayLabel(invoice.dueDate, lang) })}, ${t('commitments.closesOn', {
+        date: dayLabel(invoice.closingDate, lang),
+      }).toLowerCase()}`}
+      value={money(invoice.total, lang)}
+      aside={
+        <Tooltip title={t(`commitments.invoiceStatusHelp.${invoice.status}`)}>
+          <Chip
+            size="small"
+            label={t(`commitments.invoiceStatus.${invoice.status}`)}
+            color={invoice.status === 'CLOSED' ? 'warning' : 'default'}
+            variant={invoice.status === 'FUTURE' ? 'outlined' : 'filled'}
+          />
+        </Tooltip>
+      }
+      detailLabel={t('commitments.showItemsOf', { month: monthLabel(invoice.month, lang) })}
+      detail={
+        invoice.lines.length > 0 && (
+          <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: 'divider' }}>
+            {invoice.lines.map((line, index) => (
+              <Stack
+                // Two "UBER *TRIP" on the same day are two lines, not one.
+                key={`${line.description}-${line.purchaseDate}-${index}`}
+                direction="row"
+                spacing={2}
+                alignItems="center"
+                sx={{ minHeight: 44, py: 0.5 }}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" noWrap>
+                    {line.description}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t('commitments.purchasedOn', { date: dayLabel(line.purchaseDate, lang, FULL_DATE) })}
+                    {' · '}
+                    {line.installments > 1
+                      ? t('commitments.installment', { current: line.installment, total: line.installments })
+                      : t('commitments.singlePurchase')}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                  {money(line.amount, lang)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('commitments.purchasedOn', { date: dayLabel(line.purchaseDate, lang, FULL_DATE) })}
-                </Typography>
-              </Box>
-              <Chip
-                size="small"
-                variant="outlined"
-                label={
-                  line.installments > 1
-                    ? t('commitments.installment', { current: line.installment, total: line.installments })
-                    : t('commitments.singlePurchase')
-                }
-              />
-              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', minWidth: 96, textAlign: 'right' }}>
-                {money(line.amount, lang)}
-              </Typography>
-            </Stack>
-          ))}
-        </Box>
-      </Collapse>
-    </Box>
+              </Stack>
+            ))}
+          </Box>
+        )
+      }
+    />
   );
 }
 Invoice.propTypes = { invoice: PropTypes.object.isRequired };
@@ -107,161 +137,171 @@ Invoice.propTypes = { invoice: PropTypes.object.isRequired };
 /** Yearly rate in percent (26.8) to its compound monthly equivalent in percent (1.99). */
 export const monthlyFromAnnual = (annual) => ((1 + Number(annual) / 100) ** (1 / 12) - 1) * 100;
 
+function ItemHeading({ title, source }) {
+  return (
+    <Box>
+      <Typography variant="h6" component="h3">
+        {title}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        {source}
+      </Typography>
+    </Box>
+  );
+}
+ItemHeading.propTypes = { title: PropTypes.string.isRequired, source: PropTypes.string.isRequired };
+
 function CardSection({ card, revolving }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const used = Number(card.committedLimit);
   const limit = Number(card.creditLimit);
-  const next = card.invoices.find((invoice) => invoice.status !== 'CLOSED') || card.invoices[0];
   return (
-    <SectionCard
-      title={`${card.name}${card.lastDigits ? ` · ${t('commitments.cardFinal', { digits: card.lastDigits })}` : ''}`}
-    >
-      <Box sx={{ px: 3, pb: 3 }}>
-        <Typography variant="caption" color="text.secondary">
-          {t('commitments.source', { institution: card.institution })}
-        </Typography>
-        {next && Number(next.total) > 0 && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            {t('commitments.nextInvoiceHighlight', {
-              amount: money(next.total, lang),
-              month: monthLabel(next.month, lang),
-            })}
-          </Alert>
-        )}
-        {card.nextBillMinimum != null && Number(card.nextBillTotal) > 0 && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            {t('commitments.minimum', {
-              total: money(card.nextBillTotal, lang),
-              date: dayLabel(card.nextBillDueDate, lang, FULL_DATE),
-              minimum: money(card.nextBillMinimum, lang),
-            })}
-            {revolving &&
-              ` ${t('commitments.revolvingRate', {
-                source: revolving.bankRate
-                  ? t('commitments.revolvingBank', { institution: revolving.bankName })
-                  : t('commitments.revolvingMarket'),
-                rate: percent(revolving.bankRate ?? revolving.median, lang),
-                date: dayLabel(revolving.periodStart, lang),
-              })}`}
-          </Alert>
-        )}
-        {/* A zero limit (allowed by V11) would print "250000%"; show only what is used. */}
-        {limit > 0 ? (
-          <Box sx={{ mt: 2 }}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2">{t('commitments.limitLabel')}</Typography>
-              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                {Math.round((used / limit) * 100)}%
-              </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={Math.min(100, (used / limit) * 100)}
-              aria-label={t('commitments.limitLabel')}
-              sx={{ mt: 1, height: 8, borderRadius: 4, bgcolor: 'background.neutral' }}
-            />
-            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-              {t('commitments.limitUse', { used: money(used, lang), limit: money(limit, lang) })}
+    <Stack spacing={2} component="article">
+      <ItemHeading
+        title={`${card.name}${card.lastDigits ? ` · ${t('commitments.cardFinal', { digits: card.lastDigits })}` : ''}`}
+        source={t('commitments.source', { institution: card.institution })}
+      />
+      {/* A zero limit (allowed by V11) would print "250000%"; show only what is used. */}
+      {limit > 0 ? (
+        <Box sx={{ maxWidth: 520 }}>
+          <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Typography variant="body2">{t('commitments.limitLabel')}</Typography>
+            <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+              {Math.round((used / limit) * 100)}%
             </Typography>
-          </Box>
-        ) : (
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
-            {t('commitments.limitUnknown', { used: money(used, lang) })}
+          </Stack>
+          <Meter value={(used / limit) * 100} label={t('commitments.limitLabel')} />
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
+            {t('commitments.limitUse', { used: money(used, lang), limit: money(limit, lang) })}
           </Typography>
-        )}
-      </Box>
-      {card.invoices.map((invoice) => (
-        <Invoice key={invoice.month} invoice={invoice} />
-      ))}
-    </SectionCard>
+        </Box>
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          {t('commitments.limitUnknown', { used: money(used, lang) })}
+        </Typography>
+      )}
+      {card.nextBillMinimum != null && Number(card.nextBillTotal) > 0 && (
+        <Alert severity="warning">
+          {t('commitments.minimum', {
+            total: money(card.nextBillTotal, lang),
+            date: dayLabel(card.nextBillDueDate, lang, FULL_DATE),
+            minimum: money(card.nextBillMinimum, lang),
+          })}
+          {revolving &&
+            ` ${t('commitments.revolvingRate', {
+              source: revolving.bankRate
+                ? t('commitments.revolvingBank', { institution: revolving.bankName })
+                : t('commitments.revolvingMarket'),
+              rate: percent(revolving.bankRate ?? revolving.median, lang),
+              date: dayLabel(revolving.periodStart, lang),
+            })}`}
+        </Alert>
+      )}
+      {card.invoices.length > 0 && (
+        <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+          {card.invoices.slice(0, SHOWN_INVOICES).map((invoice) => (
+            <Invoice key={invoice.month} invoice={invoice} />
+          ))}
+          {card.invoices.length > SHOWN_INVOICES && (
+            <Disclosure
+              label={t('commitments.moreInvoices', { count: card.invoices.length - SHOWN_INVOICES })}
+              sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1 }}
+            >
+              {card.invoices.slice(SHOWN_INVOICES).map((invoice) => (
+                <Invoice key={invoice.month} invoice={invoice} />
+              ))}
+            </Disclosure>
+          )}
+        </Box>
+      )}
+    </Stack>
   );
 }
 CardSection.propTypes = { card: PropTypes.object.isRequired, revolving: PropTypes.object };
 
-function LoanSection({ loan, market }) {
+function LoanSection({ loan, market, indicators }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const paidShare = (loan.installmentsPaid / (loan.installmentsTotal || 1)) * 100;
+  const interestLeft = Number(loan.interestRemaining) > 0;
   return (
-    <Card sx={{ p: 3 }}>
-      <Typography variant="h6" component="h3">
-        {loan.product}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        {t('commitments.source', { institution: loan.institution })}
-      </Typography>
-      <Grid container spacing={3} sx={{ mt: 0.5 }}>
-        <Grid item xs={12} sm={6}>
+    <Stack spacing={2.5} component="article">
+      <ItemHeading title={loan.product} source={t('commitments.source', { institution: loan.institution })} />
+      <Columns>
+        <StatBlock
+          compact
+          label={t('commitments.remaining')}
+          value={money(loan.outstandingBalance, lang)}
+          help={t('commitments.installmentsLeft', {
+            remaining: loan.installmentsRemaining,
+            total: loan.installmentsTotal,
+          })}
+        />
+        <StatBlock
+          compact
+          label={t('commitments.nextPayment')}
+          value={money(loan.installmentAmount, lang)}
+          help={
+            loan.upcomingDueDate
+              ? [
+                  dayLabel(loan.upcomingDueDate, lang, FULL_DATE),
+                  loan.lastDueDate &&
+                    t('commitments.endsOn', {
+                      date: dayLabel(loan.lastDueDate, lang, { month: 'short', year: 'numeric' }),
+                    }),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : null
+          }
+        />
+        {interestLeft && (
           <StatBlock
-            label={t('commitments.remaining')}
-            value={money(loan.outstandingBalance, lang)}
-            help={t('commitments.installmentsLeft', {
-              remaining: loan.installmentsRemaining,
-              total: loan.installmentsTotal,
-            })}
+            compact
+            label={t('commitments.interestLeft')}
+            value={money(loan.interestRemaining, lang)}
+            help={t('commitments.interestLeftHelp', { count: loan.installmentsRemaining })}
           />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <StatBlock
-            label={t('commitments.nextPayment')}
-            value={money(loan.installmentAmount, lang)}
-            help={
-              loan.nextDueDate
-                ? [
-                    dayLabel(loan.nextDueDate, lang, FULL_DATE),
-                    loan.lastDueDate &&
-                      t('commitments.endsOn', {
-                        date: dayLabel(loan.lastDueDate, lang, { month: 'short', year: 'numeric' }),
-                      }),
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
-                : null
-            }
-          />
-        </Grid>
-      </Grid>
-      <LinearProgress
-        variant="determinate"
-        value={paidShare}
-        aria-label={t('commitments.progressLabel')}
-        sx={{ mt: 3, height: 8, borderRadius: 4, bgcolor: 'background.neutral' }}
-      />
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={0.5} sx={{ mt: 1 }}>
-        <Typography variant="caption" color="text.secondary">
+        )}
+      </Columns>
+      {overdue(loan) && (
+        <Typography variant="body2" sx={{ color: 'warning.main' }}>
+          {t('commitments.overdue', { date: dayLabel(loan.nextDueDate, lang) })}
+        </Typography>
+      )}
+      <Box sx={{ maxWidth: 520 }}>
+        <Meter value={paidShare} label={t('commitments.progressLabel')} />
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
           {t('commitments.progressLabel')}: {loan.installmentsPaid}/{loan.installmentsTotal}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {t('commitments.contracted')}: {money(loan.contractedAmount, lang)}
-          {loan.annualRate != null &&
-            ` · ${t('commitments.rate')}: ${t('commitments.rateValue', {
-              rate: Number(loan.annualRate).toLocaleString(lang, { maximumFractionDigits: 2 }),
-            })}`}
-        </Typography>
-      </Stack>
-      {loan.cet != null && (
-        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-          {t('commitments.cet', { rate: Number(loan.cet).toLocaleString(lang, { maximumFractionDigits: 2 }) })}
-        </Typography>
-      )}
-      {market && loan.annualRate != null && (
-        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-          {t('commitments.marketLoan', {
-            rate: percent(monthlyFromAnnual(loan.annualRate), lang),
-            median: percent(market.median, lang),
-            date: dayLabel(market.periodStart, lang),
-          })}
-        </Typography>
-      )}
+      </Box>
       {/* What the money costs: the fee transparency investment apps show, turned toward the one who owes. */}
-      {(loan.nextInstallmentInterest != null || Number(loan.interestRemaining) > 0) && (
-        <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="overline" color="text.secondary" component="p">
-            {t('commitments.costTitle')}
+      <Disclosure label={t('commitments.loanDetails')}>
+        <Stack spacing={1} sx={{ pl: 2, maxWidth: 680, borderLeft: '2px solid', borderColor: 'divider' }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('commitments.contracted')}: {money(loan.contractedAmount, lang)}
+            {loan.annualRate != null &&
+              ` · ${t('commitments.rate')}: ${t('commitments.rateValue', {
+                rate: Number(loan.annualRate).toLocaleString(lang, { maximumFractionDigits: 2 }),
+              })}`}
           </Typography>
+          {loan.cet != null && (
+            <Typography variant="body2" color="text.secondary">
+              {t('commitments.cet', { rate: Number(loan.cet).toLocaleString(lang, { maximumFractionDigits: 2 }) })}
+            </Typography>
+          )}
+          {market && loan.annualRate != null && (
+            <Typography variant="body2" color="text.secondary">
+              {t('commitments.marketLoan', {
+                rate: percent(monthlyFromAnnual(loan.annualRate), lang),
+                median: percent(market.median, lang),
+                date: dayLabel(market.periodStart, lang),
+              })}
+            </Typography>
+          )}
           {loan.nextInstallmentInterest != null && (
-            <Typography variant="body2">
+            <Typography variant="body2" color="text.secondary">
               {t('commitments.costNext', {
                 interest: money(loan.nextInstallmentInterest, lang),
                 principal: money(subtractMoney(loan.installmentAmount, loan.nextInstallmentInterest), lang),
@@ -269,27 +309,81 @@ function LoanSection({ loan, market }) {
               })}
             </Typography>
           )}
-          {Number(loan.interestRemaining) > 0 && (
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {t('commitments.costRemaining', {
-                interest: money(loan.interestRemaining, lang),
-                count: loan.installmentsRemaining,
+          {interestLeft && (
+            <Typography variant="body2" color="text.secondary">
+              {t('commitments.costHelp')}
+            </Typography>
+          )}
+          {/* Selic, IPCA and CDI are context for this rate, not numbers of their own at the end of the page. */}
+          {indicators.length > 0 && (
+            <Typography variant="body2" color="text.secondary">
+              {t('commitments.indicatorsLine', {
+                items: indicators
+                  .map(
+                    (indicator) =>
+                      `${t(`commitments.indicators.${indicator.code}`, { defaultValue: indicator.code })} ${percent(
+                        indicator.value,
+                        lang
+                      )}`
+                  )
+                  .join(' · '),
+                date: dayLabel(indicators[0].referenceDate, lang),
               })}
             </Typography>
           )}
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-            {t('commitments.costHelp')}
-          </Typography>
-        </Box>
-      )}
-    </Card>
+        </Stack>
+      </Disclosure>
+    </Stack>
   );
 }
-LoanSection.propTypes = { loan: PropTypes.object.isRequired, market: PropTypes.object };
+LoanSection.propTypes = {
+  loan: PropTypes.object.isRequired,
+  market: PropTypes.object,
+  indicators: PropTypes.array.isRequired,
+};
 
-export default function Commitments() {
+/** The hero: one month, one total, and what makes it up as metadata. */
+function MonthHero({ debts }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
+  return (
+    <Box>
+      <Typography variant="h6" component="p" color="text.secondary" sx={{ fontWeight: 400 }}>
+        {t('commitments.hero.lead', { month: monthLabel(debts.month, lang, { month: 'long' }) })}
+      </Typography>
+      <Typography variant="h2" component="p" sx={{ my: 0.5 }}>
+        {money(debts.total, lang)}
+        <Typography component="span" variant="h5" color="text.secondary" sx={{ ml: 1, fontWeight: 500 }}>
+          {t('commitments.hero.suffix')}
+        </Typography>
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {debts.parts
+          .map((part) =>
+            t(`commitments.hero.${part.kind}`, { amount: money(part.amount, lang), date: dayLabel(part.date, lang) })
+          )
+          .join(' · ')}
+      </Typography>
+    </Box>
+  );
+}
+MonthHero.propTypes = { debts: PropTypes.object.isRequired };
+
+/** A titled group of the page: a divider on top, the title, then its items with room between them. */
+function Group({ id, title, children }) {
+  return (
+    <Box component="section" aria-labelledby={id} sx={{ pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+      <Typography id={id} variant="h5" component="h2" sx={{ mb: 3 }}>
+        {title}
+      </Typography>
+      <Stack spacing={5}>{children}</Stack>
+    </Box>
+  );
+}
+Group.propTypes = { id: PropTypes.string.isRequired, title: PropTypes.string.isRequired, children: PropTypes.node };
+
+export default function Commitments() {
+  const { t } = useTranslation();
   const [state, setState] = useState({ loading: true, error: null, data: null });
   // Banco Central references are extra context: without them the page is still whole.
   const [market, setMarket] = useState(null);
@@ -315,14 +409,16 @@ export default function Commitments() {
   const { data } = state;
   const rate = (modality) => market?.rates?.find((quote) => quote.modality === modality) || null;
   const empty = data && !data.cards.length && !data.loans.length;
+  const debts = data ? monthDebts(data.cards, data.loans) : null;
   return (
     <>
       <Helmet>
         <title>{t('commitments.pageTitle')}</title>
       </Helmet>
       <Container maxWidth="lg">
-        <PageHeading title={t('commitments.heading')} description={t('commitments.description')} />
-        {state.loading && !data && <PageSkeleton rows={2} />}
+        <PageHeading title={t('commitments.heading')} />
+        {state.loading && !data && <PageSkeleton rows={3} />}
+        {data && <BankDataNotice bankData={data.bankData} sx={{ mb: 3 }} />}
         {state.error && (
           <Alert
             severity="error"
@@ -336,9 +432,9 @@ export default function Commitments() {
           </Alert>
         )}
         {empty && (
-          <Card>
+          <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', mb: 4 }}>
             <EmptyState
-              icon="bank"
+              icon="card"
               title={t('commitments.empty')}
               description={t('commitments.emptyHelp')}
               action={
@@ -347,56 +443,37 @@ export default function Commitments() {
                 </Button>
               }
             />
-          </Card>
+          </Box>
         )}
         {data && !empty && (
-          <Stack spacing={4}>
+          <Stack spacing={{ xs: 5, md: 6 }} aria-busy={state.loading}>
+            {debts && <MonthHero debts={debts} />}
             {data.cards.length > 0 && (
-              <Box component="section">
-                <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-                  {t('commitments.cardsTitle')}
-                </Typography>
-                <Stack spacing={3}>
-                  {data.cards.map((card) => (
-                    <CardSection key={card.id} card={card} revolving={rate('CARD_REVOLVING')} />
-                  ))}
-                </Stack>
-              </Box>
+              <Group id="cards-title" title={t('commitments.cardsTitle')}>
+                {data.cards.map((card) => (
+                  <CardSection key={card.id} card={card} revolving={rate('CARD_REVOLVING')} />
+                ))}
+              </Group>
             )}
             {data.loans.length > 0 && (
-              <Box component="section">
-                <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-                  {t('commitments.loansTitle')}
-                </Typography>
-                <Stack spacing={3}>
-                  {data.loans.map((loan) => (
-                    <LoanSection key={loan.id} loan={loan} market={rate('PERSONAL_LOAN')} />
-                  ))}
-                  <DebtPayoff />
-                </Stack>
-              </Box>
-            )}
-            {market?.indicators?.length > 0 && (
-              <Card component="section" aria-labelledby="bcb-indicators" sx={{ p: 3 }}>
-                <Typography id="bcb-indicators" variant="h6" component="h2">
-                  {t('commitments.indicatorsTitle')}
-                </Typography>
-                <Grid container spacing={2} sx={{ mt: 0.5 }}>
-                  {market.indicators.map((indicator) => (
-                    <Grid item xs={12} sm={4} key={indicator.code}>
-                      <StatBlock
-                        label={t(`commitments.indicators.${indicator.code}`, { defaultValue: indicator.code })}
-                        value={percent(indicator.value, lang)}
-                        help={t('commitments.indicatorDate', {
-                          date: dayLabel(indicator.referenceDate, lang, FULL_DATE),
-                        })}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Card>
+              <Group id="loans-title" title={t('commitments.loansTitle')}>
+                {data.loans.map((loan) => (
+                  <LoanSection
+                    key={loan.id}
+                    loan={loan}
+                    market={rate('PERSONAL_LOAN')}
+                    indicators={market?.indicators || []}
+                  />
+                ))}
+              </Group>
             )}
           </Stack>
+        )}
+        {/* Open Finance does not send "Pix no crédito" (B14): it can be typed even without a bank connected. */}
+        {data && (
+          <Box sx={{ mt: { xs: 5, md: 6 } }}>
+            <DebtPayoff manualDebts={data.manualDebts || []} onChange={load} />
+          </Box>
         )}
       </Container>
     </>

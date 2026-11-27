@@ -34,9 +34,14 @@ public class AccountDeletionService {
     /** Rows that belong to the person alone. Order matters only for readability; none references another. */
     static final List<String> OWN_ROWS = List.of(
             "DELETE FROM recurrence_decision WHERE user_id = ?",
+            "DELETE FROM charge_alert_decision WHERE user_id = ?",
             "DELETE FROM goal WHERE user_id = ?",
             "DELETE FROM future_alert WHERE user_id = ?",
             "DELETE FROM envelope WHERE user_id = ?",
+            "DELETE FROM manual_debt WHERE user_id = ?",
+            "DELETE FROM month_plan WHERE user_id = ?", // its slices go with it (ON DELETE CASCADE)
+            "DELETE FROM financial_profile WHERE user_id = ?",
+            "DELETE FROM method_choice WHERE user_id = ?",
             "DELETE FROM forecast_snapshot WHERE user_id = ?",
             "DELETE FROM push_subscription WHERE user_id = ?",
             "DELETE FROM email_verification_challenge WHERE user_id = ?",

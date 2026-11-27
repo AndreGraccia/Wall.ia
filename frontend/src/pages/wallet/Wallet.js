@@ -1,13 +1,26 @@
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, Container, Grid, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Container,
+  IconButton,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { enqueueSnackbar } from 'notistack';
 import { useWallets } from '../../context/WalletContext';
 import WalletCard from '../../components/wallet-card';
+import StatementList from '../../components/statement-list';
 import TransactionDetail from '../../components/transaction-detail';
-import { ActivityList, DataState, EmptyState, PageHeading, SectionCard, WalletIcon } from '../../components/wallet-ui';
+import { DataState, EmptyState, PageHeading, WalletIcon } from '../../components/wallet-ui';
+
+const RECENT = 8;
 
 export default function Wallet() {
   const { t } = useTranslation();
@@ -19,6 +32,7 @@ export default function Wallet() {
   const activity = selected
     ? transactions.filter((item) => item.fromWallet?.id === selected.id || item.toWallet?.id === selected.id)
     : [];
+  const openFinance = selected?.source === 'OPEN_FINANCE';
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(selected.iban);
@@ -35,78 +49,105 @@ export default function Wallet() {
       <Container maxWidth="lg">
         <PageHeading
           title={t('wallet.heading')}
-          description={t('app.walletHelp')}
           action={
-            <Button component={RouterLink} to="/wallets/new" variant="contained" startIcon={<WalletIcon name="plus" />}>
-              {t('wallet.newWallet')}
-            </Button>
+            wallets.length > 0 && (
+              <Button
+                component={RouterLink}
+                to="/wallets/new"
+                variant="outlined"
+                startIcon={<WalletIcon name="plus" />}
+              >
+                {t('wallet.newWallet')}
+              </Button>
+            )
           }
         />
         <DataState>
-          {!wallets.length ? (
-            <Card>
-              <EmptyState
-                title={t('app.firstWallet')}
-                description={t('app.firstWalletHelp')}
-                action={
-                  <Button component={RouterLink} to="/wallets/new" variant="contained">
-                    {t('wallet.newWallet')}
-                  </Button>
-                }
-              />
-            </Card>
-          ) : !selected ? (
+          {!wallets.length && (
             <EmptyState
-              title={t('app.errors.notFound')}
+              title={t('app.firstWallet')}
+              description={t('app.firstWalletHelp')}
               action={
-                <Button component={RouterLink} to="/wallets">
-                  {t('navigation.wallets')}
+                <Button component={RouterLink} to="/wallets/new" variant="contained">
+                  {t('wallet.newWallet')}
                 </Button>
               }
             />
-          ) : (
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={5}>
-                <Stack spacing={2}>
-                  {wallets.map((wallet, index) => (
-                    <WalletCard
-                      key={wallet.id}
-                      wallet={wallet}
-                      index={index}
-                      selected={selected.id === wallet.id}
-                      onClick={() => navigate(`/wallets/${wallet.id}`, { replace: true })}
-                    />
-                  ))}
-                </Stack>
-              </Grid>
-              <Grid item xs={12} md={7}>
-                <Card sx={{ mb: 3, p: 3 }}>
-                  <Typography variant="h5">{selected.name}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          )}
+          {wallets.length > 0 && !selected && (
+            <EmptyState
+              title={t('app.errors.notFound')}
+              action={
+                <Button component={RouterLink} to="/wallets" variant="outlined">
+                  {t('wallet.backToWallets')}
+                </Button>
+              }
+            />
+          )}
+          {selected && (
+            <Stack spacing={{ xs: 4, md: 5 }}>
+              {wallets.length > 1 && (
+                // Switching wallets is a filter on this page: pills, scrolling in their own row on a phone.
+                <Box sx={{ overflowX: 'auto', mx: { xs: -2, sm: 0 }, px: { xs: 2, sm: 0 }, mt: { xs: -1, md: -2 } }}>
+                  <ToggleButtonGroup
+                    exclusive
+                    value={String(selected.id)}
+                    onChange={(_, value) => value && navigate(`/wallets/${value}`, { replace: true })}
+                    aria-label={t('wallet.choose')}
+                    sx={{ flexWrap: 'nowrap', '& .MuiToggleButton-root': { whiteSpace: 'nowrap' } }}
+                  >
+                    {wallets.map((wallet) => (
+                      <ToggleButton value={String(wallet.id)} key={wallet.id}>
+                        {wallet.name}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Box>
+              )}
+
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '360px minmax(0, 1fr)' },
+                  gap: { xs: 3, md: 5 },
+                  alignItems: 'center',
+                }}
+              >
+                <Box sx={{ maxWidth: 360, width: '100%' }}>
+                  <WalletCard
+                    wallet={selected}
+                    index={wallets.indexOf(selected)}
+                    selected
+                    href={`/transactions?wallet=${selected.id}`}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" color="text.secondary">
                     {t('app.walletCode')}
                   </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
                     <Typography
-                      variant="body2"
-                      sx={{ flex: 1, wordBreak: 'break-all', fontFamily: 'monospace', userSelect: 'all' }}
+                      variant="subtitle1"
+                      sx={{ fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere', userSelect: 'all' }}
                     >
                       {selected.iban}
                     </Typography>
-                    <Button onClick={copy} aria-label={t('app.copy')} sx={{ minWidth: 44 }}>
-                      <WalletIcon name="copy" />
-                    </Button>
+                    <Tooltip title={t('app.copy')}>
+                      <IconButton onClick={copy} aria-label={t('app.copy')}>
+                        <WalletIcon name="copy" sx={{ fontSize: 20 }} />
+                      </IconButton>
+                    </Tooltip>
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">
-                    {t(selected.source === 'OPEN_FINANCE' ? 'openFinance.readOnlyAccount' : 'app.codeHelp')}
+                  <Typography variant="caption" color="text.secondary" component="p">
+                    {t(openFinance ? 'openFinance.readOnlyAccount' : 'app.codeHelp')}
                   </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 3 }}>
-                    {selected.source === 'OPEN_FINANCE' ? (
+                  <Stack direction="row" flexWrap="wrap" sx={{ gap: 1, mt: 3 }}>
+                    {openFinance ? (
                       <>
                         <Button
                           component={RouterLink}
                           to="/open-finance"
-                          variant="contained"
-                          fullWidth
+                          variant="outlined"
                           startIcon={<WalletIcon name="sync" />}
                         >
                           {t('openFinance.sync')}
@@ -115,7 +156,6 @@ export default function Wallet() {
                           component={RouterLink}
                           to="/insights"
                           variant="outlined"
-                          fullWidth
                           startIcon={<WalletIcon name="insights" />}
                         >
                           {t('navigation.insights')}
@@ -125,25 +165,41 @@ export default function Wallet() {
                       <Button
                         component={RouterLink}
                         to="/envelopes"
-                        variant="contained"
-                        fullWidth
+                        variant="outlined"
                         startIcon={<WalletIcon name="envelope" />}
                       >
                         {t('navigation.envelopes')}
                       </Button>
                     )}
                   </Stack>
-                </Card>
-                <SectionCard title={t('wallet.statement.title')}>
-                  <ActivityList transactions={activity.slice(0, 8)} wallets={[selected]} onSelect={setDetail} />
-                  {activity.length > 8 && (
-                    <Button fullWidth component={RouterLink} to={`/transactions?wallet=${selected.id}`} sx={{ py: 2 }}>
+                </Box>
+              </Box>
+
+              <Box component="section" aria-labelledby="wallet-statement">
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, gap: 2 }}>
+                  <Typography id="wallet-statement" variant="h6" component="h2">
+                    {t('wallet.statement.title')}
+                  </Typography>
+                  {activity.length > RECENT && (
+                    <Button component={RouterLink} to={`/transactions?wallet=${selected.id}`}>
                       {t('app.seeAll')}
                     </Button>
                   )}
-                </SectionCard>
-              </Grid>
-            </Grid>
+                </Stack>
+                {activity.length ? (
+                  <StatementList
+                    transactions={activity.slice(0, RECENT)}
+                    wallets={[selected]}
+                    onSelect={setDetail}
+                    dayHeading="h3"
+                  />
+                ) : (
+                  <Typography color="text.secondary" sx={{ py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                    {t(openFinance ? 'wallet.statement.emptySync' : 'wallet.statement.empty')}
+                  </Typography>
+                )}
+              </Box>
+            </Stack>
           )}
         </DataState>
       </Container>

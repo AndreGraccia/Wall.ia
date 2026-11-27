@@ -1,9 +1,12 @@
 import {
   dayLabel,
+  directionFor,
+  totalsFor,
   errorKey,
   subtractMoney,
   localDate,
   monthLabel,
+  money,
   overdraftCostText,
   projectRegularDeposits,
   savingsInAYear,
@@ -98,4 +101,31 @@ describe('savingsInAYear', () => {
   it('with a zero rate the money only adds up', () => {
     expect(savingsInAYear(100, 0, 0)).toEqual({ saved: 1200, withCdi: 1200, inTodaysMoney: 1200 });
   });
+});
+
+test('negative amounts use the typographic minus, which cannot break away from "R$"', () => {
+  expect(money(-707.72, 'pt-BR').startsWith('\u2212R$')).toBe(true);
+  expect(money(707.72, 'pt-BR').startsWith('R$')).toBe(true);
+});
+
+test('an imported move between own accounts is neither income nor expense', () => {
+  const wallets = [{ iban: 'A' }, { iban: 'B' }];
+  const out = {
+    type: { name: 'Withdrawal' },
+    fromWallet: { iban: 'A' },
+    toWallet: { iban: 'A' },
+    status: 'SUCCESS',
+    amount: 500,
+    ownAccountMove: true,
+  };
+  const salary = {
+    type: { name: 'Deposit' },
+    fromWallet: { iban: 'B' },
+    toWallet: { iban: 'B' },
+    status: 'SUCCESS',
+    amount: 4200,
+  };
+  expect(directionFor(out, wallets)).toBe('internal');
+  expect(directionFor(salary, wallets)).toBe('incoming');
+  expect(totalsFor([out, salary], wallets)).toEqual({ incoming: 420000, outgoing: 0 });
 });

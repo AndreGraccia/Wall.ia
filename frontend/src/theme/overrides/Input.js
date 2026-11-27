@@ -1,66 +1,48 @@
-import { alpha } from '@mui/material/styles';
-
+// Fields: surface2, a border that keeps 3:1 (WCAG 1.4.11) and a 2 px `future` ring on focus.
 export default function Input(theme) {
+  const { palette } = theme;
   return {
     MuiInputBase: {
       styleOverrides: {
-        root: {
-          '&.Mui-disabled': {
-            '& svg': { color: theme.palette.text.disabled },
-          },
-        },
+        root: { '&.Mui-disabled svg': { color: palette.text.disabled } },
         input: {
-          '&::placeholder': {
-            opacity: 1,
-            color: theme.palette.text.disabled,
-          },
+          // Placeholders are read, so they keep 4.5:1 (text2, not muted).
+          '&::placeholder': { opacity: 1, color: palette.text.secondary },
         },
       },
     },
-    MuiInput: {
+    MuiInputLabel: {
       styleOverrides: {
-        underline: {
-          '&:before': {
-            borderBottomColor: alpha(theme.palette.grey[500], 0.56),
-          },
+        root: { color: palette.text.secondary, '&.Mui-focused': { color: palette.text.primary } },
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: { root: { marginLeft: 2, color: palette.text.secondary } },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          backgroundColor: palette.background.neutral,
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: palette.brand.lineStrong },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: palette.text.secondary },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: palette.secondary.main, borderWidth: 2 },
+          '&.Mui-error .MuiOutlinedInput-notchedOutline': { borderColor: palette.error.main },
+          '&.Mui-disabled .MuiOutlinedInput-notchedOutline': { borderColor: palette.divider },
         },
       },
     },
     MuiFilledInput: {
       styleOverrides: {
         root: {
-          backgroundColor: alpha(theme.palette.grey[500], 0.12),
-          '&:hover': {
-            backgroundColor: alpha(theme.palette.grey[500], 0.16),
-          },
-          '&.Mui-focused': {
-            backgroundColor: theme.palette.action.focus,
-          },
-          '&.Mui-disabled': {
-            backgroundColor: theme.palette.action.disabledBackground,
-          },
-        },
-        underline: {
-          '&:before': {
-            borderBottomColor: alpha(theme.palette.grey[500], 0.56),
-          },
+          backgroundColor: palette.background.neutral,
+          '&:hover': { backgroundColor: palette.background.raised },
+          '&.Mui-focused': { backgroundColor: palette.background.neutral },
         },
       },
     },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          '& .MuiOutlinedInput-notchedOutline': {
-            // 3:1 against the surface: an input boundary is information, not decoration.
-            borderColor: theme.palette.brand.lineStrong,
-          },
-          '&.Mui-disabled': {
-            '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: theme.palette.action.disabledBackground,
-            },
-          },
-        },
-      },
+    MuiAutocomplete: {
+      styleOverrides: { paper: { boxShadow: theme.customShadows.dropdown } },
     },
   };
 }

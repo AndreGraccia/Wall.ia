@@ -2,7 +2,7 @@ import { act, Simulate } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import { MemoryRouter } from 'react-router-dom';
-import Commitments, { monthlyFromAnnual } from './Commitments';
+import Commitments, { monthDebts, monthlyFromAnnual, overdue } from './Commitments';
 import ThemeProvider from '../../theme';
 import HttpService from '../../services/HttpService';
 
@@ -99,10 +99,42 @@ test('the minimum payment warns about revolving credit and loans show CET and th
   expect(container.textContent).toContain('commitments.revolvingRate');
   expect(container.textContent).toContain('commitments.cet');
   expect(container.textContent).toContain('commitments.marketLoan');
-  expect(container.textContent).toContain('commitments.indicators.CDI');
+  // Selic/IPCA/CDI are a line inside the rate disclosure, not a section of their own.
+  expect(container.textContent).toContain('commitments.indicatorsLine');
+  expect(container.textContent).not.toContain('commitments.indicatorsTitle');
   act(() => root.unmount());
 });
 
 test('26,82% a year is 2% a month', () => {
   expect(monthlyFromAnnual('26.82')).toBeCloseTo(2, 2);
+});
+
+// 26/11: the bank still reports the 25/11 instalment; the December total is the bill on 02/12 plus the 25/12 instalment.
+const card = { invoices: [{ status: 'CLOSED', dueDate: '2026-12-02', total: '948.00' }] };
+const loan = {
+  installmentAmount: '612.48',
+  installmentsRemaining: 15,
+  nextDueDate: '2026-11-25',
+  upcomingDueDate: '2026-12-25',
+};
+
+test('the hero adds what is due in the first month with something due, never a date already past', () => {
+  const debts = monthDebts([card], [loan]);
+  expect(debts.month).toBe('2026-12');
+  expect(debts.total).toBe(1560.48);
+  expect(debts.parts.map((part) => [part.kind, part.date])).toEqual([
+    ['bill', '2026-12-02'],
+    ['loan', '2026-12-25'],
+  ]);
+  // A bill in January does not join an instalment due in December.
+  expect(monthDebts([{ invoices: [{ status: 'OPEN', dueDate: '2027-01-02', total: '10' }] }], [loan]).total).toBe(
+    612.48
+  );
+  expect(monthDebts([], [])).toBeNull();
+});
+
+test('an instalment date behind the upcoming one is overdue; a paid-off loan is not', () => {
+  expect(overdue(loan)).toBe(true);
+  expect(overdue({ ...loan, nextDueDate: '2026-12-25' })).toBe(false);
+  expect(overdue({ ...loan, installmentsRemaining: 0, upcomingDueDate: null })).toBe(false);
 });

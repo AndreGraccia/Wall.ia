@@ -132,6 +132,34 @@ class UserScopedControllersWebTest {
     }
 
     @Test
+    void pixOnCreditIsRegisteredAndDeletedOnlyForTheCaller() throws Exception {
+        String body = "{\"kind\":\"PIX_CREDIT\",\"label\":\"Banco Aurora\",\"outstandingBalance\":1000.00,"
+                + "\"installmentAmount\":100.00,\"monthlyCet\":8.5}";
+        mvc.perform(post("/api/v1/future/manual-debts").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/future/manual-debts").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated());
+        mvc.perform(delete("/api/v1/future/manual-debts/5").with(user(person(7)))).andExpect(status().isNoContent());
+        verify(futureService).createManualDebt(org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.any());
+        verify(futureService).deleteManualDebt(7L, 5L);
+    }
+
+    @Test
+    void aPixOnCreditWithoutCetOrWithAnAbsurdCetIs422BeforeTheService() throws Exception {
+        for (String cet : new String[]{"null", "0", "30.01", "8.12345"}) {
+            mvc.perform(post("/api/v1/future/manual-debts").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"kind\":\"PIX_CREDIT\",\"label\":\"Banco Aurora\",\"outstandingBalance\":1000.00,"
+                                    + "\"installmentAmount\":100.00,\"monthlyCet\":" + cet + "}"))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        mvc.perform(post("/api/v1/future/manual-debts").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LOAN\",\"label\":\"x\",\"outstandingBalance\":1,\"installmentAmount\":1,\"monthlyCet\":1}"))
+                .andExpect(status().isUnprocessableEntity());
+        verify(futureService, never()).createManualDebt(anyLong(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void aSpentAskLimitIs429AndTheQuestionIsNeverAnswered() throws Exception {
         doThrow(new AskRateLimitException()).when(askUsage).acquire(7L);
         mvc.perform(post("/api/v1/future/ask").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)

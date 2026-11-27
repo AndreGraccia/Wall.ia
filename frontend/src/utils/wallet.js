@@ -1,14 +1,27 @@
+import { amountsHidden, HIDDEN_AMOUNT } from './hiddenAmounts';
+
 export const localeFor = (language) => (language?.startsWith('en') ? 'en-US' : 'pt-BR');
+// U+2212 instead of the hyphen: the typographic minus, and no line break between it and "R$" on a phone.
+const minus = (text) => text.replace(/^-/, '−');
+// "Ocultar saldo" is one choice for the whole app, so every amount on every screen goes through here.
 export const money = (value, language) =>
-  new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
+  amountsHidden()
+    ? HIDDEN_AMOUNT
+    : minus(
+        new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'BRL' }).format(Number(value) || 0)
+      );
 /** Axis labels: "-R$ 12 mil" fits where "-R$ 12.345" loses its minus sign off the edge. */
 export const compactMoney = (value, language) =>
-  new Intl.NumberFormat(localeFor(language), {
-    style: 'currency',
-    currency: 'BRL',
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(Number(value) || 0);
+  amountsHidden()
+    ? HIDDEN_AMOUNT
+    : new Intl.NumberFormat(localeFor(language), {
+        style: 'currency',
+        currency: 'BRL',
+        notation: 'compact',
+        maximumFractionDigits: 1,
+      })
+        .format(Number(value) || 0)
+        .replace(/^-/, '−');
 export const dateTime = (value, language) => {
   const date = new Date(value);
   return value && !Number.isNaN(date.getTime())
@@ -53,6 +66,8 @@ export function directionFor(transaction, wallets) {
   const owned = new Set(wallets.map((wallet) => wallet.iban));
   const from = owned.has(transaction.fromWallet?.iban);
   const to = owned.has(transaction.toWallet?.iban);
+  // Open Finance imports each side of a move between own accounts as its own deposit/withdrawal; the API pairs them.
+  if (transaction.ownAccountMove) return 'internal';
   if (transaction.type?.name === 'Deposit' || transaction.type?.name === 'Initial balance')
     return to ? 'incoming' : 'adjustment';
   if (transaction.type?.name === 'Withdrawal') return from ? 'outgoing' : 'adjustment';
@@ -110,6 +125,8 @@ export function errorKey(error) {
       'ALERT_EMAIL_NOT_VERIFIED',
       'ENVELOPE_LIMIT',
       'ENVELOPE_NOT_FOUND',
+      'MANUAL_DEBT_LIMIT',
+      'MANUAL_DEBT_NOT_FOUND',
       'PUSH_UNAVAILABLE',
       'PUSH_INVALID_SUBSCRIPTION',
       'PUSH_LIMIT',
@@ -128,6 +145,16 @@ export function errorKey(error) {
       'EMAIL_VERIFICATION_REQUIRED',
       'USERNAME_TAKEN',
       'INVALID_PASSWORD',
+      'MONTH_PLAN_EMPTY',
+      'MONTH_PLAN_TOO_MANY_SLICES',
+      'MONTH_PLAN_INVALID_PERCENT',
+      'MONTH_PLAN_INVALID_LABEL',
+      'MONTH_PLAN_SLICE_NOT_COMMITTABLE',
+      'MONTH_PLAN_DUPLICATE_SLICE',
+      'MONTH_PLAN_INCOMPLETE',
+      'MONTH_PLAN_NEEDS_INCOME',
+      'METHOD_CHOICE_LIMIT',
+      'INVALID_MONTH',
     ].includes(code)
   )
     return `app.errors.${code}`;

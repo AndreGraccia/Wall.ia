@@ -1,131 +1,87 @@
 import { alpha } from '@mui/material/styles';
 
-// Wall.ia — primitives. Components never use these directly; they use the semantic palette below
-// (or `brand.*` for the few brand-only moments). Contrast pairs are listed in docs/brand/wallia-brand.md.
+// Wall.ia "Grafite" (docs/brand/DESIGN.md) — primitives. Components never use these directly; they use the
+// semantic palette below. Every text/background pair is checked by `npm run test:contrast`
+// (scripts/check-contrast.cjs).
 export const primitives = {
-  void: '#07090D',
-  ink: '#0A0D13',
-  surface1: '#10141C',
-  surface2: '#161B25',
-  surface3: '#1D2330',
-  line: '#232A37',
-  // 3:1 against surface1-3 (WCAG 1.4.11): field borders must be seen to be used.
-  lineStrong: '#646E88',
-  text: '#E9EDF3',
-  text2: '#A3ACBA',
-  muted: '#7D8797',
-  volt: '#D4FF3A',
-  voltDeep: '#B8E01F',
-  horizon: '#5CE1E6',
-  mint: '#3DDC97',
-  coral: '#FF7A7A',
-  amber: '#FFB547',
+  // Depth by layer, not by shadow: bg -> surface1 -> surface2 -> surface3 (floating: menus, tooltips).
+  bg: '#08090C',
+  surface1: '#0F1116',
+  surface2: '#161920',
+  surface3: '#1D2129',
+  line: '#222631',
+  // Field and control boundaries: >= 3:1 against bg and surfaces 1-2 (WCAG 1.4.11).
+  lineStrong: '#616B7F',
+  text: '#F3F5F9',
+  text2: '#A4ABBA',
+  muted: '#7A8294',
+  // The action is white. Colour only says what a number is.
+  action: '#F3F5F9',
+  future: '#8FA3FF',
+  positive: '#4FD1A1',
+  negative: '#FF7B7B',
+  warning: '#F2B85B',
 };
 
 const GREY = {
   0: '#FFFFFF',
   100: primitives.text,
-  200: '#C9D0DA',
+  200: '#D3D7DF',
   300: primitives.text2,
   400: primitives.muted,
-  500: '#5B6474',
+  500: '#4A5160',
   600: primitives.lineStrong,
   700: primitives.surface3,
   800: primitives.surface2,
   900: primitives.surface1,
 };
 
+const tone = (main, light, dark) => ({
+  lighter: alpha(main, 0.14),
+  light,
+  main,
+  dark,
+  darker: dark,
+  contrastText: primitives.bg,
+});
+
 const palette = {
   mode: 'dark',
-  common: { black: primitives.void, white: '#FFFFFF' },
+  common: { black: primitives.bg, white: '#FFFFFF' },
 
-  // Action: the only colour that means "you can press this".
-  primary: {
-    lighter: alpha(primitives.volt, 0.14),
-    light: '#E4FF7A',
-    main: primitives.volt,
-    dark: primitives.voltDeep,
-    darker: '#6F8A00',
-    contrastText: primitives.void,
-  },
+  // Action: white pill, dark text.
+  primary: tone(primitives.action, '#FFFFFF', '#D3D7DF'),
   // Projection / estimate: anything the engine expects but has not happened yet.
-  secondary: {
-    lighter: alpha(primitives.horizon, 0.14),
-    light: '#9AEEF1',
-    main: primitives.horizon,
-    dark: '#2FB8BE',
-    darker: '#146E72',
-    contrastText: primitives.void,
-  },
-  info: {
-    lighter: alpha(primitives.horizon, 0.14),
-    light: '#9AEEF1',
-    main: primitives.horizon,
-    dark: '#2FB8BE',
-    darker: '#146E72',
-    contrastText: primitives.void,
-  },
-  success: {
-    lighter: alpha(primitives.mint, 0.14),
-    light: '#7EEBBC',
-    main: primitives.mint,
-    dark: '#23B176',
-    darker: '#0F6B45',
-    contrastText: primitives.void,
-  },
-  warning: {
-    lighter: alpha(primitives.amber, 0.14),
-    light: '#FFD08A',
-    main: primitives.amber,
-    dark: '#E0931F',
-    darker: '#7A4A00',
-    contrastText: primitives.void,
-  },
-  error: {
-    lighter: alpha(primitives.coral, 0.14),
-    light: '#FFA8A8',
-    main: primitives.coral,
-    dark: '#E65555',
-    darker: '#7A1F1F',
-    contrastText: primitives.void,
-  },
+  secondary: tone(primitives.future, '#B7C4FF', '#7186E6'),
+  info: tone(primitives.future, '#B7C4FF', '#7186E6'),
+  success: tone(primitives.positive, '#8AE3C2', '#34B386'),
+  warning: tone(primitives.warning, '#F7D08F', '#D99B3B'),
+  error: tone(primitives.negative, '#FFA8A8', '#E65C5C'),
   grey: GREY,
 
-  // Brand-only tokens (logo, certainty markers). Never used as a button colour.
+  // Brand-only tokens (logo, chart marks).
   brand: {
-    volt: primitives.volt,
-    horizon: primitives.horizon,
-    ink: primitives.ink,
-    surface3: primitives.surface3,
+    future: primitives.future,
+    line: primitives.line,
     lineStrong: primitives.lineStrong,
+    surface3: primitives.surface3,
   },
-  // Chart marks: darker steps of horizon/volt that sit in the dark-mode lightness band
-  // (validated with the dataviz palette checker: CVD ΔE 16.0, all checks pass on #10141C).
   chart: {
-    projection: '#1E9CA3',
-    scenario: '#7F9E0A',
-    negative: alpha(primitives.coral, 0.12),
+    history: primitives.text,
+    projection: primitives.future,
+    scenario: primitives.text,
+    negative: alpha(primitives.negative, 0.16),
     grid: primitives.line,
+    zero: primitives.lineStrong,
   },
-  // Wallet card finishes (the physical-card metaphor). White text passes AA on every finish.
-  cardFinishes: [
-    'linear-gradient(135deg, #1D2330 0%, #0A0D13 100%)',
-    `radial-gradient(120% 90% at 100% 0%, ${alpha(
-      primitives.volt,
-      0.28
-    )} 0%, transparent 55%), linear-gradient(135deg, #1A2012 0%, #0A0D13 100%)`,
-    `radial-gradient(120% 90% at 100% 0%, ${alpha(
-      primitives.horizon,
-      0.3
-    )} 0%, transparent 55%), linear-gradient(135deg, #0F2A30 0%, #0A0D13 100%)`,
-    'linear-gradient(135deg, #2B2240 0%, #0D0B14 100%)',
-    'linear-gradient(135deg, #332414 0%, #0F0B07 100%)',
-  ],
-  // How sure a number is. Each state also has a text label and a line style, never colour alone.
+  // Wallet card finishes: flat tints of the surfaces, never a gradient. White text passes AA on all of them.
+  cardFinishes: ['#161920', '#141A2C', '#11201B', '#221B12', '#1F1524'],
+  // How sure a number is. Each state also has a text label, a line style and (for estimates) italics,
+  // never colour alone.
   certainty: {
     confirmed: primitives.text,
-    estimated: primitives.horizon,
-    hypothetical: primitives.volt,
+    estimated: primitives.future,
+    hypothetical: primitives.text2,
   },
 
   divider: primitives.line,
@@ -136,9 +92,8 @@ const palette = {
     disabled: primitives.muted,
   },
 
-  // Elevation by lightness: the higher the surface, the lighter it is.
   background: {
-    default: primitives.ink,
+    default: primitives.bg,
     paper: primitives.surface1,
     neutral: primitives.surface2,
     raised: primitives.surface3,
@@ -146,12 +101,12 @@ const palette = {
 
   action: {
     active: primitives.text2,
-    hover: alpha(primitives.text, 0.06),
-    selected: alpha(primitives.volt, 0.12),
-    disabled: alpha(primitives.text2, 0.4),
+    hover: alpha(primitives.text, 0.05),
+    selected: primitives.surface2,
+    disabled: alpha(primitives.text2, 0.45),
     disabledBackground: alpha(primitives.text2, 0.12),
-    focus: alpha(primitives.volt, 0.24),
-    hoverOpacity: 0.06,
+    focus: alpha(primitives.future, 0.24),
+    hoverOpacity: 0.05,
     disabledOpacity: 0.48,
   },
 };

@@ -110,6 +110,46 @@ class BillingRadarDetectorTest {
         assertTrue(BillingRadarDetector.detect(movements).isEmpty());
     }
 
+    @Test
+    void groceriesWithVaryingAmountsAreNotCountedAsRecurringCharges() {
+        // The sandbox market: four purchases a month, R$ 179 to R$ 263. A habit, not a bill to review.
+        List<RecurrenceDetector.Movement> movements = List.of(
+                movement(1, "2026-08-03", "231.80", RecurrenceDetector.Direction.OUT, "Mercado Bairro"),
+                movement(2, "2026-08-27", "205.60", RecurrenceDetector.Direction.OUT, "Mercado Bairro"),
+                movement(3, "2026-09-27", "179.35", RecurrenceDetector.Direction.OUT, "Mercado Bairro"),
+                movement(4, "2026-10-27", "262.75", RecurrenceDetector.Direction.OUT, "Mercado Bairro"));
+
+        assertTrue(BillingRadarDetector.detect(movements).isEmpty());
+    }
+
+    @Test
+    void fixedBillsThatVaryALittleStayRecurring() {
+        // Rent is exact and electricity moves about 20%: both stay, the everyday rule must not touch them.
+        List<RecurrenceDetector.Movement> movements = List.of(
+                movement(1, "2026-08-18", "176.40", RecurrenceDetector.Direction.OUT, "Enel Distribuição SP"),
+                movement(2, "2026-09-18", "203.10", RecurrenceDetector.Direction.OUT, "Enel Distribuição SP"),
+                movement(3, "2026-10-18", "214.30", RecurrenceDetector.Direction.OUT, "Enel Distribuição SP"),
+                movement(4, "2026-08-01", "1500.00", RecurrenceDetector.Direction.OUT, "Imobiliária Lar Seguro"),
+                movement(5, "2026-09-01", "1500.00", RecurrenceDetector.Direction.OUT, "Imobiliária Lar Seguro"),
+                movement(6, "2026-10-01", "1500.00", RecurrenceDetector.Direction.OUT, "Imobiliária Lar Seguro"));
+
+        List<BillingRadarDetector.Signal> signals = BillingRadarDetector.detect(movements);
+
+        assertEquals(2, signals.size());
+        assertTrue(signals.stream().allMatch(BillingRadarDetector.Signal::recurring));
+    }
+
+    @Test
+    void aSupermarketSubscriptionWithAFixedPriceIsStillRecurring() {
+        // Same everyday name, stable price (a delivery club): the amount rule keeps it on the radar.
+        List<RecurrenceDetector.Movement> movements = List.of(
+                movement(1, "2026-08-05", "14.90", RecurrenceDetector.Direction.OUT, "Supermercado Clube"),
+                movement(2, "2026-09-05", "14.90", RecurrenceDetector.Direction.OUT, "Supermercado Clube"),
+                movement(3, "2026-10-05", "14.90", RecurrenceDetector.Direction.OUT, "Supermercado Clube"));
+
+        assertTrue(BillingRadarDetector.detect(movements).get(0).recurring());
+    }
+
     private static RecurrenceDetector.Movement movement(long id, String date, String amount,
                                                          RecurrenceDetector.Direction direction, String counterparty) {
         return movement(id, date, amount, direction, counterparty, "Conta principal", "Banco de teste");

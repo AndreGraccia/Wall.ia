@@ -104,3 +104,6 @@ Contexto*.txt
 # Backups do banco (scripts/backup.sh): dados pessoais, nunca no repositório.
 backups/
 *.dump
+
+# Claude Code: agent worktrees and local session state
+.claude/
