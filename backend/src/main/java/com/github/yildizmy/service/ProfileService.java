@@ -94,7 +94,7 @@ public class ProfileService {
     private MethodAdvisor.Facts facts(long userId, MethodAdvisor.Preference preference, MethodAdvisor.Goal goal) {
         FutureService.Context context = futureService.context(userId);
         BigDecimal income = MonthPlanCalculator.income(context.confirmed()).map(MonthPlanCalculator.Income::monthly).orElse(null);
-        BigDecimal fixed = MonthPlanCalculator.fixedUsed(context.confirmed(), context.loanPlans()).total();
+        BigDecimal fixed = MonthPlanCalculator.fixedUsed(context.countedRecurrences(), context.loanPlans()).total();
         long loansWithRate = context.loans().stream()
                 .filter(loan -> loan.getAnnualRate() != null && loan.getOutstandingBalance() != null
                         && loan.getOutstandingBalance().signum() > 0)

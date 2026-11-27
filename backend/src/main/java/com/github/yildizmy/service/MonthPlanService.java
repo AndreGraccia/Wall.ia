@@ -7,6 +7,7 @@ import com.github.yildizmy.dto.response.PlanResponses;
 import com.github.yildizmy.exception.WalletRuleException;
 import com.github.yildizmy.repository.MonthPlanRepository;
 import com.github.yildizmy.service.future.CashEvent;
+import com.github.yildizmy.service.future.Categories;
 import com.github.yildizmy.service.future.MonthFlow;
 import com.github.yildizmy.service.future.MonthPlanCalculator;
 import com.github.yildizmy.service.future.MonthPlanCalculator.Kind;
@@ -161,7 +162,11 @@ public class MonthPlanService {
                 .map(RecurrencePattern::key)
                 .filter(key -> !context.decisions().containsKey(key))
                 .collect(Collectors.toSet());
-        return MonthFlow.of(lines, confirmed, pending, context.cardPlans());
+        Set<String> counted = context.countedRecurrences().stream()
+                .filter(item -> Categories.ESSENTIALS_SLICE.contains(item.category().name()))
+                .map(item -> item.pattern().key())
+                .collect(Collectors.toSet());
+        return MonthFlow.of(lines, confirmed, pending, counted, context.cardPlans(), context.categories());
     }
 
     private PlanResponses.MonthPlan view(FutureService.Context context, MonthPlan plan) {
@@ -192,7 +197,7 @@ public class MonthPlanService {
         }
 
         BigDecimal base = income.get().monthly();
-        MonthPlanCalculator.FixedUsed fixed = MonthPlanCalculator.fixedUsed(context.confirmed(), context.loanPlans());
+        MonthPlanCalculator.FixedUsed fixed = MonthPlanCalculator.fixedUsed(context.countedRecurrences(), context.loanPlans());
         MonthFlow.Result flow = monthFlow(context, YearMonth.from(context.today()));
         BigDecimal essentials = fixed.total().add(flow.essentials());
         BigDecimal leisure = flow.leisure();
@@ -207,10 +212,10 @@ public class MonthPlanService {
                 case FIXED -> new PlanResponses.Slice(i, slice.kind().name(), slice.label(), slice.percent(), false,
                         role(slice), amount, essentials, MonthPlanCalculator.usedPercent(essentials, amount),
                         amount.subtract(essentials), null, fixed.recurring().signum() > 0 ? ESTIMATED : CONFIRMED,
-                        "Recorrências confirmadas, parcelas de empréstimo e essenciais do dia a dia no extrato do mês");
+                        "Recorrências confirmadas, parcelas de empréstimo e essenciais do extrato do mês");
                 case LEISURE -> new PlanResponses.Slice(i, slice.kind().name(), slice.label(), slice.percent(), false,
                         role(slice), amount, leisure, MonthPlanCalculator.usedPercent(leisure, amount),
-                        amount.subtract(leisure), null, CONFIRMED, "Gastos de lazer reconhecidos pelo nome no extrato do mês");
+                        amount.subtract(leisure), null, CONFIRMED, "Gastos de lazer do extrato do mês, pela sua escolha ou pelo nome");
                 default -> new PlanResponses.Slice(i, slice.kind().name(), slice.label(), slice.percent(),
                         slice.commitment(), role(slice), amount, null, null, null, committed.get(i),
                         slice.commitment() ? CONFIRMED : null, slice.commitment() ? MonthPlanCalculator.ORIGIN : null);

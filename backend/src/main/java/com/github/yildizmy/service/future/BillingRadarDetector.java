@@ -40,6 +40,11 @@ public final class BillingRadarDetector {
     }
 
     public static List<Signal> detect(List<RecurrenceDetector.Movement> movements) {
+        return detect(movements, Map.of());
+    }
+
+    /** @param choices movement id to the category the person decided; it prevails over the name (ADR 0024) */
+    public static List<Signal> detect(List<RecurrenceDetector.Movement> movements, Map<Long, MonthFlow.Choice> choices) {
         Map<String, List<RecurrenceDetector.Movement>> groups = movements.stream()
                 .filter(movement -> movement.direction() == RecurrenceDetector.Direction.OUT)
                 .filter(movement -> movement.amount() != null && movement.amount().signum() > 0)
@@ -50,7 +55,7 @@ public final class BillingRadarDetector {
                         Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
 
         List<Signal> signals = new ArrayList<>();
-        groups.forEach((key, group) -> analyse(key, group).ifPresent(signals::add));
+        groups.forEach((key, group) -> analyse(key, group, choices).ifPresent(signals::add));
         return signals.stream()
                 .sorted(Comparator.comparingInt((Signal signal) -> signal.priceIncrease() ? 0
                                 : signal.possibleDuplicate() ? 1 : 2)
@@ -58,7 +63,8 @@ public final class BillingRadarDetector {
                 .toList();
     }
 
-    private static java.util.Optional<Signal> analyse(String key, List<RecurrenceDetector.Movement> group) {
+    private static java.util.Optional<Signal> analyse(String key, List<RecurrenceDetector.Movement> group,
+                                                      Map<Long, MonthFlow.Choice> choices) {
         List<RecurrenceDetector.Movement> sorted = group.stream()
                 .sorted(Comparator.comparing(RecurrenceDetector.Movement::date)
                         .thenComparingLong(RecurrenceDetector.Movement::id))
@@ -66,7 +72,7 @@ public final class BillingRadarDetector {
 
         Duplicate duplicate = findDuplicate(sorted);
         List<RecurrenceDetector.Movement> monthly = monthlyTail(monthlyObservations(sorted));
-        boolean recurring = monthly.size() >= 2 && !everydayVariable(sorted);
+        boolean recurring = monthly.size() >= 2 && !everydayVariable(sorted, choices);
 
         RecurrenceDetector.Movement latest = monthly.isEmpty() ? sorted.get(sorted.size() - 1)
                 : monthly.get(monthly.size() - 1);
@@ -151,8 +157,16 @@ public final class BillingRadarDetector {
         return monthly.subList(start, monthly.size());
     }
 
-    static boolean everydayVariable(List<RecurrenceDetector.Movement> sorted) {
-        if (SpendingNames.of(sorted.get(0).counterparty()) == SpendingNames.Group.UNCLASSIFIED) return false;
+    /** The latest category the person decided for this charge says whether it is everyday spending; else the name. */
+    static boolean everydayVariable(List<RecurrenceDetector.Movement> sorted, Map<Long, MonthFlow.Choice> choices) {
+        String decided = null;
+        for (RecurrenceDetector.Movement movement : sorted) {
+            MonthFlow.Choice choice = choices.get(movement.id());
+            if (choice != null) decided = choice.category();
+        }
+        boolean everyday = decided != null ? decided.equals("ESSENTIAL") || decided.equals("LEISURE")
+                : SpendingNames.of(sorted.get(0).counterparty()) != SpendingNames.Group.UNCLASSIFIED;
+        if (!everyday) return false;
         BigDecimal min = sorted.stream().map(RecurrenceDetector.Movement::amount).min(BigDecimal::compareTo).orElseThrow();
         BigDecimal max = sorted.stream().map(RecurrenceDetector.Movement::amount).max(BigDecimal::compareTo).orElseThrow();
         return min.signum() > 0 && max.divide(min, 4, RoundingMode.HALF_UP).compareTo(RecurrenceDetector.STABLE_RATIO) > 0;

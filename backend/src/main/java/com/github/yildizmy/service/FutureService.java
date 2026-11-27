@@ -30,6 +30,8 @@ import com.github.yildizmy.service.future.CardBillPayment;
 import com.github.yildizmy.service.future.CardPlan;
 import com.github.yildizmy.service.future.CashEvent;
 import com.github.yildizmy.service.future.CashEventPlanner;
+import com.github.yildizmy.service.future.Categories;
+import com.github.yildizmy.service.future.MonthFlow;
 import com.github.yildizmy.service.future.CashEventPlanner.ConfirmedRecurrence;
 import com.github.yildizmy.service.future.DailySpending;
 import com.github.yildizmy.service.future.ExitPlan;
@@ -102,6 +104,7 @@ public class FutureService {
     private final MonthPlanRepository monthPlanRepository;
     private final UserService userService;
     private final MarketRatesService marketRates;
+    private final CategoryResolver categoryResolver;
     private final Clock clock;
 
     public FutureService(
@@ -116,6 +119,7 @@ public class FutureService {
             MonthPlanRepository monthPlanRepository,
             UserService userService,
             MarketRatesService marketRates,
+            CategoryResolver categoryResolver,
             Clock clock) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
@@ -128,6 +132,7 @@ public class FutureService {
         this.monthPlanRepository = monthPlanRepository;
         this.userService = userService;
         this.marketRates = marketRates;
+        this.categoryResolver = categoryResolver;
         this.clock = clock;
     }
 
@@ -424,7 +429,8 @@ public class FutureService {
     @Transactional(readOnly = true)
     public BillingRadarPriceImpact simulatePriceReversion(long userId, String key) {
         Context context = load(userId);
-        BillingRadarDetector.Signal signal = BillingRadarDetector.detect(movements(userId, context.wallets()))
+        List<Movement> history = movements(userId, context.wallets());
+        BillingRadarDetector.Signal signal = BillingRadarDetector.detect(history, categories(userId, history))
                 .stream()
                 .filter(candidate -> candidate.key().equals(key))
                 .filter(BillingRadarDetector.Signal::priceIncrease)
@@ -752,7 +758,8 @@ public class FutureService {
         return new Context(today, wallets, balance, patterns, decisions, confirmed,
                 cards, cardPlans, loans, loans.stream().map(this::toPlan).toList(),
                 dailyEstimate, dailyAmount, cardEstimate, cardAmount, mainCard(cardPlans, today), goals, reserved,
-                scheduled(transactions, wallets, today), transactions, monthPlan);
+                scheduled(transactions, wallets, today), transactions, monthPlan,
+                categories(userId, movements(transactions, wallets)));
     }
 
     /**
@@ -818,6 +825,11 @@ public class FutureService {
                         .map(CardPlan.Charge::totalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)))
                 .orElse(null);
+    }
+
+    /** The categories the person decided, by movement id. */
+    Map<Long, MonthFlow.Choice> categories(long userId, List<Movement> movements) {
+        return categoryResolver.resolve(userId, movements);
     }
 
     /**
@@ -1145,8 +1157,22 @@ public class FutureService {
             BigDecimal reserved,
             List<CashEvent> scheduled,
             List<Transaction> transactions,
-            com.github.yildizmy.domain.entity.MonthPlan monthPlan
+            com.github.yildizmy.domain.entity.MonthPlan monthPlan,
+            Map<Long, MonthFlow.Choice> categories
     ) {
+
+        /**
+         * The confirmed recurrences the essentials slice may count: one whose latest charge the person moved to a
+         * category outside that slice (leisure, other...) leaves it, so it is not measured twice.
+         */
+        List<ConfirmedRecurrence> countedRecurrences() {
+            return confirmed.stream().filter(item -> {
+                var occurrences = item.pattern().occurrences();
+                MonthFlow.Choice latest = categories.get(occurrences.get(occurrences.size() - 1).transactionId());
+                return item.pattern().direction() != Direction.OUT || latest == null
+                        || Categories.ESSENTIALS_SLICE.contains(latest.category());
+            }).toList();
+        }
 
         BigDecimal goalsMonthly() {
             return goals.stream().map(CashEventPlanner.GoalPlan::monthlyAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
