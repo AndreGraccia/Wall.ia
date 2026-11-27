@@ -30,6 +30,7 @@ const Future = screen(() => import('./pages/future/Future'));
 const Plan = screen(() => import('./pages/plan/Plan'));
 const Method = screen(() => import('./pages/plan/Method'));
 const CashFlow = screen(() => import('./pages/cash-flow/CashFlow'));
+const Review = screen(() => import('./pages/cash-flow/Review'));
 const Ask = screen(() => import('./pages/ask/Ask'));
 const Commitments = screen(() => import('./pages/commitments/Commitments'));
 const BillingRadar = screen(() => import('./pages/billing-radar/BillingRadar'));
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="plan" element={<Plan />} />
             <Route path="plan/method" element={<Method />} />
             <Route path="cash-flow" element={<CashFlow />} />
+            <Route path="cash-flow/review" element={<Review />} />
             <Route path="ask" element={<Ask />} />
             <Route path="commitments" element={<Commitments />} />
             <Route path="billing-radar" element={<BillingRadar />} />
