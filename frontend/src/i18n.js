@@ -123,6 +123,11 @@ const resources = {
           BILLING_RADAR_PRICE_CHANGE_NOT_FOUND:
             'Não foi possível calcular este cenário. Atualize o radar e confira se há histórico suficiente.',
           INVALID_CHARGE_ALERT_DECISION: 'Escolha uma resposta válida para esse sinal.',
+          TRANSACTION_NOT_FOUND: 'Não encontramos esse lançamento. Atualize a tela.',
+          CATEGORY_NOT_ALLOWED: 'Essa categoria não vale para esse lançamento.',
+          CATEGORY_RULE_NOT_ALLOWED: 'Esse lançamento não tem um nome que uma regra possa reconhecer.',
+          CATEGORY_RULE_NOT_FOUND: 'Essa regra não existe mais.',
+          CATEGORY_RULE_LIMIT: 'Você chegou ao limite de regras. Remova uma para criar outra.',
           MONTH_PLAN_EMPTY: 'O plano precisa de pelo menos uma fatia.',
           MONTH_PLAN_TOO_MANY_SLICES: 'O plano aceita até 12 fatias.',
           MONTH_PLAN_INVALID_PERCENT: 'Use percentuais de 0 a 100, com até duas casas.',
@@ -1136,6 +1141,26 @@ const resources = {
         OUTROS: 'Outros',
         UNKNOWN: 'Método não informado',
       },
+      review: {
+        pick: 'Escolher categoria',
+        category: 'Categoria',
+        suggested: 'sugerido',
+        edit: 'Trocar a categoria de {{name}}',
+        backToAutomatic: 'Voltar ao automático',
+        done: '{{name}} marcado como {{category}}.',
+        undo: 'Desfazer',
+        pending_one: '{{count}} para revisar',
+        pending_other: '{{count}} para revisar',
+        open: 'Revisar',
+        origin: {
+          CHOSEN: 'Escolhida por você',
+          RULE: 'Pela sua regra',
+          RECURRENCE: 'Pela recorrência que você confirmou',
+          DATA: 'Pelos dados do cartão',
+          NAME: 'Sugerida pelo nome do lançamento',
+          NONE: 'Sem classificação',
+        },
+      },
       cashFlow: {
         filter: { by: 'Filtrar a lista por {{name}}', active: 'Só {{name}}', clear: 'Limpar filtro' },
         items: {
@@ -1170,7 +1195,7 @@ const resources = {
         loadError: 'Não foi possível carregar entradas e saídas.',
         why: 'Por quê?',
         whyText:
-          'Transferência entre suas contas não conta como ganho nem gasto. A categoria é a que você confirmou no Futuro. No dia a dia, essenciais e lazer são reconhecidos pelo nome do lançamento; o que o nome não diz fica como não classificado.',
+          'Transferência entre suas contas não conta como ganho nem gasto. A categoria que você escolhe vale primeiro. Sem escolha, é a que você confirmou no Futuro; no dia a dia, essenciais e lazer são sugeridos pelo nome do lançamento, e o que o nome não diz fica como não classificado.',
         categories: {
           UNCONFIRMED_RECURRENCE: 'Recorrência sem resposta',
           ESSENTIAL: 'Essenciais do dia a dia',
@@ -1256,7 +1281,7 @@ const resources = {
           free: 'sem destino',
           why: 'Por quê?',
           whyText:
-            'Essenciais compara com a meta suas contas fixas, parcelas e o que já saiu no mês com mercado, saúde e transporte. Lazer compara o lazer do mês com o teto. Os dois são reconhecidos pelo nome do lançamento na conta; o que não é reconhecido não entra em nenhum, e compras no cartão contam na fatura. As outras fatias só saem do saldo se você marcar "tirar do saldo no dia da renda": aí saem nesse dia e o limite diário cai junto.',
+            'Essenciais compara com a meta suas contas fixas, parcelas e o que já saiu no mês com mercado, saúde e transporte. Lazer compara o lazer do mês com o teto. Os dois seguem a categoria que você escolheu ou, sem escolha, o nome do lançamento na conta; o que não é reconhecido não entra em nenhum, e compras no cartão contam na fatura. As outras fatias só saem do saldo se você marcar "tirar do saldo no dia da renda": aí saem nesse dia e o limite diário cai junto.',
         },
         sum: {
           total: 'Soma {{percent}}',
@@ -1853,6 +1878,11 @@ const resources = {
           BILLING_RADAR_PRICE_CHANGE_NOT_FOUND:
             'This scenario could not be calculated. Refresh the radar and check whether enough history is available.',
           INVALID_CHARGE_ALERT_DECISION: 'Choose a valid response for this signal.',
+          TRANSACTION_NOT_FOUND: 'We could not find that entry. Refresh the screen.',
+          CATEGORY_NOT_ALLOWED: 'That category does not apply to this entry.',
+          CATEGORY_RULE_NOT_ALLOWED: 'This entry has no name a rule could recognise.',
+          CATEGORY_RULE_NOT_FOUND: 'That rule no longer exists.',
+          CATEGORY_RULE_LIMIT: 'You reached the rule limit. Remove one to create another.',
           MONTH_PLAN_EMPTY: 'The plan needs at least one slice.',
           MONTH_PLAN_TOO_MANY_SLICES: 'The plan takes up to 12 slices.',
           MONTH_PLAN_INVALID_PERCENT: 'Use percentages from 0 to 100, with up to two decimals.',
@@ -2864,6 +2894,26 @@ const resources = {
         OUTROS: 'Other',
         UNKNOWN: 'Method not reported',
       },
+      review: {
+        pick: 'Pick a category',
+        category: 'Category',
+        suggested: 'suggested',
+        edit: 'Change the category of {{name}}',
+        backToAutomatic: 'Back to automatic',
+        done: '{{name}} marked as {{category}}.',
+        undo: 'Undo',
+        pending_one: '{{count}} to review',
+        pending_other: '{{count}} to review',
+        open: 'Review',
+        origin: {
+          CHOSEN: 'Picked by you',
+          RULE: 'By your rule',
+          RECURRENCE: 'From the recurrence you confirmed',
+          DATA: 'From card data',
+          NAME: 'Suggested by the entry name',
+          NONE: 'Not classified',
+        },
+      },
       cashFlow: {
         filter: { by: 'Filter the list by {{name}}', active: 'Only {{name}}', clear: 'Clear filter' },
         items: {
@@ -2898,7 +2948,7 @@ const resources = {
         loadError: 'Could not load money in and out.',
         why: 'Why?',
         whyText:
-          'A transfer between your own accounts is neither income nor spending. The category is the one you confirmed in Future. For day-to-day spending, essentials and leisure are recognised by the name of the entry; what the name does not say stays unclassified.',
+          'A transfer between your own accounts is neither income nor spending. The category you pick comes first. Without one, it is the one you confirmed in Future; for day-to-day spending, essentials and leisure are suggested by the name of the entry, and what the name does not say stays unclassified.',
         categories: {
           UNCONFIRMED_RECURRENCE: 'Unanswered recurrence',
           ESSENTIAL: 'Day-to-day essentials',
@@ -2982,7 +3032,7 @@ const resources = {
           free: 'unassigned',
           why: 'Why?',
           whyText:
-            'Essentials compares with the goal your fixed bills, instalments and what already went this month on groceries, health and transport. Leisure compares this month\'s leisure with the ceiling. Both are recognised by the name of the entry on the account; what is not recognised counts in neither, and card purchases count in the card bill. The other slices only leave the balance if you mark "take from the balance on income day": then they leave on that day and the daily limit drops with them.',
+            'Essentials compares with the goal your fixed bills, instalments and what already went this month on groceries, health and transport. Leisure compares this month\'s leisure with the ceiling. Both follow the category you pick or, without one, the name of the entry on the account; what is not recognised counts in neither, and card purchases count in the card bill. The other slices only leave the balance if you mark "take from the balance on income day": then they leave on that day and the daily limit drops with them.',
         },
         sum: {
           total: 'Total {{percent}}',

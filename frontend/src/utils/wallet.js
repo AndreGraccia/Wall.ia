@@ -155,6 +155,11 @@ export function errorKey(error) {
       'MONTH_PLAN_NEEDS_INCOME',
       'METHOD_CHOICE_LIMIT',
       'INVALID_MONTH',
+      'TRANSACTION_NOT_FOUND',
+      'CATEGORY_NOT_ALLOWED',
+      'CATEGORY_RULE_NOT_ALLOWED',
+      'CATEGORY_RULE_NOT_FOUND',
+      'CATEGORY_RULE_LIMIT',
     ].includes(code)
   )
     return `app.errors.${code}`;
