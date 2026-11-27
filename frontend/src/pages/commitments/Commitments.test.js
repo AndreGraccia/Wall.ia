@@ -27,6 +27,8 @@ test('"try again" clears the error and shows it is loading right away', async ()
     )
   );
   expect(container.textContent).toContain('app.errors.server');
+  // The way to the radar on the phone: it is there even when the page failed to load.
+  expect(container.querySelector('a[href="/billing-radar"]').textContent).toBe('navigation.billingRadar');
 
   HttpService.getWithAuth.mockReturnValue(new Promise(() => {}));
   const retry = [...container.querySelectorAll('button')].find((item) => item.textContent === 'app.retry');
