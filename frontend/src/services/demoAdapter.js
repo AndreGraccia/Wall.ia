@@ -5,6 +5,11 @@ import data from './demo-data.json';
  * shown without the API. Nothing leaves the browser and nothing is saved; writes answer success and change nothing.
  * Never built into the real site: the flag is replaced at build time and the import below is dropped otherwise.
  */
+/** Fictional accounts of the demonstration build; the data behind both is the same recorded account. */
+export const ACCOUNTS = [
+  { username: 'homolog', password: 'homolog' },
+  { username: 'demo', password: 'demo' },
+];
 const day = (seconds) => Math.floor(Date.now() / 1000) + seconds;
 const b64 = (value) => btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fakeToken = () => `${b64({ alg: 'none' })}.${b64({ sub: 'demo', exp: day(60 * 60 * 24) })}.demo`;
@@ -29,7 +34,12 @@ export default function demoAdapter(config) {
   const method = (config.method || 'get').toLowerCase();
   const path = stripBase(config.url || '').split('?')[0];
   if (method === 'post' && path === '/auth/login') {
-    return reply(config, 200, { ...data.login, token: fakeToken(), type: 'Bearer' });
+    const { username, password } = JSON.parse(config.data || '{}');
+    // Like a real login: the demonstration accounts are the only ones that get in.
+    const known = ACCOUNTS.some((account) => account.username === username && account.password === password);
+    return known
+      ? reply(config, 200, { ...data.login, token: fakeToken(), type: 'Bearer' })
+      : reply(config, 401, { message: 'Bad credentials' });
   }
   if (method === 'post' && path === '/future/ask') {
     const asked = JSON.parse(config.data || '{}').question || '';

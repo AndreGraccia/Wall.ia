@@ -207,6 +207,9 @@ export default function AuthView({ signup = false }) {
                 </Typography>
                 <Box component="form" onSubmit={submit}>
                   <Stack spacing={2.5}>
+                    {process.env.REACT_APP_DEMO === '1' && !signup && (
+                      <Alert severity="info">{t('auth.login.demoHint')}</Alert>
+                    )}
                     {error && <Alert severity="error">{t(error)}</Alert>}
                     {fields.map((field) => (
                       <TextField
