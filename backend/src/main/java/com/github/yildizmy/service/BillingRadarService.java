@@ -40,7 +40,8 @@ public class BillingRadarService {
     @Transactional(readOnly = true)
     public BillingRadarReport report(long userId) {
         List<Wallet> wallets = walletRepository.findByUserId(userId);
-        List<Signal> signals = BillingRadarDetector.detect(futureService.movements(userId, wallets));
+        var history = futureService.movements(userId, wallets);
+        List<Signal> signals = BillingRadarDetector.detect(history, futureService.categories(userId, history));
 
         BigDecimal projectedMonthly = signals.stream()
                 .filter(Signal::recurring)

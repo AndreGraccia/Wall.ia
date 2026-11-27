@@ -45,7 +45,7 @@ class CardEarlyPaymentTest {
             mock(RecurrenceDecisionRepository.class), cards, mock(LoanRepository.class), mock(GoalRepository.class),
             mock(EnvelopeRepository.class), mock(ManualDebtRepository.class), mock(MonthPlanRepository.class),
             mock(UserService.class), mock(com.github.yildizmy.service.market.MarketRatesService.class),
-            Clock.fixed(Instant.parse("2026-11-28T15:00:00Z"), ZoneOffset.UTC));
+            mock(CategoryResolver.class), Clock.fixed(Instant.parse("2026-11-28T15:00:00Z"), ZoneOffset.UTC));
     private final Wallet account = new Wallet();
     private final List<Transaction> history = new ArrayList<>();
     private final List<CreditCard> owned = new ArrayList<>();

@@ -132,6 +132,25 @@ class UserScopedControllersWebTest {
     }
 
     @Test
+    void updatingAGoalActsOnTheCallersOwnAndRejectsBadValuesBeforeTheService() throws Exception {
+        String base = "{\"name\":\"Viagem\",\"monthlyAmount\":100,\"dayOfMonth\":10,";
+        String valid = base + "\"targetAmount\":3000,\"targetDate\":\"2027-12-10\",\"savedAmount\":0}";
+        mvc.perform(put("/api/v1/future/goals/3").contentType(MediaType.APPLICATION_JSON).content(valid))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/v1/future/goals/3").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
+                        .content(valid))
+                .andExpect(status().isOk());
+        for (String bad : new String[]{"\"targetAmount\":0", "\"targetAmount\":100000000.01", "\"savedAmount\":-1",
+                "\"savedAmount\":1.001"}) {
+            mvc.perform(put("/api/v1/future/goals/3").with(user(person(7))).contentType(MediaType.APPLICATION_JSON)
+                            .content(base + bad + "}"))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        verify(futureService, org.mockito.Mockito.times(1)).updateGoal(org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(3L), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void pixOnCreditIsRegisteredAndDeletedOnlyForTheCaller() throws Exception {
         String body = "{\"kind\":\"PIX_CREDIT\",\"label\":\"Banco Aurora\",\"outstandingBalance\":1000.00,"
                 + "\"installmentAmount\":100.00,\"monthlyCet\":8.5}";

@@ -26,7 +26,21 @@ import java.util.Map;
 public class EncryptionRotationService {
 
     static final int BATCH = 500;
-    static final List<String> TABLES = List.of("transaction", "card_charge");
+    record Column(String table, String name) {
+    }
+
+    /** Every encrypted column; each table has a numeric {@code id}. */
+    static final List<Column> COLUMNS = List.of(
+            new Column("transaction", "description"),
+            new Column("card_charge", "description"),
+            new Column("category_rule", "description"),
+            new Column("investment", "institution"),
+            new Column("investment", "name"),
+            new Column("investment", "note"),
+            new Column("life_goal", "title"),
+            new Column("life_goal", "current_situation"),
+            new Column("life_goal", "desired_situation"),
+            new Column("life_goal_step", "description"));
 
     public record Result(int rewritten, int failed) {
     }
@@ -52,13 +66,15 @@ public class EncryptionRotationService {
         if (!FieldCipher.enabled()) return new Result(0, 0);
         int rewritten = 0;
         int failed = 0;
-        for (String table : TABLES) {
+        for (Column column : COLUMNS) {
+            String table = column.table();
+            String name = column.name();
             long after = 0;
             while (true) {
                 long from = after;
-                // Table names come from the constant list above, never from input.
-                List<Map<String, Object>> rows = jdbc.queryForList("SELECT id, description FROM " + table
-                        + " WHERE id > ? AND description IS NOT NULL AND description NOT LIKE ? ORDER BY id LIMIT ?",
+                // Table and column names come from the constant list above, never from input.
+                List<Map<String, Object>> rows = jdbc.queryForList("SELECT id, " + name + " AS secret FROM " + table
+                        + " WHERE id > ? AND " + name + " IS NOT NULL AND " + name + " NOT LIKE ? ORDER BY id LIMIT ?",
                         from, FieldCipher.currentPattern(), BATCH);
                 if (rows.isEmpty()) break;
                 int[] counts = transactions.execute(status -> {
@@ -66,8 +82,8 @@ public class EncryptionRotationService {
                     int bad = 0;
                     for (Map<String, Object> row : rows) {
                         try {
-                            String plain = FieldCipher.decrypt((String) row.get("description"));
-                            jdbc.update("UPDATE " + table + " SET description = ? WHERE id = ?",
+                            String plain = FieldCipher.decrypt((String) row.get("secret"));
+                            jdbc.update("UPDATE " + table + " SET " + name + " = ? WHERE id = ?",
                                     FieldCipher.encrypt(plain), row.get("id"));
                             ok++;
                         } catch (IllegalStateException unreadable) {

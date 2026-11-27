@@ -62,6 +62,8 @@ function groupsFor(user) {
     {
       key: 'more',
       items: [
+        { path: '/wealth', label: 'navigation.wealth', icon: 'wealth' },
+        { path: '/life-goals', label: 'navigation.lifeGoals', icon: 'flag' },
         { path: '/insights', label: 'navigation.insights', icon: 'insights' },
         { path: '/wallets', label: 'navigation.wallets', icon: 'wallet' },
         { path: '/open-finance', label: 'navigation.openFinance', icon: 'bank' },

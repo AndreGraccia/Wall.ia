@@ -39,6 +39,7 @@ jest.mock('./pages/future/Future', () => mockScreen());
 jest.mock('./pages/plan/Plan', () => mockScreen());
 jest.mock('./pages/plan/Method', () => mockScreen());
 jest.mock('./pages/cash-flow/CashFlow', () => mockScreen());
+jest.mock('./pages/cash-flow/Review', () => mockScreen());
 jest.mock('./pages/ask/Ask', () => mockScreen());
 jest.mock('./pages/commitments/Commitments', () => mockScreen());
 jest.mock('./pages/billing-radar/BillingRadar', () => mockScreen());
@@ -79,6 +80,7 @@ test.each([
   '/plan',
   '/plan/method',
   '/cash-flow',
+  '/cash-flow/review',
   '/ask',
   '/commitments',
   '/billing-radar',
