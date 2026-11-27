@@ -69,10 +69,10 @@ public final class QuestionParser {
             "revisar|classificar|categorizar|sem categoria|\\breview\\b|categori[sz]e|uncategori[sz]ed");
     private static final Pattern PLAN_STATUS = Pattern.compile(
             "meu plano|do plano|no plano|orcamento|gastando demais|gastei demais|\\bmy plan\\b|budget|spending too much|overspend");
-    private static final Pattern IN_MONTHS = Pattern.compile("\\b(?:em|in|daqui a) (\\{1,3}) (?:meses|mes|months?)\\b");
+    private static final Pattern IN_MONTHS = Pattern.compile("\\b(?:em|in|daqui a) (\\d{1,3}) (?:meses|mes|months?)\\b");
     private static final Pattern BY_MONTH = Pattern.compile("\\b(?:ate|em|by|until) (janeiro|fevereiro|marco|abril|maio|junho|"
             + "julho|agosto|setembro|outubro|novembro|dezembro|january|february|march|april|may|june|july|august|"
-            + "september|october|november|december)(?: (?:de )?(20\\{2}))?");
+            + "september|october|november|december)(?: (?:de )?(20\\d{2}))?");
     private static final List<String> MONTHS = List.of("janeiro", "fevereiro", "marco", "abril", "maio", "junho",
             "julho", "agosto", "setembro", "outubro", "novembro", "dezembro", "january", "february", "march", "april",
             "may", "june", "july", "august", "september", "october", "november", "december");
