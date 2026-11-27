@@ -38,9 +38,9 @@ Nenhum item está **validado com usuários** nem **pronto para produção**: a v
 | Item | Estado | Próximo passo |
 | --- | --- | --- |
 | Primeiros passos no Início | Feito | Medir se leva ao primeiro resultado |
-| Fila "Para revisar" e correção de categoria | Planejado | Primeira entrega depois da A3: categoria por transação, com origem e desfazer |
-| Regra criada a partir da correção, com prévia | Planejado | Depende da fila |
-| Dividir uma transação entre categorias | Planejado | Depende da fila |
+| Fila "Para revisar" e correção de categoria | Feito | Categoria por transação, com origem e desfazer (ADR 0024) |
+| Regra criada a partir da correção, com prévia | Feito | Só a partir de hoje ou também os anteriores; lista e remoção (ADR 0024) |
+| Dividir uma transação entre categorias | Planejado | A fila existe; falta o modelo de divisão |
 | Meta com valor e data (B56) | Planejado | Modelo de meta com alvo, prazo e acumulado |
 | Perfil ampliado (ciclo de renda, dependentes, reserva) | Planejado | Só com uso concreto para cada dado (LGPD) |
 | Comparar dois métodos lado a lado | Planejado | `POST /plan/fit` já simula sem gravar |

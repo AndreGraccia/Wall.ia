@@ -1,5 +1,12 @@
 # Changelog
 
+## 27/11/2026: Para revisar, categorias e regras (ADR 0024)
+
+### Novo
+- **Categoria escolhida por você** em cada lançamento, com a origem na tela e desfazer. Ela prevalece em Entradas e saídas, em Essenciais e Lazer do plano e no Radar.
+- **Fila "Para revisar":** lançamentos sem categoria ou só sugeridos pelo nome, com confirmar ou trocar em um toque. Aviso em Entradas e saídas e no Início.
+- **Regras** criadas a partir da correção, com prévia, escolha entre só a partir de hoje ou também os anteriores, lista e remoção.
+
 ## 27/11/2026: auditorias externas, correções prioritárias
 
 ### Corrigido
