@@ -45,6 +45,8 @@ const paths = {
   card: 'M3 6h18v12H3V6Zm0 4h18M7 15h4',
   trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6m4-6v6',
   envelope: 'M3 6h18v12H3V6Zm0 0 9 7 9-7',
+  // Net worth: layers stacked.
+  wealth: 'm12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5',
   ask: 'M4 5h16v11H9l-5 4V5Zm6.5 3.5a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.7.7-.7 1.2M12 13.5h.01',
   chevron: 'm6 9 6 6 6-6',
   menu: 'M4 7h16M4 12h16M4 17h16',

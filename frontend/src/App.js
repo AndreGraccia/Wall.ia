@@ -29,6 +29,7 @@ const OpenFinance = screen(() => import('./pages/open-finance/OpenFinance'));
 const Future = screen(() => import('./pages/future/Future'));
 const Plan = screen(() => import('./pages/plan/Plan'));
 const Method = screen(() => import('./pages/plan/Method'));
+const Wealth = screen(() => import('./pages/wealth/Wealth'));
 const CashFlow = screen(() => import('./pages/cash-flow/CashFlow'));
 const Ask = screen(() => import('./pages/ask/Ask'));
 const Commitments = screen(() => import('./pages/commitments/Commitments'));
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="ask" element={<Ask />} />
             <Route path="commitments" element={<Commitments />} />
             <Route path="billing-radar" element={<BillingRadar />} />
+            <Route path="wealth" element={<Wealth />} />
             <Route path="insights" element={<Insights />} />
             <Route path="open-finance" element={<OpenFinance />} />
             <Route path="about" element={<About />} />

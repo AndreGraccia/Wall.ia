@@ -155,6 +155,13 @@ export function errorKey(error) {
       'MONTH_PLAN_NEEDS_INCOME',
       'METHOD_CHOICE_LIMIT',
       'INVALID_MONTH',
+      'INVESTMENT_NOT_FOUND',
+      'INVESTMENT_LIMIT',
+      'INVESTMENT_VALUE_NOT_FOUND',
+      'INVESTMENT_VALUE_LIMIT',
+      'INVESTMENT_LAST_VALUE',
+      'INVESTMENT_FUTURE_DATE',
+      'INVALID_DATE',
     ].includes(code)
   )
     return `app.errors.${code}`;
