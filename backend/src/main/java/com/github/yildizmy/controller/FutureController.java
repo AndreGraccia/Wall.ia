@@ -43,6 +43,7 @@ public class FutureController {
 
     private final FutureService futureService;
     private final AskUsage askUsage;
+    private final com.github.yildizmy.service.AssistantService assistantService;
     private final FutureAlertService alertService;
     private final ForecastService forecastService;
     private final PushService pushService;
@@ -91,7 +92,7 @@ public class FutureController {
             @AuthenticationPrincipal UserDetailsImpl user,
             @Valid @RequestBody FutureRequests.Question request) {
         askUsage.acquire(user.getId());
-        FutureResponses.Answer answer = futureService.ask(user.getId(), request.question());
+        FutureResponses.Answer answer = assistantService.ask(user.getId(), request.question());
         askUsage.record(answer.intent());
         return noStore(answer);
     }

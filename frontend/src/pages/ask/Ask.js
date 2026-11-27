@@ -10,8 +10,9 @@ import { Disclosure } from '../../components/detail-ui';
 import { PageHeading } from '../../components/wallet-ui';
 import { dayLabel, errorKey, money, overdraftCostText } from '../../utils/wallet';
 import { forecastReady, limitSummary } from '../../utils/forecast';
+import { assistAnswer } from './Assist';
 
-const SUGGESTIONS = ['s1', 's2', 's3', 's4', 's5'];
+const SUGGESTIONS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
 const VERDICT_COLOR = { SAFE: 'success', TIGHT: 'warning', RISK: 'error' };
 const sign = (value) => (Number(value) < 0 ? 'error.main' : 'text.primary');
 
@@ -124,14 +125,14 @@ function useAnswer(answer) {
         }),
       };
     default:
-      return { sentence: t('ask.unknown') };
+      return assistAnswer(answer, t, lang) || { sentence: t('ask.unknown') };
   }
 }
 
 /** One question and its answer: the question small, the number big, one sentence, then where it came from. */
 function Turn({ turn, latest }) {
   const { t } = useTranslation();
-  const { seal, label, value, unit, color = 'text.primary', sentence, details } = useAnswer(turn.answer);
+  const { seal, label, value, unit, color = 'text.primary', sentence, details, actions } = useAnswer(turn.answer);
   const known = turn.answer.intent !== 'UNKNOWN';
   return (
     <Box
@@ -166,6 +167,7 @@ function Turn({ turn, latest }) {
         <Typography variant={value ? 'body1' : 'h6'} sx={{ maxWidth: 640, fontWeight: value ? 400 : 500 }}>
           {sentence}
         </Typography>
+        {actions}
       </Stack>
       {known && (
         <Disclosure label={t('ask.whereFrom')} sx={{ mt: 1.5 }}>

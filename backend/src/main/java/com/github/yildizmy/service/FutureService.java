@@ -731,7 +731,9 @@ public class FutureService {
             case NEXT_INCOME -> answer(intent, parsed, method, null, overview, null, null, null,
                     overview.projection().events().stream().filter(event -> event.amount().signum() > 0)
                             .findFirst().orElse(null), null, null, null);
-            case UNKNOWN -> answer(intent, parsed, method, null, overview, null, null, null, null, null, null, null);
+            // Plan, method, review and savings questions get their numbers from the assistant (ADR 0027).
+            case PLAN_STATUS, METHOD, REVIEW, SAVE_GOAL, UNKNOWN ->
+                    answer(intent, parsed, method, null, overview, null, null, null, null, null, null, null);
         };
     }
 
@@ -778,7 +780,25 @@ public class FutureService {
                 scenario == null ? null : scenario.scenario(),
                 newMonthlyCommitment,
                 cardName,
-                "WHY_NEGATIVE".equals(intent) ? overview.exitPlan() : null);
+                "WHY_NEGATIVE".equals(intent) ? overview.exitPlan() : null,
+                null);
+    }
+
+    /** A goal the person could create to reach {@code target} by {@code date}; nothing is written. */
+    @Transactional(readOnly = true)
+    public Optional<FutureResponses.GoalDraft> draftGoal(long userId, BigDecimal target, LocalDate date) {
+        Context context = load(userId);
+        int day = context.confirmed().stream()
+                .filter(item -> item.pattern().direction() == Direction.IN)
+                .map(item -> item.pattern().typicalDay())
+                .findFirst().orElse(5);
+        // The placeholder amount only counts the contribution days up to the date.
+        GoalProgress progress = GoalProgress.of(new CashEventPlanner.GoalPlan(0, "", BigDecimal.ONE, day), target, date,
+                null, context.today());
+        if (progress.requiredMonthly() == null) return Optional.empty();
+        FutureResponses.GoalFit fit = goalFit(context,
+                new CashEventPlanner.GoalPlan(0, "", progress.requiredMonthly(), day), progress.requiredMonthly());
+        return Optional.of(new FutureResponses.GoalDraft(target, date, progress.requiredMonthly(), day, fit.fits()));
     }
 
     // --- loading -----------------------------------------------------------------------------

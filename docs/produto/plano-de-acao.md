@@ -53,7 +53,7 @@ Nenhum item está **validado com usuários** nem **pronto para produção**: a v
 
 | Item | Estado | Condição |
 | --- | --- | --- |
-| Assistente com IA em todas as áreas (B57) | Planejado | Etapa 1: responder sobre plano e método com os dados da pessoa. Etapa 2: preparar a ação e pedir confirmação. O modelo nunca calcula nem grava. Depende de categorias confiáveis |
+| Assistente com IA em todas as áreas (B57) | Parcial | Responde sobre plano, método, revisão e metas e cria a meta com confirmação (ADR 0027), sem modelo de linguagem. Falta interpretar livremente e agir nas outras áreas |
 | Calendário de saldo diário com simulação | Planejado | |
 | Cenários salvos | Planejado | |
 | Patrimônio e investimentos informativos | Feito | Manual (ADR 0026), sem recomendar ativo; recomendação individual é regulada pela CVM. Falta gráfico da evolução e validar com pessoas |
@@ -77,6 +77,6 @@ Nenhum item está **validado com usuários** nem **pronto para produção**: a v
 2. Testar com pessoas.
 3. Fila "Para revisar", correção de categoria e regras.
 4. Metas completas e comparação de métodos.
-5. Assistente, etapa 1.
+5. Assistente: interpretação livre e mais ações.
 6. Open Finance real e produção.
 7. Patrimônio e desenvolvimento pessoal.
